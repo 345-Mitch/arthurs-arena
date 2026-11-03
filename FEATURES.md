@@ -97,3 +97,71 @@ Scratch has no camera. The project already fakes a shake: `when I receive 揺れ
 3. On the boss sprites, inside `when I receive 魔敵技`, `魔敵技2`, `魔滴技3`, `炎敵技`, `炎敵技２`, `暴敵技`, and `暴敵技2`, add `broadcast 大揺れ` at the moment the attack costume starts.
 4. Where Arthur already gets hurt (the `touching color` checks on `主人公` that `broadcast 揺れ`), add `if Enemy Attack Strength > 30 then broadcast 大揺れ else broadcast 揺れ`. A small hit stays a small shake. A boss hit is the big one.
 5. After the repeats, `set y to` the y the sprite had at the start of the shake (store it in a variable like `ShakeHomeY` on that sprite first). A cancelled fight should not leave the ground crooked.
+
+## 4. Sound on/off
+
+A big speaker button mutes the game, and the choice can be written into the save code Scratch already uses.
+
+Plain Scratch has no local storage. A normal variable forgets its value when the green flag starts, because the flag loads the value saved in the project. There is no block for cookies, files, or the tablet's storage.
+
+A cloud variable can store this, with hard limits. Cloud variables hold numbers only (0 and 1 are fine, the word "off" is not). They need a Scratcher account, they need the internet, and they are shared by everyone looking at the project. One public `☁ SoundOn` would mute the game for every player at once. Offline on the tablet, the cloud value does not update. That is a poor fit for Arthur's home tablet.
+
+The realistic place to remember the choice is the save code this game already teaches: press **Save**, copy the code, and type it in on **Load** (`セーブ` and `ロード` sprites, list `セーブする`). Add one extra digit. Old codes that do not have the digit still load.
+
+**Sprites:** new `SoundButton` (two costumes, `on` and `off`, a big speaker). Existing `音楽` (plays `魔王魂  ファンタジー10` in a `forever` loop after `ゲームスタート` and sets volume to 70 or 0). Existing `セーブ` and `ロード`.
+
+**Variables:** new `SoundOn` (1 or 0). The project already uses `セーブ` and `答え　数` while loading.
+
+**Messages:** `ゲームスタート`, `戦闘開始`, `勝利`, `敗北`. Those are the messages where `音楽` already runs `set volume to`.
+
+**Blocks:**
+
+1. Make `SoundButton` large (`set size to 150%` or bigger) and park it in a corner on every screen: `when green flag clicked` → `show`, `go to front layer`, `go to x: 200 y: 160`.
+2. `when this sprite clicked`: `if SoundOn = 1 then set SoundOn to 0 else set SoundOn to 1`. `if SoundOn = 1 then switch costume to on` and `set volume to 70`. `else switch costume to off`, `set volume to 0`, `stop all sounds`.
+3. On `音楽`, at the **bottom** of each script that already does `set volume to 70` (the `ゲームスタート`, `勝利`, and `敗北` scripts), add `if SoundOn = 0 then set volume to 0` and `stop all sounds`. Those scripts currently force volume back to 70. The check has to come after that, or the mute button loses.
+4. The `戦闘開始` script on `音楽` already sets volume to 0. Leave that fade alone, and still end it with the same `if SoundOn = 0` check so unmuting later in a fight can `set volume to 70` from the button in step 2.
+5. Saving: on the `セーブ` sprite, where the code is joined together, `join` `SoundOn` as the last character. On the `ロード` sprite, the project already reads one letter at a time with `letter (答え　数) of answer`. After the old letters are read, read one more letter into `SoundOn`. `if answer is empty` or that letter is not 0 or 1, `set SoundOn to 1` and keep going. An old save code should still load the game.
+6. `when green flag clicked` on `SoundButton`: `set SoundOn to 1` only if you have not loaded a code yet. A simple way is a variable `LoadedSound` that the load script sets to 1. `if LoadedSound = 0 then set SoundOn to 1`. Sound stays on until Arthur taps the button or loads a code.
+
+## 5. How to play
+
+A big overlay with three icons: move, punch, and kick.
+
+The fight controls are the messages `左` `右` `上` `下` (move), `パンチ` (punch), and `キック` (kick). `コントローラー` sends the move messages when the arrow keys are pressed. Guard (`ガード`) and the sword button (`剣ボタン`) stay off this overlay so the three icons can be huge.
+
+**Sprites:** new `HowTo`. Costumes: `closed`, and `page` (a large card). Three more costumes, or three tiny extra sprites: a shoe or arrow for move, a fist for punch, a boot for kick. New `HowToButton` with the word HELP in big letters.
+
+**Variables:** new `HowToOpen` (1 or 0).
+
+**Messages:** new `show help` and `hide help`. Also `ステージかいし`, so the card hides when a fight starts.
+
+**Blocks:**
+
+1. `HowToButton`: `set size to 180%`, `go to x: -200 y: 160`, `go to front layer`. `when this sprite clicked`: `if HowToOpen = 0 then broadcast show help else broadcast hide help`.
+2. On `HowTo`, `when I receive show help`: `set HowToOpen to 1`, `show`, `go to front layer`, `go to x: 0 y: 0`, `switch costume to page`, `set size to 200%`.
+3. On the page costume, draw three pictures in a row with words under them: MOVE, PUNCH, KICK. Words are part of the costume so they stay big on the tablet. Under the pictures, one line: "Tap HELP again to close."
+4. `when I receive hide help` or `when I receive ステージかいし`: `set HowToOpen to 0`, `hide`.
+5. `when this sprite clicked` on `HowTo` while it is open: `broadcast hide help`, so a tap on the card itself also closes it. The button is the obvious target. The card is a second, just as big, target.
+
+## 6. Missing-picture fallback
+
+If the hero costume is the wrong one, show a plain stickman and a friendly sentence.
+
+Scratch will not tell you that a picture failed to download. The project finishes loading before the green flag runs. There is no "when load fails" hat, and there is no try/catch block. A costume that was never added is already missing in the editor. `switch costume to` a name that is not in the list does not change the costume.
+
+What Scratch **can** check is `costume name` and `backdrop name`. The fallback is a costume you draw yourself, plus a check that the name is one you expect.
+
+**Sprites:** `主人公`. Add a costume named `plain stickman` (circle head, five lines). New sprite `OopsText` for the message. On the Stage, add a backdrop named `oops` (a flat colour and the words "Arthur's Arena").
+
+**Variables:** new `PictureOK` (1 or 0).
+
+**Messages:** none required. The check runs `when green flag clicked`.
+
+**Blocks:**
+
+1. Draw `plain stickman` on `主人公` and draw the `oops` backdrop. These live inside the project, so they are there even if a fancier costume was deleted.
+2. `when green flag clicked` on `主人公`: `set PictureOK to 0`. `if costume name = コスチューム1` (the costume the fight script already switches to at `ステージかいし`) `then set PictureOK to 1`. Add `or` for the other hero costumes you still trust.
+3. `if PictureOK = 0 then switch costume to plain stickman`, `set size to 100%`, `go to x: 0 y: 0`, `show`.
+4. On `OopsText`, `when green flag clicked`: `if PictureOK = 0 then say A picture is missing. Here is a plain stickman so you can still play. for 5 seconds`, with the sprite `set size to 200%` and `go to front layer`. `else hide`.
+5. Backdrop check, on the Stage, `when green flag clicked`: `if backdrop name = oops then` you are already on the safe backdrop. The home backdrop you want is `ホーム`. `if backdrop name is not ホーム and PictureOK = 0 then switch backdrop to oops`. Only do this at the flag, before `ホーム画面` runs, so a normal fight backdrop (`1`, `魔王`, `炎`, `暴走`, and the others) is not replaced mid-game.
+6. Keep the sentence kind. No error codes on screen.
