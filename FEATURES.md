@@ -376,7 +376,7 @@ A fight is not one knockdown. The first person to win two rounds wins.
 **Blocks:**
 
 1. On `start fight`, if this is a new person (the Boss Card is about to set health): `set Arthur Rounds to 0`, `set Boss Rounds to 0`. The card already sets Brute to 24, Ivy to 24, and Quake to 30.
-2. When the boss health hits 0, before `broadcast arthur wins round`: `change Arthur Rounds by 1`. `if Arthur Rounds < 2` then do not broadcast the win. `set Boss Health to Boss Max Health`, `set Arthur Health to Arthur Max Health`, `set Quake Phase to 1`, `set Wave Speed to 16`, `set Power to 0`. Show `Round Card` with the next round number, `say` nothing extra, `wait 1.5 seconds`, `hide` the card. `Which Fight` stays, so the same boss comes back calm.
+2. When the boss health hits 0, before `broadcast arthur wins round`: `change Arthur Rounds by 1`. `if Arthur Rounds < 2` then do not broadcast the win. `set Boss Health to Boss Max Health`, `set Arthur Health to Arthur Max Health`, `set Hearts to 3`, `set Quake Phase to 1`, `set Wave Speed to 16`, `set Power to 0`. Show `Round Card` with the next round number, `say` nothing extra, `wait 1.5 seconds`, `hide` the card. `Which Fight` stays, so the same boss comes back calm.
 3. `if Arthur Rounds = 2` then `broadcast arthur wins round` as the file already does. Quake (`Which Fight` = 4) still becomes the champion. Anyone else still goes to the next fight.
 4. A round the boss wins is in feature 15. It adds to `Boss Rounds`. At 2, `broadcast arthur loses`, which is what starts feature 8's countdown. Under 2, refill both bars and show the round card. Do not broadcast `arthur loses` yet.
 5. `Game State` stays `boss` for Brute, Ivy, and Quake during the card, and `fight` for Rival. The card is a pause, not a new state.
