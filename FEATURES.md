@@ -8,6 +8,21 @@ Open the project and click **See inside**. Names in the project are a mix of Jap
 
 Big text, big buttons, kind messages, and a debug screen Mitch can turn on. Those are the rules for every feature.
 
+## What changed from the starting list
+
+All 10 seeds are still here. Each one was tightened to match project 732904827.
+
+1. **Health bars.** Both Arthur and the enemy get a bar, including the Demon King, the flame boss, and the berserk boss. Colour is a percent of that fight's max, because health runs from about 50 to 8200. The new sprites are `ArthurBar` and `EnemyBar`. The sprite already named `体力バー` holds save-code blocks, so the bar does not go there. The digit sprites already draw the number.
+2. **Hit flash.** The blink is the colour effect. This project already uses the ghost effect to hide punches and buttons. Bosses flash on a new message, `敵いてっ`. The old `いてっ` (ouch) message stays.
+3. **Screen shake.** The project already has `揺れ` (a small y-wiggle). The big shake is a new message, `大揺れ`, copied from that script. `揺れ2` stays on the energy-wave sprite `波動`. Boss attack messages send `大揺れ`. Buttons stay still.
+4. **Sound.** The choice is an extra digit on the save code the game already uses. A normal variable resets when the green flag starts. A cloud variable is numbers-only, needs a Scratcher account, needs the internet, and is shared by every viewer. Details are in feature 4.
+5. **How to play.** Still three icons: move, punch, kick. Guard and the sword stay off this card so those three can be huge.
+6. **Missing picture.** Scratch has no "load failed" hat. The check is `costume name` and `backdrop name`, and the plain stickman is a costume drawn into the project. Details are in feature 6.
+7. **Debug.** Scratch has no FPS block, so the overlay shows loops per second. Scratch cannot list running scripts, so each big message sets `CurrentState`. The reward number in this game is `gold`. The readouts stay hidden until the button is tapped.
+8. **Try again.** A HOME button sits beside FIGHT AGAIN. The 5-second count still starts the fight at 0. HOME broadcasts `ホーム画面`.
+9. **Tap zones.** A miss sets `TapZone` to `none` and leaves health alone. One short hint plays the first time. The hero's `mouse down?` loop during `ステージかいし` is why this matters: the other buttons already use `when this sprite clicked`.
+10. **Version line.** The words are `Arthur's Arena v0.2`, on backdrop `ホーム`.
+
 ## The 10 features
 
 1. **Colour health bars** — Arthur's bar and the enemy bar turn green, then yellow, then red, and a big number shows the health.
@@ -52,7 +67,7 @@ Health in this game is not "out of 100". Arthur's max grows with power-ups (`現
 **Blocks:**
 
 1. On `ArthurBar`, draw three costumes: a thick rectangle named `green`, `yellow`, and `red`. Put the costume centre on the **left** edge so the bar grows to the right. Do the same for `EnemyBar`.
-2. When I receive `ステージかいし`: `set ArthurMax to 現在の体力`. `if ArthurMax < 1 then set ArthurMax to 1` (this stops a divide-by-zero if a fight starts before max health is set). `show`, `go to front layer`, `go to x: -160 y: 150`, `set size to 40%` as the starting height.
+2. When I receive `ステージかいし`: `set ArthurMax to 現在の体力`. `if ArthurMax < 1 then set ArthurMax to 1` (this stops a divide-by-zero if a fight starts before max health is set). `show`, `go to front layer`, `go to x: -160 y: 150`. Draw the rectangle about 12 pixels tall. `set size` grows width and height together, so a thin costume stays a thin bar.
 3. `forever` on `ArthurBar`: `set BarPercent to ((自分:体力 / ArthurMax) * 100)`. `if BarPercent > 100 then set BarPercent to 100`. `if BarPercent < 0 then set BarPercent to 0`. `if BarPercent > 60 then switch costume to green`, `else if BarPercent > 30 then switch costume to yellow`, `else switch costume to red`. Then `set size to BarPercent`. The left-centred costume keeps the bar glued to the left while the length changes.
 4. On the Stage, at the start of each fight (the same scripts that `set 敵:体力` to 140, 270, 400, 500, 1000, 5000, 7000, or 8200), add `set EnemyMax to 敵:体力`. Do this **before** any hit subtracts health. `EnemyBar` uses `敵:体力 / EnemyMax` the same way as step 3, sitting at `x: 40 y: 150`.
 5. When I receive `ステージ魔王` or the backdrop switches to `魔王`: `EnemyBar` `says Boss` for 2 seconds in big text (`set size to 150%` on a small label sprite, or a costume that says BOSS). The bar itself still follows `敵:体力`.
@@ -155,16 +170,17 @@ What Scratch **can** check is `costume name` and `backdrop name`. The fallback i
 
 **Variables:** new `PictureOK` (1 or 0).
 
-**Messages:** none required. The check runs `when green flag clicked`.
+**Messages:** new `pictures checked`, sent at the end of the hero's green-flag script so the message and the backdrop wait until `PictureOK` is set.
 
 **Blocks:**
 
 1. Draw `plain stickman` on `主人公` and draw the `oops` backdrop. These live inside the project, so they are there even if a fancier costume was deleted.
 2. `when green flag clicked` on `主人公`: `set PictureOK to 0`. `if costume name = コスチューム1` (the costume the fight script already switches to at `ステージかいし`) `then set PictureOK to 1`. Add `or` for the other hero costumes you still trust.
 3. `if PictureOK = 0 then switch costume to plain stickman`, `set size to 100%`, `go to x: 0 y: 0`, `show`.
-4. On `OopsText`, `when green flag clicked`: `if PictureOK = 0 then say A picture is missing. Here is a plain stickman so you can still play. for 5 seconds`, with the sprite `set size to 200%` and `go to front layer`. `else hide`.
-5. Backdrop check, on the Stage, `when green flag clicked`: `if backdrop name = oops then` you are already on the safe backdrop. The home backdrop you want is `ホーム`. `if backdrop name is not ホーム and PictureOK = 0 then switch backdrop to oops`. Only do this at the flag, before `ホーム画面` runs, so a normal fight backdrop (`1`, `魔王`, `炎`, `暴走`, and the others) is not replaced mid-game.
-6. Keep the sentence kind. No error codes on screen.
+4. End the hero's green-flag script with `broadcast pictures checked`. Green-flag scripts start together, so a `say` on the flag can run before `PictureOK` is set.
+5. On `OopsText`, `when I receive pictures checked`: `set size to 200%`, `go to front layer`. `if PictureOK = 0 then say A picture is missing. Here is a plain stickman so you can still play. for 5 seconds`. `else hide`.
+6. On the Stage, `when I receive pictures checked`: `if PictureOK = 0 then switch backdrop to oops`. The home backdrop is `ホーム`. Fight backdrops (`1`, `魔王`, `炎`, `暴走`, and the rest) are chosen later by their own messages. This check runs once, from `pictures checked`.
+7. Keep the sentence kind. No error codes on screen.
 
 ## 7. Debug overlay
 
@@ -196,20 +212,20 @@ After a loss, a big prompt counts down from 5 and then restarts the fight.
 
 `when I receive 敗北` already hides the fighters, hides the health digits, and switches the backdrop. That is the dead end. The countdown sprite shows on top of that backdrop.
 
-**Sprites:** new `TryAgain` with a large costume that reads "Arthur got knocked down." New `FightAgainButton` ("FIGHT AGAIN") and new `HomeButton2` ("HOME") if `ホームボタン` is hidden on `敗北` (it is not in the defeat hide list, but the fight buttons `ガードボタン` and `剣ボタン` do hide). Make both new buttons `set size to 180%`.
+**Sprites:** new `TryAgain` with a large costume that reads "Arthur got knocked down." New `FightAgainButton` ("FIGHT AGAIN") and new `HomeButton2` ("HOME"). `ガードボタン` and `剣ボタン` already hide on `敗北`, so these two new buttons are the ones Arthur sees. Make both `set size to 180%`.
 
-**Variables:** new `RestartIn`. Existing `ステージ` tells you which fight to run again. `試合終了` is already set around a loss.
+**Variables:** new `RestartIn`, new `RestartChoice` (`fight` or `home`). Existing `ステージ` tells you which fight to run again. `試合終了` is already set around a loss.
 
-**Messages:** `敗北` opens the prompt. `FightAgainButton` broadcasts the start message for `ステージ` (see the table in the intro: stage value lines up with `ステージ1`, `ステージ2`, `ステージ炎`, `ステージ暴走`, `ステージ魔王`, and the other stage messages the Stage already receives). `HomeButton2` broadcasts `ホーム画面`. New message `cancel restart` so a tap stops the countdown.
+**Messages:** `敗北` opens the prompt. The prompt itself broadcasts the next step when the count finishes. `HomeButton2` only sets variables. Stage start messages already on the Stage include `ステージ1`, `ステージ2`, `ステージ炎`, `ステージ暴走`, and `ステージ魔王`.
 
 **Blocks:**
 
-1. On `TryAgain`, `when I receive 敗北`: `show`, `go to front layer`, `go to x: 0 y: 40`, `set RestartIn to 5`.
-2. `repeat until RestartIn = 0`: `say (join "Try again? " (join RestartIn " ...")) for 1 seconds`, `wait 1 seconds`, `change RestartIn by -1`. The say block is the big text. `set size to 200%` on `TryAgain`.
-3. `if RestartIn = 0 then broadcast` the stage start message for the current `ステージ`, using `if ステージ = 1 then broadcast ステージ1` and one `if` per stage you have, including `if backdrop name = 魔王 then broadcast ステージ魔王`. Then `hide`.
-4. On `FightAgainButton`, `when this sprite clicked`: `set RestartIn to 0` and `broadcast cancel restart`, then broadcast the same stage message. `when I receive cancel restart` on `TryAgain` stops the loop: use a second check inside the loop, `if RestartIn = 0 then stop this script`, placed at the top of the repeat. Set `RestartIn` to 0 **before** the broadcast so the loop notices.
-5. On `HomeButton2`, `when this sprite clicked`: `set RestartIn to 0`, `broadcast cancel restart`, `broadcast ホーム画面`, `hide` the prompt. Arthur can leave. Waiting also works: at 0 the fight starts on its own.
-6. `when I receive 勝利`: `hide` the prompt so a win never shows the loss countdown.
+1. On `TryAgain`, `when I receive 敗北`: `show`, `go to front layer`, `go to x: 0 y: 40`, `set size to 200%`, `set RestartIn to 5`, `set RestartChoice to fight`. Show `FightAgainButton` and `HomeButton2` here too (`broadcast show restart buttons`, and those sprites `show` and `go to front`).
+2. `repeat until RestartIn < 1`: `say (join "Try again? " RestartIn)`, `wait 1 seconds`, `if RestartIn > 0 then change RestartIn by -1`. The `if` matters. A button sets `RestartIn` to 0 during the wait. The next `change by -1` would make it -1, and `repeat until RestartIn = 0` would never end.
+3. After the loop: `if RestartChoice = home then broadcast ホーム画面`. `else if ステージ = 1 then broadcast ステージ1`, and one `if` per stage, including `if backdrop name = 魔王 then broadcast ステージ魔王`. Then `hide` the prompt and both buttons.
+4. On `FightAgainButton`, `when this sprite clicked`: `set RestartChoice to fight`, `set RestartIn to 0`. The loop in step 2 sees the 0 and step 3 starts the fight. The button does not broadcast the stage itself, or the fight would start twice.
+5. On `HomeButton2`, `when this sprite clicked`: `set RestartChoice to home`, `set RestartIn to 0`. Step 3 then broadcasts `ホーム画面`.
+6. `when I receive 勝利`: `hide` the prompt and both buttons, so a win never shows the loss countdown.
 
 ## 9. Tap zones
 
@@ -250,3 +266,15 @@ The title backdrop is `ホーム`, shown when the Stage receives `ホーム画�
 2. `when I receive ゲームスタート`: same show, in case the title uses that message instead of `ホーム画面`.
 3. `when I receive ステージかいし`: `hide`. Same hide on `マップへ` and the gacha and equipment messages, so the line does not sit on a boss.
 4. Bump the costume text when the build changes (`v0.3`, `v0.4`). The words on the costume are the thing Mitch compares on the tablet.
+
+## Codex review
+
+Checked on 2026-11-03. Codex had not flagged anything in this repo, so no review note was folded into the 10 features.
+
+- Branch `codex-review` exists and points at the same commit as `main`: `94aefa4` ("Add starter guide for Arthur's stickman fighting game in Scratch"). The diff from `main` to `origin/codex-review` is empty. Both branches contain `README.md` and `STARTER_GUIDE.md` only.
+- Pull requests: none, open or closed.
+- Issues: none.
+- Issue comments, commit comments on `94aefa4` and `46eb807`, and pull-request review threads: none.
+- Discussions are disabled on the repository.
+
+The Scratch limits written into features 4, 6, and 7 come from how Scratch and this project behave, not from a Codex comment. If a later comment lands on `codex-review` or on a pull request, add the useful part here and say which feature it changed.
