@@ -15,7 +15,7 @@ All 10 seeds are still here. Fight notes now follow the bosses file. The big tem
 1. **Health bars.** `Arthur Bar` and `Boss Bar` in the bosses file already turn green above 60 percent, yellow above 30, and red at 30 or below. Rival's bar scale is 55. Brute, Ivy, and Quake use 100, with a big BOSS label. Arthur's health is 100. Boss health is Brute 24, Ivy 24, Quake 30. The template's `体力バー` sprite is still save-code, and its bosses still use `敵:体力`.
 2. **Hit flash.** The bosses file already sets the color effect to 40 for 0.12 seconds. Arthur flashes on `boss hits arthur`. Brute, Ivy, and Quake flash on `arthur hits boss`. The template's ouch message `いてっ` stays in the big project.
 3. **Screen shake.** The bosses file already has `shake`. Brute sends it when his charge hits. Quake sends it on STOMP, including the faster wave under half health. `Ground` and `Impact` hop. Buttons stay still. Arthur's y stays with the jump, because `Arthur Jumping` is how he dodges Quake. The template's small shake is `揺れ`. `揺れ2` stays on the energy-wave sprite `波動`.
-4. **Sound.** The choice is an extra digit on the save code the game already uses. A normal variable resets when the green flag starts. A cloud variable is numbers-only, needs a Scratcher account, needs the internet, and is shared by every viewer. Details are in feature 4.
+4. **Sound.** The choice is an extra digit on the save code the game already uses. A normal variable resets when the green flag starts. A cloud variable is numbers-only, needs a Scratcher account, needs the internet, and is shared by every viewer. The speaker button broadcasts `apply sound`. Each sprite that plays a sound sets its own volume. Details are in feature 4.
 5. **How to play.** Still three icons: move, punch, kick. Guard and the sword stay off this card so those three can be huge.
 6. **Missing picture.** Scratch has no "load failed" hat. The check is `costume name` and `backdrop name`, and the plain stickman is a costume drawn into the project. Details are in feature 6.
 7. **Debug.** Scratch has no FPS block, so the overlay shows loops per second. Scratch cannot list running scripts. The bosses file already has a hidden `Game State` (`title`, `intro`, `fight`, `boss`, `win`, `lose`). An earlier draft called this `CurrentState`. That would be a second variable for the same job, so the overlay shows `Game State`.
@@ -125,20 +125,24 @@ A cloud variable can store this, with hard limits. Cloud variables hold numbers 
 
 The realistic place to remember the choice is the save code this game already teaches: press **Save**, copy the code, and type it in on **Load** (`セーブ` and `ロード` sprites, list `セーブする`). Add one extra digit. Old codes that do not have the digit still load.
 
-**Sprites:** new `SoundButton` (two costumes, `on` and `off`, a big speaker). Existing `音楽` (plays `魔王魂  ファンタジー10` in a `forever` loop after `ゲームスタート` and sets volume to 70 or 0). Existing `セーブ` and `ロード`.
+Scratch's `set volume` block changes the volume of the sprite that runs the block. It does not change the volume of the sprite that is playing the music. A `set volume` on `SoundButton` mutes the button only. `stop all sounds` can cut off what is playing, and then `音楽`'s `forever` loop starts `魔王魂  ファンタジー10` again at `音楽`'s own volume, which the button never changed. A later tap that unmutes the button cannot turn `音楽` back up after `音楽` has set its own volume to 0. The button broadcasts. Every sprite that plays a sound sets its own volume when that message arrives.
+
+The bosses file has no sounds and no speaker button. If a sound is added there, that new sprite needs the same `when I receive apply sound` script.
+
+**Sprites:** new `SoundButton` (two costumes, `on` and `off`, a big speaker). Existing `音楽` (plays `魔王魂  ファンタジー10` in a `forever` loop after `ゲームスタート`, and sets its own volume to 70 or 0). `敵1`, `敵2`, and `敵3` play a sound when they receive `揺れ`. Any other sprite with a `play sound` or `start sound` block needs the same handler. Existing `セーブ` and `ロード`.
 
 **Variables:** new `SoundOn` (1 or 0). The project already uses `セーブ` and `答え　数` while loading.
 
-**Messages:** `ゲームスタート`, `戦闘開始`, `勝利`, `敗北`. Those are the messages where `音楽` already runs `set volume to`.
+**Messages:** new `apply sound`. Also `ゲームスタート`, `戦闘開始`, `勝利`, and `敗北`, because those are where `音楽` already runs `set volume` on itself.
 
 **Blocks:**
 
 1. Make `SoundButton` large (`set size to 150%` or bigger) and park it in a corner on every screen: `when green flag clicked` → `show`, `go to front layer`, `go to x: 200 y: 160`.
-2. `when this sprite clicked`: `if SoundOn = 1 then set SoundOn to 0 else set SoundOn to 1`. `if SoundOn = 1 then switch costume to on` and `set volume to 70`. `else switch costume to off`, `set volume to 0`, `stop all sounds`.
-3. On `音楽`, at the **bottom** of each script that already does `set volume to 70` (the `ゲームスタート`, `勝利`, and `敗北` scripts), add `if SoundOn = 0 then set volume to 0` and `stop all sounds`. Those scripts currently force volume back to 70. The check has to come after that, or the mute button loses.
-4. The `戦闘開始` script on `音楽` already sets volume to 0. Leave that fade alone, and still end it with the same `if SoundOn = 0` check so unmuting later in a fight can `set volume to 70` from the button in step 2.
-5. Saving: on the `セーブ` sprite, where the code is joined together, `join` `SoundOn` as the last character. On the `ロード` sprite, the project already reads one letter at a time with `letter (答え　数) of answer`. After the old letters are read, read one more letter into `SoundOn`. `if answer is empty` or that letter is not 0 or 1, `set SoundOn to 1` and keep going. An old save code should still load the game.
-6. `when green flag clicked` on `SoundButton`: `set SoundOn to 1` only if you have not loaded a code yet. A simple way is a variable `LoadedSound` that the load script sets to 1. `if LoadedSound = 0 then set SoundOn to 1`. Sound stays on until Arthur taps the button or loads a code.
+2. `when this sprite clicked`: `if SoundOn = 1 then set SoundOn to 0 else set SoundOn to 1`. `if SoundOn = 1 then switch costume to on`, `else switch costume to off`. Then `broadcast apply sound`. The button does not run `set volume` and does not run `stop all sounds`.
+3. On `音楽`, and on `敵1`, `敵2`, `敵3`, and every other sprite that plays a sound: `when I receive apply sound` → `if SoundOn = 1 then set volume to 70`, `else set volume to 0` and `stop all sounds`. The `set volume` has to be inside that sprite's script. A broadcast is what makes each sprite run its own block. Copy this script onto each of them.
+4. On `音楽`, the `ゲームスタート`, `勝利`, and `敗北` scripts already `set volume to 70`. That line turns the music back up even when the speaker shows off. At the bottom of each of those scripts, `broadcast apply sound`, so `音楽` applies `SoundOn` to itself after the 70. The `戦闘開始` script sets volume to 0 as a quiet battle. Leave that fade, and end it with `if SoundOn = 0 then set volume to 0` on `音楽`. Do not broadcast `apply sound` from the fade, or an unmute-state would jump straight back to 70. A tap on the speaker during the fight still broadcasts `apply sound`, which is how `音楽` follows the button.
+5. Saving: on the `セーブ` sprite, where the code is joined together, `join` `SoundOn` as the last character. On the `ロード` sprite, the project already reads one letter at a time with `letter (答え　数) of answer`. After the old letters are read, read one more letter into `SoundOn`. `if answer is empty` or that letter is not 0 or 1, `set SoundOn to 1` and keep going. An old save code should still load the game. Then `broadcast apply sound`. Writing the variable is not enough. The music sprite does not see the number until it receives the message.
+6. `when green flag clicked` on `SoundButton`: `set SoundOn to 1` only if you have not loaded a code yet. A simple way is a variable `LoadedSound` that the load script sets to 1. `if LoadedSound = 0 then set SoundOn to 1`. Then `broadcast apply sound`, so every sound sprite picks up the starting value. Sound stays on until Arthur taps the button or loads a code.
 
 ## 5. How to play
 
@@ -283,12 +287,15 @@ The title backdrop is `ホーム`, shown when the Stage receives `ホーム画�
 
 ## Codex review
 
-Checked on 2026-11-03. Codex had not flagged anything in this repo, so no review note was folded into the 10 features.
+Checked again on 2026-11-03, after Codex reviewed this pull request.
 
-- Branch `codex-review` exists and points at the same commit as `main`: `94aefa4` ("Add starter guide for Arthur's stickman fighting game in Scratch"). The diff from `main` to `origin/codex-review` is empty. Both branches contain `README.md` and `STARTER_GUIDE.md` only.
-- Pull requests: none, open or closed.
-- Issues: none.
-- Issue comments, commit comments on `94aefa4` and `46eb807`, and pull-request review threads: none.
-- Discussions are disabled on the repository.
+Codex flagged one thing. On feature 4, the review comment (pull request #1, `FEATURES.md`) says Scratch's volume block changes the volume of the sprite that runs the block. A mute button that runs `set volume` only changes itself. `stop all sounds` can cut off what is playing, and `音楽`'s `forever` loop can start the music again at `音楽`'s old volume. Unmuting from the button cannot turn `音楽` back up after `音楽` has set its own volume to 0.
 
-The Scratch limits written into features 4, 6, and 7 come from how Scratch and this project behave, not from a Codex comment. If a later comment lands on `codex-review` or on a pull request, add the useful part here and say which feature it changed.
+Addressed in feature 4. The button broadcasts `apply sound` and does not set volume. Every sprite that plays a sound, including `音楽` and the hit sounds on `敵1`, `敵2`, and `敵3`, sets its own volume when it receives `apply sound`. The load script broadcasts `apply sound` after it writes `SoundOn` from the save code. The green flag does too. The earlier sentence in this section that said Codex flagged nothing was from before this review. This note replaces it.
+
+Still true from the first look, and not part of the finding:
+
+- Branch `codex-review` points at the same commit as `main`: `94aefa4` ("Add starter guide for Arthur's stickman fighting game in Scratch"). The diff is empty. Both branches contain `README.md` and `STARTER_GUIDE.md` only.
+- Issues: none. Commit comments on `94aefa4` and `46eb807`: none. Discussions are disabled.
+
+The limits in features 6 and 7 (no load-error hat, no FPS block, no list of running scripts) come from Scratch, not from Codex. Feature 4's volume rule is the Codex finding. The save-code limit in feature 4 is still a Scratch limit, and the volume rule sits on top of it.
