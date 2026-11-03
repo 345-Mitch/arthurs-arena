@@ -285,6 +285,80 @@ The title backdrop is `ホーム`, shown when the Stage receives `ホーム画�
 3. `when I receive ステージかいし`: `hide`. Same hide on `マップへ` and the gacha and equipment messages, so the line does not sit on a boss.
 4. Bump the costume text when the build changes (`v0.3`, `v0.4`). The words on the costume are the thing Mitch compares on the tablet.
 
+## More features from popular fighters
+
+Features 1 to 10 stay as they are. These extra ones come from games a lot of people play: Super Smash Bros. Ultimate, Street Fighter 6, Mortal Kombat 1, Tekken 8, Brawlhalla, Brawl Stars, and Stick Fight: The Game.
+
+Two popular ideas are left out on purpose. Fortnite's storm circle shrinks and hurts anyone left outside it ([Epic's storm circle notes](https://dev.epicgames.com/documentation/en-us/fortnite/storm-circle)). A closing ring on one flat floor is a harsh timer for a kid. Mortal Kombat's finishing moves are left out too. The block button and the practice room are the parts that fit. Stick Fight is full of guns ([Steam page](https://store.steampowered.com/app/674940/Stick_Fight_The_Game/)). The arena pickup below is a healing apple, not a weapon.
+
+Each idea uses the bosses file: `Game State`, `shake`, `Boss Bar`, `Which Fight`, and Brute, Ivy, and Quake.
+
+## 11. A short dodge
+
+Arthur slips aside for a moment, and the hit misses.
+
+**Where it shows up:** Super Smash Bros. Ultimate has an air dodge that makes the fighter briefly unable to be hit ([SmashWiki: Air dodge](https://www.ssbwiki.com/Air_dodge)). Brawlhalla's dodge does the same job: a short invincible move that can slip an attack ([Brawlhalla Wiki: Movement](https://brawlhalla.wiki.gg/wiki/Movement)).
+
+**Why it suits Arthur:** Brute says **Ready?** and then runs. Ivy calls **Low!** and **High!** Quake yells **STOMP!** A dodge gives Arthur one more answer when the jump is the wrong one. It is one big button, and it cannot be spammed.
+
+**Sprites:** new `Dodge Button`, words DODGE, `set size to 180%`. It shows and hides with the other fight buttons, on `intro done`, and hides on `show title`, `arthur loses`, and `arthur champion`.
+
+**Variables:** new `Dodge Safe` (1 or 0), new `Dodge Ready` (1 or 0).
+
+**Messages:** the Stage already receives `boss hits arthur` from Brute, Ivy Shot, Quake Wave, and Rival. New message `boss missed`.
+
+**Blocks:**
+
+1. `Dodge Button`, `when this sprite clicked`: `if Fight On = 1 and Dodge Ready = 1`. `set Dodge Ready to 0`. `set Dodge Safe to 1`. On Arthur, `set ghost effect to 40` so he looks faded. `wait 0.4 seconds`. `set Dodge Safe to 0`. `clear graphic effects`. `wait 1 second`. `set Dodge Ready to 1`.
+2. On the Stage, at the top of `when I receive boss hits arthur`: `if Dodge Safe = 1 then broadcast boss missed` and `stop this script`. Health does not change. The rest of that script, the one that subtracts `Hurt Power`, stays for a real hit.
+3. On Arthur, `when I receive boss missed`: `say Missed! for 0.6 seconds`.
+4. This covers Brute's charge (hit 10), Ivy's three shots (hit 8, low then high then low), and Quake's wave (hit 12, and only when `Arthur Jumping` is 0). The jump still dodges the wave by itself. The dodge is the extra slip.
+
+## 12. A block that softens one hit
+
+A big BLOCK button makes the next hit softer, and then it needs a rest.
+
+**Where it shows up:** Super Smash Bros. Ultimate has a shield. It blocks most hits, and it cannot be held forever: it shrinks and can break ([SmashWiki: Shield](https://www.ssbwiki.com/Shield)). Street Fighter 6 has blocking, and a Drive Reversal you can do while blocking ([Capcom: Fighting Ground](https://www.streetfighter.com/6/en-us/mode/fightingground)). Mortal Kombat 1 has Block as its own button ([WB Games support: accessibility](https://mortalkombatgamessupport.wbgames.com/hc/en-us/articles/19435787154963-Mortal-Kombat-1-Accessibility-Features-A11Y)).
+
+**Why it suits Arthur:** One button, one job. The next boss hit hurts less. Then the button rests, so holding it is not a wall. High and low blocks are left out. Ivy's **Low!** and **High!** are already a jump puzzle.
+
+**Sprites:** new `Block Button`, words BLOCK, `set size to 180%`. Same show and hide as `Dodge Button`.
+
+**Variables:** new `Blocking` (1 or 0), new `Block Ready` (1 or 0).
+
+**Messages:** `boss hits arthur`.
+
+**Blocks:**
+
+1. `when green flag clicked` on `Block Button`: `set Block Ready to 1`. `set Blocking to 0`.
+2. `when this sprite clicked`: `if Fight On = 1 and Block Ready = 1 and Dodge Safe = 0`. `set Blocking to 1`. `set Block Ready to 0`. Arthur `says Block! for 0.4 seconds`.
+3. On the Stage, inside `boss hits arthur`, after the dodge check: `if Blocking = 1 then set Hurt Power to Hurt Power / 2`, `set Blocking to 0`, then do the normal health subtract. Brute's 10 becomes 5. Ivy's 8 becomes 4. Quake's 12 becomes 6. `Boss Bar` still follows `Boss Health`. Arthur's bar follows the smaller loss.
+4. After that hit, `wait 1 second`, then `set Block Ready to 1`. A second hit during the rest is full strength.
+5. If `Dodge Safe` is 1, the dodge already skipped the damage. The block does not also fire.
+
+## 13. A power star
+
+Landing hits fills a meter. When it is full, one big star hit shakes the ground.
+
+**Where it shows up:** Street Fighter 6 spends a Super Art gauge on a big special. The gauge fills when attacks land, and it can hold three stocks ([Capcom: Fighting Ground](https://www.streetfighter.com/6/en-us/mode/fightingground), [SuperCombo: HUD](https://wiki.supercombo.gg/w/Street_Fighter_6/HUD)). In Brawl Stars, a Super charges mostly by hitting the other fighters, then fires from its own button ([Brawl Stars Wiki: Beginner's Guide](https://brawlstars.fandom.com/wiki/Beginner%27s_Guide)). Super Smash Bros. Ultimate's Rage Blaster "grows stronger if the user has taken lots of damage" ([official items page](https://www.smashbros.com/en_US/item/index.html)).
+
+**Why it suits Arthur:** Punch is 5 and kick is 8. The star is one bigger hit he can see coming, because the button only appears when the meter is full. Under 30 health his bar is already red, so the meter fills faster and a cheer shows up. That is the comeback, without a finishing move.
+
+**Sprites:** new `Power Meter` (a thin bar, costumes `empty` and `full`). New `Star Button`, words STAR, hidden until the meter is full. `set size to 180%`.
+
+**Variables:** new `Power` (0 to 10). New `Said Cheer` (1 or 0). Already there: `Hit Power`, `Arthur Health`, `Arthur Max Health`.
+
+**Messages:** `arthur hits boss` fills the meter. `boss hits arthur` is where the low-health cheer runs. New message `arthur power`.
+
+**Blocks:**
+
+1. On the Stage, `when I receive arthur hits boss`, after `Boss Health` changes: `if Arthur Health < 30 then change Power by 2`, `else change Power by 1`. 30 is the red zone on Arthur's bar, because his max is 100 and the bar turns red at 30 percent or below. `if Power > 10 then set Power to 10`.
+2. On `when I receive boss hits arthur`, the first time `Arthur Health` is under 30: `if Said Cheer = 0 then` Arthur `says You can do it! for 1 second`, `set Said Cheer to 1`. Set `Said Cheer` back to 0 on `start fight`.
+3. `Power Meter` `forever`: `if Power = 10 then switch costume to full` and `show` `Star Button`. `else switch costume to empty` and `hide` `Star Button`.
+4. `Star Button`, `when this sprite clicked`: `if Power = 10 and Fight On = 1`. `broadcast arthur power`.
+5. On Arthur, `when I receive arthur power`: `set Hit Power to 16`. If he is touching the fighter for this `Which Fight` (Rival 1, Brute 2, Ivy 3, Quake 4), the same touching checks his punch already uses, `broadcast arthur hits boss`. `broadcast shake`. `set Power to 0`. `say Star! for 0.6 seconds`.
+6. `shake` is the same message Brute and Quake already send. `Ground` and `Impact` hop. The buttons do not.
+
 ## Codex review
 
 Checked again on 2026-11-03, after Codex reviewed this pull request.
