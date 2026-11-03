@@ -165,3 +165,88 @@ What Scratch **can** check is `costume name` and `backdrop name`. The fallback i
 4. On `OopsText`, `when green flag clicked`: `if PictureOK = 0 then say A picture is missing. Here is a plain stickman so you can still play. for 5 seconds`, with the sprite `set size to 200%` and `go to front layer`. `else hide`.
 5. Backdrop check, on the Stage, `when green flag clicked`: `if backdrop name = oops then` you are already on the safe backdrop. The home backdrop you want is `ホーム`. `if backdrop name is not ホーム and PictureOK = 0 then switch backdrop to oops`. Only do this at the flag, before `ホーム画面` runs, so a normal fight backdrop (`1`, `魔王`, `炎`, `暴走`, and the others) is not replaced mid-game.
 6. Keep the sentence kind. No error codes on screen.
+
+## 7. Debug overlay
+
+A button shows a loops-per-second count, health, gold, and the current state.
+
+Scratch has no FPS block, and it cannot list the scripts that are running. Two stand-ins are honest and still useful. A `forever` loop that counts once per trip around the loop, copied out each time `timer` passes 1, is "loops this second". It is not a real frame rate, and Turbo Mode makes the number huge. "Which script is running" is a variable the important scripts set themselves, named `CurrentState`.
+
+There is no `score` variable. The number this game already shows as a reward is `gold`. The overlay shows `gold`.
+
+The overlay stays hidden until the button is tapped, so Arthur's fight screen stays clear.
+
+**Sprites:** new `DebugButton`, a big "DEBUG" label, `set size to 140%`, at `x: 200 y: -160`.
+
+**Variables to show:** new `ShowDebug` (1 or 0), new `LoopsPerSecond`, new `LoopCount`, new `CurrentState`. Checked values: `自分:体力`, `敵:体力`, `gold`, `ステージ`, `試合中` (in a match), `試合終了` (match over).
+
+**Messages:** the ones that should stamp `CurrentState`: `ホーム画面` → `home`, `ゲームスタート` → `title`, `ステージかいし` → `fight`, `ステージ魔王` / `ステージ炎` / `ステージ暴走` → `boss`, `勝利` → `win`, `敗北` → `lose`.
+
+**Blocks:**
+
+1. `when this sprite clicked` on `DebugButton`: `if ShowDebug = 0 then set ShowDebug to 1 else set ShowDebug to 0`.
+2. `if ShowDebug = 1 then show variable` for `LoopsPerSecond`, `CurrentState`, `自分:体力`, `敵:体力`, `gold`, and `ステージ`. `else hide variable` for each of those. `show variable` and `hide variable` are in the Variables category. Drag the readouts to the top edge so they do not cover the buttons.
+3. Loops counter, on the Stage: `when green flag clicked` → `reset timer`, `set LoopCount to 0`. Then `forever`: `change LoopCount by 1`, `if timer > 1 then set LoopsPerSecond to LoopCount`, `set LoopCount to 0`, `reset timer`.
+4. On the Stage scripts that already receive the messages in the list above, add `set CurrentState to home` (or `fight`, `boss`, `win`, `lose`) as the first block. A boss start should set `boss` even though `ステージかいし` also runs, so put the `boss` set in the boss script **after** the fight script's set, or check `backdrop name = 魔王` inside the fight start and set `boss` in that case.
+5. `when green flag clicked`: `set ShowDebug to 0` and hide the variables. The button still shows, so Mitch can turn the overlay on after a crash-like soft lock (a fight that never broadcasts `勝利` or `敗北`). `CurrentState` staying on `fight` while both stickmen are gone is the clue.
+
+## 8. Try-again countdown
+
+After a loss, a big prompt counts down from 5 and then restarts the fight.
+
+`when I receive 敗北` already hides the fighters, hides the health digits, and switches the backdrop. That is the dead end. The countdown sprite shows on top of that backdrop.
+
+**Sprites:** new `TryAgain` with a large costume that reads "Arthur got knocked down." New `FightAgainButton` ("FIGHT AGAIN") and new `HomeButton2` ("HOME") if `ホームボタン` is hidden on `敗北` (it is not in the defeat hide list, but the fight buttons `ガードボタン` and `剣ボタン` do hide). Make both new buttons `set size to 180%`.
+
+**Variables:** new `RestartIn`. Existing `ステージ` tells you which fight to run again. `試合終了` is already set around a loss.
+
+**Messages:** `敗北` opens the prompt. `FightAgainButton` broadcasts the start message for `ステージ` (see the table in the intro: stage value lines up with `ステージ1`, `ステージ2`, `ステージ炎`, `ステージ暴走`, `ステージ魔王`, and the other stage messages the Stage already receives). `HomeButton2` broadcasts `ホーム画面`. New message `cancel restart` so a tap stops the countdown.
+
+**Blocks:**
+
+1. On `TryAgain`, `when I receive 敗北`: `show`, `go to front layer`, `go to x: 0 y: 40`, `set RestartIn to 5`.
+2. `repeat until RestartIn = 0`: `say (join "Try again? " (join RestartIn " ...")) for 1 seconds`, `wait 1 seconds`, `change RestartIn by -1`. The say block is the big text. `set size to 200%` on `TryAgain`.
+3. `if RestartIn = 0 then broadcast` the stage start message for the current `ステージ`, using `if ステージ = 1 then broadcast ステージ1` and one `if` per stage you have, including `if backdrop name = 魔王 then broadcast ステージ魔王`. Then `hide`.
+4. On `FightAgainButton`, `when this sprite clicked`: `set RestartIn to 0` and `broadcast cancel restart`, then broadcast the same stage message. `when I receive cancel restart` on `TryAgain` stops the loop: use a second check inside the loop, `if RestartIn = 0 then stop this script`, placed at the top of the repeat. Set `RestartIn` to 0 **before** the broadcast so the loop notices.
+5. On `HomeButton2`, `when this sprite clicked`: `set RestartIn to 0`, `broadcast cancel restart`, `broadcast ホーム画面`, `hide` the prompt. Arthur can leave. Waiting also works: at 0 the fight starts on its own.
+6. `when I receive 勝利`: `hide` the prompt so a win never shows the loss countdown.
+
+## 9. Tap zones
+
+Only taps inside the button boxes punch, kick, or move. Other taps do nothing.
+
+Buttons already use `when this sprite clicked` (`ガードボタン`, `剣ボタン`, `戦闘ボタン`, `ホームボタン`), so a tap on empty stage does not press them. The fight loop on `主人公` is the risky one: during `ステージかいし` it watches `mouse down?` for the whole screen. A tap on a button can also be read as a move. The check below runs first and ignores anything outside the boxes.
+
+**Sprites:** `コントローラー` (it already turns arrow keys into `左` `右` `上` `下`). `主人公`. The punch and kick are messages, not a single button sprite, so add two big button sprites if the remix does not already have them: `PunchButton` and `KickButton`, `set size to 180%`, sitting on the right side of the fight. Move zone is the left half of the stage, above the ground.
+
+**Variables:** new `TapZone` (`none`, `move`, `punch`, `kick`). New `ShownTapHint` so the hint plays once.
+
+**Messages:** `パンチ`, `キック`, `左`, `右`, `上`, `下`. Only send these from the zone check during a touch fight.
+
+**Blocks:**
+
+1. Drag `PunchButton` and `KickButton` where Arthur's thumb can reach. Write down the edges. A button from x 120 to 200 and y -40 to 40 is a punch box. Do the same for kick, just below it, and for move (x less than 0, and y greater than the ground).
+2. On `コントローラー`, add a `forever` next to the arrow-key script: `if mouse down? then` test the boxes with `mouse x` and `mouse y`. `if mouse x > 120 and mouse x < 200 and mouse y > -40 and mouse y < 40 then set TapZone to punch` and `broadcast パンチ`. The kick box broadcasts `キック`. The left side `set TapZone to move` and broadcasts `右` or `左` based on whether `mouse x` is greater than the hero's `x position`.
+3. `else set TapZone to none`. Do not broadcast. Do not change health.
+4. On the first ignored tap only: `if TapZone = none and ShownTapHint = 0 then say Tap the big punch or kick button. for 2 seconds`, `set ShownTapHint to 1`. Later misses stay quiet so a fight is not a stream of popups.
+5. While `TapZone` is `punch` or `kick`, skip the move branch in the hero's `mouse down?` script (`when I receive ステージかいし` on `主人公`). Wrap that move with `if TapZone = move then`. A thumb on Punch should not also walk Arthur.
+6. Arrow keys on `コントローラー` stay as they are. This check is for taps.
+
+## 10. Version line
+
+The home screen shows **Arthur's Arena v0.2** so Mitch can see which build is open.
+
+The title backdrop is `ホーム`, shown when the Stage receives `ホーム画面`. The thumbnail sprite `サムネイル` also reacts to `ゲームスタート`. The version sits on the home screen only, big enough to read, along the bottom so the title stays clear.
+
+**Sprites:** new `VersionTag`. One costume with the words `Arthur's Arena v0.2` drawn in thick letters, or a text variable of that name. A costume is easier to make large.
+
+**Variables:** none, if the words are a costume. If you would rather use a variable, name it `VersionText`, `set VersionText to Arthur's Arena v0.2`, and `show variable` only on the home screen.
+
+**Messages:** `ホーム画面` and `ゲームスタート` show it. `ステージかいし`, `マップへ`, `ガチャ画面へ`, `装備選択　画面` hide it.
+
+**Blocks:**
+
+1. `when I receive ホーム画面`: `show`, `go to front layer`, `go to x: 0 y: -150`, `set size to 120%`.
+2. `when I receive ゲームスタート`: same show, in case the title uses that message instead of `ホーム画面`.
+3. `when I receive ステージかいし`: `hide`. Same hide on `マップへ` and the gacha and equipment messages, so the line does not sit on a boss.
+4. Bump the costume text when the build changes (`v0.3`, `v0.4`). The words on the costume are the thing Mitch compares on the tablet.
