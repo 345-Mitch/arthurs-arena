@@ -2,116 +2,118 @@
 
 Written 2026-11-03 for Mitch and Arthur.
 
-This is a plan for the Scratch game [Stickman Battle](https://scratch.mit.edu/projects/732904827) (project 732904827 by onigirikun_2009). The starter guide renames the hero Arthur and the title to **Arthur's Arena**. This file does not change the Scratch project. It says what to build, in blocks a kid can follow.
+This is a plan for Arthur's Arena. The boss fights live in `projects/arthurs-arena-bosses.sb3` on branch `grok/bosses` (pull request #2). The scripts in that file are written out in `BOSSES.md` and `projects/BLOCK_LISTING.md` on that branch. The big Stickman Battle project it comes from is [project 732904827](https://scratch.mit.edu/projects/732904827) by onigirikun_2009. This file does not change either project. It says what to build, in blocks a kid can follow.
 
-Open the project and click **See inside**. Names in the project are a mix of Japanese and English. Each Japanese name below has a short English meaning next to it.
+Open the bosses file and click **See inside**. The names there are English. The big project is still a mix of Japanese and English. A Japanese name below has a short English meaning next to it.
 
 Big text, big buttons, kind messages, and a debug screen Mitch can turn on. Those are the rules for every feature.
 
 ## What changed from the starting list
 
-All 10 seeds are still here. Each one was tightened to match project 732904827.
+All 10 seeds are still here. Fight notes now follow the bosses file. The big template is named only where its bosses are different.
 
-1. **Health bars.** Both Arthur and the enemy get a bar, including the Demon King, the flame boss, and the berserk boss. Colour is a percent of that fight's max, because health runs from about 50 to 8200. The new sprites are `ArthurBar` and `EnemyBar`. The sprite already named `体力バー` holds save-code blocks, so the bar does not go there. The digit sprites already draw the number.
-2. **Hit flash.** The blink is the colour effect. This project already uses the ghost effect to hide punches and buttons. Bosses flash on a new message, `敵いてっ`. The old `いてっ` (ouch) message stays.
-3. **Screen shake.** The project already has `揺れ` (a small y-wiggle). The big shake is a new message, `大揺れ`, copied from that script. `揺れ2` stays on the energy-wave sprite `波動`. Boss attack messages send `大揺れ`. Buttons stay still.
+1. **Health bars.** `Arthur Bar` and `Boss Bar` in the bosses file already turn green above 60 percent, yellow above 30, and red at 30 or below. Rival's bar scale is 55. Brute, Ivy, and Quake use 100, with a big BOSS label. Arthur's health is 100. Boss health is Brute 24, Ivy 24, Quake 30. The template's `体力バー` sprite is still save-code, and its bosses still use `敵:体力`.
+2. **Hit flash.** The bosses file already sets the color effect to 40 for 0.12 seconds. Arthur flashes on `boss hits arthur`. Brute, Ivy, and Quake flash on `arthur hits boss`. The template's ouch message `いてっ` stays in the big project.
+3. **Screen shake.** The bosses file already has `shake`. Brute sends it when his charge hits. Quake sends it on STOMP, including the faster wave under half health. `Ground` and `Impact` hop. Buttons stay still. Arthur's y stays with the jump, because `Arthur Jumping` is how he dodges Quake. The template's small shake is `揺れ`. `揺れ2` stays on the energy-wave sprite `波動`.
 4. **Sound.** The choice is an extra digit on the save code the game already uses. A normal variable resets when the green flag starts. A cloud variable is numbers-only, needs a Scratcher account, needs the internet, and is shared by every viewer. Details are in feature 4.
 5. **How to play.** Still three icons: move, punch, kick. Guard and the sword stay off this card so those three can be huge.
 6. **Missing picture.** Scratch has no "load failed" hat. The check is `costume name` and `backdrop name`, and the plain stickman is a costume drawn into the project. Details are in feature 6.
-7. **Debug.** Scratch has no FPS block, so the overlay shows loops per second. Scratch cannot list running scripts, so each big message sets `CurrentState`. The reward number in this game is `gold`. The readouts stay hidden until the button is tapped.
-8. **Try again.** A HOME button sits beside FIGHT AGAIN. The 5-second count still starts the fight at 0. HOME broadcasts `ホーム画面`.
+7. **Debug.** Scratch has no FPS block, so the overlay shows loops per second. Scratch cannot list running scripts. The bosses file already has a hidden `Game State` (`title`, `intro`, `fight`, `boss`, `win`, `lose`). An earlier draft called this `CurrentState`. That would be a second variable for the same job, so the overlay shows `Game State`.
+8. **Try again.** The bosses file already has RETRY and HOME. RETRY broadcasts `start fight` and leaves `Which Fight` alone, so the same person comes back. HOME broadcasts `show title`. The 5-second count is the part to add on top of those two buttons.
 9. **Tap zones.** A miss sets `TapZone` to `none` and leaves health alone. One short hint plays the first time. The hero's `mouse down?` loop during `ステージかいし` is why this matters: the other buttons already use `when this sprite clicked`.
 10. **Version line.** The words are `Arthur's Arena v0.2`, on backdrop `ホーム`.
 
 ## The 10 features
 
-1. **Colour health bars** — Arthur's bar and the enemy bar turn green, then yellow, then red, and a big number shows the health.
+1. **Colour health bars** — Arthur's bar and the boss bar turn green, then yellow, then red, and a big number shows the health.
 2. **Hit flash** — The stickman flashes when he gets hurt, so a hit is obvious.
-3. **Screen shake** — Heavy hits and boss attacks nudge the fighters, and the buttons stay still.
+3. **Screen shake** — Brute's hit and Quake's stomp hop the ground, and the buttons stay still.
 4. **Sound on/off** — A big speaker button mutes the game, and the choice can be written into the save code Scratch already uses.
 5. **How to play** — A big overlay with three icons: move, punch, and kick.
 6. **Missing-picture fallback** — If the hero costume is the wrong one, show a plain stickman and a friendly sentence.
-7. **Debug overlay** — A button shows a loops-per-second count, health, gold, and the current state.
+7. **Debug overlay** — A button shows a loops-per-second count, health, and `Game State`.
 8. **Try-again countdown** — After a loss, a big prompt counts down from 5 and then restarts the fight.
 9. **Tap zones** — Only taps inside the button boxes punch, kick, or move. Other taps do nothing.
 10. **Version line** — The home screen shows **Arthur's Arena v0.2** so Mitch can see which build is open.
 
 Implementation steps for each feature come in the sections below.
 
-The template already shakes the screen and already has boss fights. Feature 3 reuses that. `origin/grok/bosses` was not on the remote on 2026-11-03, so the boss notes below use the bosses already inside project 732904827. When a new boss branch adds sprites, use the same three hooks: colour the enemy bar from `敵:体力`, broadcast `大揺れ` on the heavy attack, and set `CurrentState` to `boss`.
+Boss notes below follow `projects/arthurs-arena-bosses.sb3`. The order is Rival, then three bosses. `Which Fight` is 1 Rival, 2 Brute, 3 Ivy, 4 Quake.
 
-Bosses already in the template:
-
-| Sprite | English | Start message | Attack messages | Backdrop |
+| Fight | Who | Health | What they do | Hooks already in the file |
 | --- | --- | --- | --- | --- |
-| `魔王敵` | Demon King | `ステージ魔王` | `魔敵技`, `魔敵技2`, `魔滴技3` | `魔王` |
-| `炎敵` | flame boss | `ステージ炎` | `炎敵技`, `炎敵技２` | `炎` |
-| `暴走敵` | berserk boss | `ステージ暴走` | `暴敵技`, `暴敵技2` | `暴走` |
+| 2 | Brute | 24 | Says **Ready?**, saves `Arthur X` into `Charge X`, then glides to that spot. The hit is 10. | `broadcast shake` when the charge touches Arthur |
+| 3 | Ivy | 24 | Three shots, one at a time: low, high, low. `Shot Height` is 0, then 156, then 0. Each hit is 8. | Message `ivy shot`. Ivy Shot sets `Hurt Power` and broadcasts `boss hits arthur` |
+| 4 | Quake | 30 | Says **STOMP!** An orange wave rolls on the ground. The hit is 12, and only if `Arthur Jumping` is 0. Under half health, `Wave Speed` goes from 16 to 26. | Messages `shake`, `quake wave`, and `quake angry` |
 
-Arthur's health variable is `自分:体力`. The shared enemy and boss health variable is `敵:体力`. Arthur's max health for the current power-up level is `現在の体力` (the fight script copies it into `自分:体力` when it receives `ステージかいし`).
+Shared hooks in that file:
+
+- Bars: `Arthur Bar` and `Boss Bar`. Green above 60 percent, yellow above 30, red at 30 or below. `Boss Bar Scale` is 55 for Rival and 100 for a boss. `Boss Label` says BOSS for Brute, Ivy, and Quake.
+- Health: `Arthur Health` and `Arthur Max Health` are 100. `Boss Health` and `Boss Max Health` are the pair on `Boss Card`.
+- `Game State` is `title`, `intro`, `fight`, `boss`, `win`, or `lose`. It is hidden. Rival is `fight`. Brute, Ivy, and Quake are `boss`.
+
+The big template still has its own bosses: `魔王敵` (Demon King), `炎敵` (flame), and `暴走敵` (berserk), with `敵:体力` and the message `揺れ`. Those fights stay in project 732904827. The steps below use the bosses file. A template name is only a pointer back to that older fight.
 
 ## 1. Colour health bars
 
-Arthur's bar and the enemy bar turn green, then yellow, then red, and a big number shows the health.
+Arthur's bar and the boss bar turn green, then yellow, then red, and a big number shows the health.
 
-The sprite named `体力バー` is a bad place for this. Its blocks are part of the save code, not a drawing of a bar. The numbers Arthur already sees are the digit sprites `体力1桁目` through `体力4桁目` (Arthur) and `敵　体力1桁目` through `敵　体力4桁目` (enemy). Keep those. Add two new sprites for the colour.
+This is already in the bosses file. Use `Arthur Bar` and `Boss Bar`. A second pair of bar sprites would sit on top of them.
 
-Health in this game is not "out of 100". Arthur's max grows with power-ups (`現在の体力` is set to 50, then 60, then on up past 1000). Boss health is set on the Stage to numbers like 5000, 7000, and 8200. Colour uses a percent of the max, so the Demon King bar stays green at the start of the fight.
+**Sprites:** `Arthur Bar`, `Arthur Bar Back`, `Boss Bar`, `Boss Bar Back`, `Boss Label`. Rival is the smaller bar. Brute, Ivy, and Quake are the big one.
 
-**Sprites:** new `ArthurBar`, new `EnemyBar`. Leave the digit sprites as they are.
+**Variables:** `Arthur Health`, `Arthur Max Health`, `Boss Health`, `Boss Max Health`, `Bar Percent`, `Boss Bar Scale`, `Which Fight`.
 
-**Variables:** `自分:体力`, `現在の体力`, `敵:体力`, new `ArthurMax`, new `EnemyMax`, new `BarPercent`.
-
-**Messages:** `ステージかいし` (fight start), `ステージ魔王`, `ステージ炎`, `ステージ暴走`, `勝利` (win), `敗北` (loss).
+**Messages:** `intro done` shows the bars. `show title`, `arthur loses`, `arthur champion`, and `round clear` hide them.
 
 **Blocks:**
 
-1. On `ArthurBar`, draw three costumes: a thick rectangle named `green`, `yellow`, and `red`. Put the costume centre on the **left** edge so the bar grows to the right. Do the same for `EnemyBar`.
-2. When I receive `ステージかいし`: `set ArthurMax to 現在の体力`. `if ArthurMax < 1 then set ArthurMax to 1` (this stops a divide-by-zero if a fight starts before max health is set). `show`, `go to front layer`, `go to x: -160 y: 150`. Draw the rectangle about 12 pixels tall. `set size` grows width and height together, so a thin costume stays a thin bar.
-3. `forever` on `ArthurBar`: `set BarPercent to ((自分:体力 / ArthurMax) * 100)`. `if BarPercent > 100 then set BarPercent to 100`. `if BarPercent < 0 then set BarPercent to 0`. `if BarPercent > 60 then switch costume to green`, `else if BarPercent > 30 then switch costume to yellow`, `else switch costume to red`. Then `set size to BarPercent`. The left-centred costume keeps the bar glued to the left while the length changes.
-4. On the Stage, at the start of each fight (the same scripts that `set 敵:体力` to 140, 270, 400, 500, 1000, 5000, 7000, or 8200), add `set EnemyMax to 敵:体力`. Do this **before** any hit subtracts health. `EnemyBar` uses `敵:体力 / EnemyMax` the same way as step 3, sitting at `x: 40 y: 150`.
-5. When I receive `ステージ魔王` or the backdrop switches to `魔王`: `EnemyBar` `says Boss` for 2 seconds in big text (`set size to 150%` on a small label sprite, or a costume that says BOSS). The bar itself still follows `敵:体力`.
-6. When I receive `勝利` or `敗北`: `hide` both bars, matching `自分体力` and `敵体力`, which already hide on those messages.
-7. The digit sprites stay the numeric readout. If they are hard to read on the tablet, `set size to 200%` on `体力1桁目` through `体力4桁目` and the four enemy digit sprites when the fight starts.
+1. The coloured costume's centre is the left edge, so the bar shrinks toward the left as health drops. `Arthur Bar` and `Boss Bar` already run `forever` while `Fight On` = 1. They set `Bar Percent` to `(health / max) * 100`, keep it between 0 and 100, then `switch costume to green` above 60, `yellow` above 30, and `red` otherwise.
+2. Both loops already do `if max < 1 then set max to 1` before the divide. Leave that. It stops a divide-by-zero on the first frame.
+3. `Boss Bar` sets `Boss Bar Scale` to 55 when `Which Fight` = 1 (Rival) and to 100 for Brute (2), Ivy (3), and Quake (4). The size block is `(Bar Percent * Boss Bar Scale) / 100`. `Boss Label` switches to the BOSS costume at size 120 for those three, and to RIVAL at size 70 for Rival.
+4. `Boss Card` sets each fight's health as a pair, on `start fight`, before `intro done`. Brute is `Boss Max Health` 24 and `Boss Health` 24. Ivy is 24 and 24. Quake is 30 and 30, and it also sets `Quake Phase` to 1. Change both numbers together. One number alone makes the percent wrong, so a full-health boss can open on yellow or red.
+5. The number is the variable monitor. On `intro done` the Stage already runs `show variable Arthur Health` and `show variable Boss Health`. Drag those readouts next to the bars so the digits are big and easy to see. On `show title`, `arthur loses`, and `arthur champion` the Stage hides them. Leave that.
+6. The big template still has `魔王敵`, `炎敵`, and `暴走敵`, and the variable `敵:体力`. Its sprite `体力バー` holds save-code blocks, not a drawing of a bar. These steps follow the bosses file.
 
 ## 2. Hit flash
 
 The stickman flashes when he gets hurt, so a hit is obvious.
 
-A hit already broadcasts `いてっ` (ouch) and subtracts `Enemy Attack Strength` from `自分:体力`. The hero, the enemies, and the bosses already listen for `揺れ`. Flash is a separate, short colour blink so it still reads on a white stickman.
+The bosses file already blinks the colour effect. Arthur blinks when a boss hits him. Brute, Ivy, and Quake blink when Arthur's punch or kick lands. Keep that blink. A second script on the same message stacks the colour and the flash lasts too long.
 
-**Sprites:** `主人公` (Arthur), and the fighter who got hit: `敵1`, `敵2`, `敵3`, `敵4`, `敵5`, `炎敵`, `暴走敵`, `魔王敵`.
+**Sprites:** `Arthur`, `Brute`, `Ivy`, `Quake`. Rival uses the same blink. `Ivy Shot` and `Quake Wave` are the attacks, so the flash stays on Ivy and Quake, not on the ball or the wave.
 
-**Variables:** `自分:体力`, `敵:体力`. No new variable.
+**Variables:** `Which Fight`. No new variable.
 
-**Messages:** `いてっ`. New message `敵いてっ` for when the enemy or boss loses health.
+**Messages:** `boss hits arthur` (Arthur flashes). `arthur hits boss` (the boss flashes).
 
 **Blocks:**
 
-1. On `主人公`, `when I receive いてっ`: `set color effect to 40`, `wait 0.1 seconds`, `set color effect to 0`. Keep this script short. The old `いてっ` scripts should keep doing what they already do.
-2. Find the scripts that already `change 敵:体力 by` a minus, or `set 敵:体力` to a smaller number, on the punch and kick path (`when I receive パンチ` and `when I receive キック` on `主人公`, and the hit checks on the enemy sprites). After the health goes down, `broadcast 敵いてっ`.
-3. On each enemy sprite and on `魔王敵`, `炎敵`, and `暴走敵`, `when I receive 敵いてっ`: same colour blink as step 1. `if 敵:体力 < 1 then set color effect to 0` so a defeated boss does not stay pink.
-4. Do not use the ghost effect for the flash. This project already sets ghost to 100 to hide punches and buttons. A ghost flash looks like the stickman vanished.
+1. On `Arthur`, `when I receive boss hits arthur` already does `set color effect to 40`, `wait 0.12 seconds`, `set color effect to 0`. Leave it.
+2. On `Brute`, the same three blocks run `when I receive arthur hits boss`, inside `if Which Fight = 2`. `Ivy` checks `Which Fight = 3`. `Quake` checks `Which Fight = 4`. The check matters: all three sprites hear every hit, and only the one in the fight should flash.
+3. A new boss copies step 2 and checks its own `Which Fight` number. One blink script per sprite.
+4. The big template's ouch message is `いてっ`, and its bosses are `魔王敵`, `炎敵`, and `暴走敵`. The ghost effect in that project hides punches and buttons. The blink in both files stays the color effect.
 
 ## 3. Screen shake
 
-Heavy hits and boss attacks nudge the fighters, and the buttons stay still.
+Brute's hit and Quake's stomp hop the ground, and the buttons stay still.
 
-Scratch has no camera. The project already fakes a shake: `when I receive 揺れ` (shake) on `主人公`, `地面` (the ground), the enemy sprites, `炎敵`, `暴走敵`, and `魔王敵` does `change y by`, `wait`, then `change y by` the other way. Copy that pattern. Do not reuse `揺れ2`: that message drives the energy-wave sprite `波動`, and mixing a camera shake into it would move the wave.
+Scratch has no camera. The bosses file fakes the shake with the message `shake`. `Ground` and `Impact` hop, then hop back. The buttons never hear `shake`. Arthur does not hear it either: his y is the jump, and `Arthur Jumping` is what makes Quake's wave miss.
 
-**Sprites:** the same ones that already receive `揺れ`: `主人公`, `地面`, `敵1` through `敵5`, `炎敵`, `暴走敵`, `魔王敵`. Do not put the shake on `ガードボタン`, `剣ボタン`, `戦闘ボタン`, or `ホームボタン`. A shaking button is a missed tap.
+**Sprites:** `Ground` and `Impact` hop. `Brute` and `Quake` send `shake`. Leave `Left Button`, `Right Button`, `Jump Button`, `Punch Button`, and `Kick Button` off this message. A hopping button is a missed tap.
 
-**Variables:** `Enemy Attack Strength`.
+**Variables:** `Arthur X`, `Charge X`, `Arthur Jumping`, `Quake Phase`, `Wave Speed`, `Shot Height`.
 
-**Messages:** existing `揺れ`. New `大揺れ` (big shake). Boss attacks that should send it: `魔敵技`, `魔敵技2`, `魔滴技3`, `炎敵技`, `炎敵技２`, `暴敵技`, `暴敵技2`.
+**Messages:** `shake`. Quake also sends `quake wave`. Ivy sends `ivy shot` and does not shake today.
 
 **Blocks:**
 
-1. On `主人公`, duplicate the `when I receive 揺れ` script. Change the hat to `when I receive 大揺れ`. In the copy, `change y by 12`, `wait 0.05 seconds`, `change y by -12`, and `repeat` that 4 times. The normal `揺れ` script stays the small one.
-2. Copy that same `大揺れ` script onto `地面` and onto each enemy and boss sprite that already has a `揺れ` script. Each sprite wiggles itself. That is the pattern the project already uses.
-3. On the boss sprites, inside `when I receive 魔敵技`, `魔敵技2`, `魔滴技3`, `炎敵技`, `炎敵技２`, `暴敵技`, and `暴敵技2`, add `broadcast 大揺れ` at the moment the attack costume starts.
-4. Where Arthur already gets hurt (the `touching color` checks on `主人公` that `broadcast 揺れ`), add `if Enemy Attack Strength > 30 then broadcast 大揺れ else broadcast 揺れ`. A small hit stays a small shake. A boss hit is the big one.
-5. After the repeats, `set y to` the y the sprite had at the start of the shake (store it in a variable like `ShakeHomeY` on that sprite first). A cancelled fight should not leave the ground crooked.
+1. Brute's loop runs when `Fight On` = 1 and `Which Fight` = 2. He `set Charge X to Arthur X`, `switch costume to lean`, and `say Ready? for 0.7 seconds`. Then he glides to `Charge X`. If he is `touching Arthur`, he sets `Hurt Power` to 10, `broadcast boss hits arthur`, and `broadcast shake`. Move while he says Ready? and the glide misses.
+2. Quake says STOMP! and `broadcast shake`, then `broadcast quake wave`. The wave hurts only when `Arthur Jumping` is 0, and the hit is 12. Under half health (`Boss Health` below `Boss Max Health / 2`) the Stage `broadcast quake angry`, then `Wave Speed` is 26 instead of 16 and the warning is 0.25 seconds. That faster stomp still broadcasts `shake`.
+3. On `Ground`, `when I receive shake` already `repeat 3`: `change y by 6`, `wait 0.05 seconds`, `change y by -6`, `wait 0.05 seconds`. `Impact` does `change y by 8` for the same three hops, then `hide`. The down step puts them back. Leave those scripts. Do not add `shake` to Arthur.
+4. Ivy is the gap. Her three shots are low, high, low (`Shot Height` 0, then 156, then 0) and each hit is 8. On `Ivy Shot`, next to `broadcast boss hits arthur`, add `broadcast shake`. The ground then hops on her hits too. The buttons still get no shake script.
+5. A bigger hop while Quake is angry: on `Ground`, `if Quake Phase = 2 then change y by 10`, `else change y by 6`. Same three repeats, and the matching `change y by` negative number so the floor ends where it started.
+6. The big template's small shake is `揺れ`, on the fighters, including `魔王敵`, `炎敵`, and `暴走敵`. `揺れ2` belongs to the energy-wave sprite `波動`. The bosses file's message is `shake`. Extend `shake`.
 
 ## 4. Sound on/off
 
@@ -184,48 +186,60 @@ What Scratch **can** check is `costume name` and `backdrop name`. The fallback i
 
 ## 7. Debug overlay
 
-A button shows a loops-per-second count, health, gold, and the current state.
+A button shows a loops-per-second count, health, and `Game State`.
 
-Scratch has no FPS block, and it cannot list the scripts that are running. Two stand-ins are honest and still useful. A `forever` loop that counts once per trip around the loop, copied out each time `timer` passes 1, is "loops this second". It is not a real frame rate, and Turbo Mode makes the number huge. "Which script is running" is a variable the important scripts set themselves, named `CurrentState`.
+Scratch has no FPS block, and it cannot list the scripts that are running. A `forever` loop that counts once per trip, copied out each time `timer` passes 1, is "loops this second". It is not a real frame rate, and Turbo Mode makes the number huge. "Which script is running" is a variable the Stage sets itself.
 
-There is no `score` variable. The number this game already shows as a reward is `gold`. The overlay shows `gold`.
+That variable already exists. It is `Game State`, and the bosses file hides it on the green flag. An earlier draft of this plan called it `CurrentState`. A second variable would drift out of date the first time a fight script forgot to set both. The overlay shows `Game State`.
 
-The overlay stays hidden until the button is tapped, so Arthur's fight screen stays clear.
+The bosses file has no `gold` variable. The template's reward number is `gold`. Here the overlay shows `Which Fight` next to the two health numbers.
 
-**Sprites:** new `DebugButton`, a big "DEBUG" label, `set size to 140%`, at `x: 200 y: -160`.
+**Sprites:** new `DebugButton`, a big DEBUG label, `set size to 140%`, at `x: 200 y: -160`.
 
-**Variables to show:** new `ShowDebug` (1 or 0), new `LoopsPerSecond`, new `LoopCount`, new `CurrentState`. Checked values: `自分:体力`, `敵:体力`, `gold`, `ステージ`, `試合中` (in a match), `試合終了` (match over).
+**Variables to show:** new `ShowDebug` (1 or 0), new `LoopsPerSecond`, new `LoopCount`. Already in the file: `Game State`, `Arthur Health`, `Boss Health`, `Which Fight`.
 
-**Messages:** the ones that should stamp `CurrentState`: `ホーム画面` → `home`, `ゲームスタート` → `title`, `ステージかいし` → `fight`, `ステージ魔王` / `ステージ炎` / `ステージ暴走` → `boss`, `勝利` → `win`, `敗北` → `lose`.
+**Messages:** the Stage already sets `Game State` on these:
+
+| Message | `Game State` | Who |
+| --- | --- | --- |
+| green flag, `show title` | `title` | title |
+| `start fight` | `intro` | name card, before the fight |
+| `intro done` and `Which Fight` = 1 | `fight` | Rival |
+| `intro done` and `Which Fight` is 2, 3, or 4 | `boss` | Brute, Ivy, Quake |
+| `arthur wins round` and `Which Fight` = 4 | `win` | Quake, the champion |
+| `arthur loses` | `lose` | Arthur's health hit 0 |
 
 **Blocks:**
 
 1. `when this sprite clicked` on `DebugButton`: `if ShowDebug = 0 then set ShowDebug to 1 else set ShowDebug to 0`.
-2. `if ShowDebug = 1 then show variable` for `LoopsPerSecond`, `CurrentState`, `自分:体力`, `敵:体力`, `gold`, and `ステージ`. `else hide variable` for each of those. `show variable` and `hide variable` are in the Variables category. Drag the readouts to the top edge so they do not cover the buttons.
+2. `if ShowDebug = 1 then show variable` for `LoopsPerSecond`, `Game State`, `Arthur Health`, `Boss Health`, and `Which Fight`. `else hide variable` for each of those. `Game State` starts hidden. This button is how Mitch sees it. Hiding it again keeps Arthur's screen clear. Drag the readouts to the top edge so they do not cover the buttons.
 3. Loops counter, on the Stage: `when green flag clicked` → `reset timer`, `set LoopCount to 0`. Then `forever`: `change LoopCount by 1`, `if timer > 1 then set LoopsPerSecond to LoopCount`, `set LoopCount to 0`, `reset timer`.
-4. On the Stage scripts that already receive the messages in the list above, add `set CurrentState to home` (or `fight`, `boss`, `win`, `lose`) as the first block. A boss start should set `boss` even though `ステージかいし` also runs, so put the `boss` set in the boss script **after** the fight script's set, or check `backdrop name = 魔王` inside the fight start and set `boss` in that case.
-5. `when green flag clicked`: `set ShowDebug to 0` and hide the variables. The button still shows, so Mitch can turn the overlay on after a crash-like soft lock (a fight that never broadcasts `勝利` or `敗北`). `CurrentState` staying on `fight` while both stickmen are gone is the clue.
+4. Leave the Stage's `set Game State` blocks as they are. `intro done` is the one that picks `fight` for Rival and `boss` for Brute, Ivy, and Quake. Do not add `CurrentState` beside them.
+5. `when green flag clicked` on `DebugButton`: `set ShowDebug to 0` and hide the debug variables. The Stage already hides `Game State`, `Arthur Health`, and `Boss Health` on the flag. The button still shows, so Mitch can turn the overlay on if a fight never reaches `win` or `lose`. `Game State` stuck on `boss` while both stickmen are gone is the clue.
 
 ## 8. Try-again countdown
 
-After a loss, a big prompt counts down from 5 and then restarts the fight.
+After a loss, a big prompt counts down from 5 and then restarts the same fight.
 
-`when I receive 敗北` already hides the fighters, hides the health digits, and switches the backdrop. That is the dead end. The countdown sprite shows on top of that backdrop.
+The bosses file already handles the loss. On `arthur loses` the Stage sets `Game State` to `lose`, switches to the Lose backdrop, and Arthur says **Arthur got knocked down.** `Try Again` (the RETRY button) and `Home Button` show. RETRY `broadcast start fight` and does not change `Which Fight`, so Brute, Ivy, or Quake comes back. HOME `broadcast show title`.
 
-**Sprites:** new `TryAgain` with a large costume that reads "Arthur got knocked down." New `FightAgainButton` ("FIGHT AGAIN") and new `HomeButton2` ("HOME"). `ガードボタン` and `剣ボタン` already hide on `敗北`, so these two new buttons are the ones Arthur sees. Make both `set size to 180%`.
+The 5-second count is the new part. It sits on top of those two buttons. The buttons only set variables. The countdown script is the one that broadcasts, so a tap and the timer cannot both start a fight.
 
-**Variables:** new `RestartIn`, new `RestartChoice` (`fight` or `home`). Existing `ステージ` tells you which fight to run again. `試合終了` is already set around a loss.
+**Sprites:** new `Countdown`, with big words. Existing `Try Again` and `Home Button`. Do not add a second RETRY or HOME sprite.
 
-**Messages:** `敗北` opens the prompt. The prompt itself broadcasts the next step when the count finishes. `HomeButton2` only sets variables. Stage start messages already on the Stage include `ステージ1`, `ステージ2`, `ステージ炎`, `ステージ暴走`, and `ステージ魔王`.
+**Variables:** new `RestartIn`, new `RestartChoice` (`fight` or `home`). `Which Fight` is already 2, 3, or 4 for Brute, Ivy, and Quake.
+
+**Messages:** `arthur loses` opens the prompt. At 0 the prompt broadcasts `start fight` or `show title`. `show title` and `arthur champion` hide it.
 
 **Blocks:**
 
-1. On `TryAgain`, `when I receive 敗北`: `show`, `go to front layer`, `go to x: 0 y: 40`, `set size to 200%`, `set RestartIn to 5`, `set RestartChoice to fight`. Show `FightAgainButton` and `HomeButton2` here too (`broadcast show restart buttons`, and those sprites `show` and `go to front`).
-2. `repeat until RestartIn < 1`: `say (join "Try again? " RestartIn)`, `wait 1 seconds`, `if RestartIn > 0 then change RestartIn by -1`. The `if` matters. A button sets `RestartIn` to 0 during the wait. The next `change by -1` would make it -1, and `repeat until RestartIn = 0` would never end.
-3. After the loop: `if RestartChoice = home then broadcast ホーム画面`. `else if ステージ = 1 then broadcast ステージ1`, and one `if` per stage, including `if backdrop name = 魔王 then broadcast ステージ魔王`. Then `hide` the prompt and both buttons.
-4. On `FightAgainButton`, `when this sprite clicked`: `set RestartChoice to fight`, `set RestartIn to 0`. The loop in step 2 sees the 0 and step 3 starts the fight. The button does not broadcast the stage itself, or the fight would start twice.
-5. On `HomeButton2`, `when this sprite clicked`: `set RestartChoice to home`, `set RestartIn to 0`. Step 3 then broadcasts `ホーム画面`.
-6. `when I receive 勝利`: `hide` the prompt and both buttons, so a win never shows the loss countdown.
+1. On `Countdown`, `when I receive arthur loses`: `show`, `go to front layer`, `go to x: 0 y: 80`, `set size to 200%`, `set RestartIn to 5`, `set RestartChoice to fight`. `Try Again` and `Home Button` already show themselves on `arthur loses`.
+2. `repeat until RestartIn < 1`: `say (join "Try again? " RestartIn)`, `wait 1 seconds`, `if RestartIn > 0 then change RestartIn by -1`. The `if` matters. A button sets `RestartIn` to 0 during the wait. Another `change by -1` would make it -1, and `repeat until RestartIn = 0` would never end.
+3. After the loop: `if RestartChoice = home then broadcast show title`, `else broadcast start fight`. Then `hide`. `start fight` keeps `Which Fight`, which is the same thing RETRY already does.
+4. On `Try Again`, `when this sprite clicked`: `set RestartChoice to fight`, `set RestartIn to 0`. Take the `broadcast start fight` off this click and leave it in step 3. A click that also broadcasts starts the fight twice.
+5. On `Home Button`, `when this sprite clicked`: `set RestartChoice to home`, `set RestartIn to 0`. Step 3 then broadcasts `show title`.
+6. `when I receive arthur champion` or `show title`: `hide` the countdown, so a win or a trip home never leaves the numbers up.
+7. The big template's loss message is `敗北`, and its home message is `ホーム画面`. Its bosses are still `魔王敵`, `炎敵`, and `暴走敵`. The countdown in the bosses file uses `arthur loses`, `start fight`, and `show title`.
 
 ## 9. Tap zones
 
