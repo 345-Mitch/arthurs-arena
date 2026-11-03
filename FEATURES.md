@@ -359,6 +359,115 @@ Landing hits fills a meter. When it is full, one big star hit shakes the ground.
 5. On Arthur, `when I receive arthur power`: `set Hit Power to 16`. If he is touching the fighter for this `Which Fight` (Rival 1, Brute 2, Ivy 3, Quake 4), the same touching checks his punch already uses, `broadcast arthur hits boss`. `broadcast shake`. `set Power to 0`. `say Star! for 0.6 seconds`.
 6. `shake` is the same message Brute and Quake already send. `Ground` and `Impact` hop. The buttons do not.
 
+## 14. First to two rounds
+
+A fight is not one knockdown. The first person to win two rounds wins.
+
+**Where it shows up:** Street Fighter 6 shows a round count on the fight screen, and the Super Art gauge can carry from one round to the next ([SuperCombo: HUD](https://wiki.supercombo.gg/w/Street_Fighter_6/HUD)). Common tournament rules play Street Fighter 6 first to 2 rounds, and Tekken 8 first to 3 rounds ([NSXC Mindset 26 rules](https://nsxc.gg/mindset/rules/)). Arthur's version is the short one: first to 2.
+
+**Why it suits Arthur:** Brute, Ivy, and Quake each stay on their own `Which Fight`. A round loss is a big "ROUND 2" card, not the end of the game. The 5-second countdown in feature 8 still waits for a real loss, which is when the boss has won two rounds.
+
+**Sprites:** new `Round Card`, a big white card. Costumes can say ROUND 1, ROUND 2, and ROUND 3. `set size to 200%`.
+
+**Variables:** new `Arthur Rounds`, new `Boss Rounds`. Already there: `Which Fight`, `Boss Max Health`, `Boss Health`, `Arthur Max Health`, `Arthur Health`, `Quake Phase`, `Wave Speed`.
+
+**Messages:** `arthur wins round` already fires when `Boss Health` hits 0. `arthur loses` is the real loss. `start fight` resets the counts only when a new person begins, not between rounds.
+
+**Blocks:**
+
+1. On `start fight`, if this is a new person (the Boss Card is about to set health): `set Arthur Rounds to 0`, `set Boss Rounds to 0`. The card already sets Brute to 24, Ivy to 24, and Quake to 30.
+2. When the boss health hits 0, before `broadcast arthur wins round`: `change Arthur Rounds by 1`. `if Arthur Rounds < 2` then do not broadcast the win. `set Boss Health to Boss Max Health`, `set Arthur Health to Arthur Max Health`, `set Quake Phase to 1`, `set Wave Speed to 16`, `set Power to 0`. Show `Round Card` with the next round number, `say` nothing extra, `wait 1.5 seconds`, `hide` the card. `Which Fight` stays, so the same boss comes back calm.
+3. `if Arthur Rounds = 2` then `broadcast arthur wins round` as the file already does. Quake (`Which Fight` = 4) still becomes the champion. Anyone else still goes to the next fight.
+4. A round the boss wins is in feature 15. It adds to `Boss Rounds`. At 2, `broadcast arthur loses`, which is what starts feature 8's countdown. Under 2, refill both bars and show the round card. Do not broadcast `arthur loses` yet.
+5. `Game State` stays `boss` for Brute, Ivy, and Quake during the card, and `fight` for Rival. The card is a pause, not a new state.
+
+## 15. Three hearts
+
+Arthur has three hearts. A knockdown spends one. The fight ends when the hearts are gone.
+
+**Where it shows up:** Super Smash Bros. calls a life a stock. Versus matches are won by who is KO'd fewer times, and Classic Mode defaults to three stocks ([SmashWiki: Stock](https://www.ssbwiki.com/Stock)). Brawlhalla's Stock mode usually gives 3 lives. A KO spends one, and losing the last life eliminates that player ([Brawlhalla Wiki: Stock](https://brawlhalla.wiki.gg/wiki/Stock)).
+
+**Why it suits Arthur:** One unlucky Quake stomp (12 damage) should not end the afternoon. Hearts are the get-up. Rounds in feature 14 are the match. A heart loss is not yet a round loss.
+
+**Sprites:** new `Heart 1`, `Heart 2`, `Heart 3`. A filled heart costume and an empty one. Line them up under Arthur's bar, `set size to 80%` so they stay readable and out of the buttons.
+
+**Variables:** new `Hearts` (starts at 3).
+
+**Messages:** `boss hits arthur` is where health can hit 0. The Stage already broadcasts `arthur loses` at that moment. Feature 8 listens for `arthur loses`.
+
+**Blocks:**
+
+1. On `start fight`: `set Hearts to 3`, and each heart `switch costume to full` and `show` after `intro done`. Hide them on `show title`.
+2. In `when I receive boss hits arthur`, where the Stage would `broadcast arthur loses` because `Arthur Health` is under 1: `change Hearts by -1` first. The matching heart `switch costume to empty`.
+3. `if Hearts > 0` then do not broadcast `arthur loses`. `set Arthur Health to Arthur Max Health` (100). Arthur `says Get up! for 1 second`. `Game State` stays `boss` or `fight`. `Boss Bar` does not reset.
+4. `if Hearts = 0` then this is a round loss. `change Boss Rounds by 1`. `if Boss Rounds < 2` then refill both health bars, `set Hearts to 3`, show the round card, and do not broadcast `arthur loses`. `if Boss Rounds = 2` then `broadcast arthur loses`. Feature 8's countdown runs only then.
+5. A dodge (`Dodge Safe` = 1) still skips this whole script, so a miss spends no heart.
+
+## 16. One healing apple
+
+Once each fight, an apple appears. Touch it and Arthur heals a little.
+
+**Where it shows up:** Super Smash Bros. Ultimate drops items onto the stage. The Healing Sprout heals whoever it is stuck to, and the Healing Field heals whoever stands on it ([official items page](https://www.smashbros.com/en_US/item/index.html)). Stick Fight puts lots of weapons into its levels ([Landfall press kit](https://landfall.se/stick-fight-press-kit)). The apple keeps the "something showed up" idea and leaves the guns out.
+
+**Why it suits Arthur:** Boss health is small and countable: Brute 24, Ivy 24, Quake 30, Arthur 100. One apple, worth 20, is a visible treat. It shows up when the boss bar is under half, which is the same half Quake already uses to get angry.
+
+**Sprites:** new `Apple`. One costume, a red circle with a leaf. `set size to 120%`.
+
+**Variables:** new `Apple Out` (1 or 0). Already there: `Boss Health`, `Boss Max Health`, `Arthur Health`, `Arthur Max Health`.
+
+**Messages:** none. The apple watches `Boss Health` while `Fight On` is 1.
+
+**Blocks:**
+
+1. `when I receive start fight`: `hide`, `set Apple Out to 0`.
+2. `forever`: `if Fight On = 1 and Apple Out = 0 and Boss Health < (Boss Max Health / 2)`. `set Apple Out to 1`. `go to x: 0 y: -30`. `show`. `go to front`. For Quake this is the same half that sets `Quake Phase` to 2. The apple and the angry card can both happen. The apple waits until the card hides: `wait until Fight On = 1` again, because `quake angry` sets `Fight On` to 0 for 1.6 seconds.
+3. `if touching Arthur` then `change Arthur Health by 20`. `if Arthur Health > Arthur Max Health then set Arthur Health to Arthur Max Health`. `hide`. Arthur `says Yum! for 0.6 seconds`. Do not `broadcast shake`. A heal is not a heavy hit.
+4. One apple per fight. `Apple Out` stays 1 after he eats it, so a second one does not appear. The next `start fight` sets it back to 0, including a new round from feature 14.
+
+## 17. A hit cheer
+
+Two hits in a row pop up a big number. It does not change the damage.
+
+**Where it shows up:** Street Fighter 6's training mode can show a whole combo on screen at once, startup and recovery included ([Fighters Generation, quoting Capcom's training-mode preview](https://www.fightersgeneration.com/news1/sf6-sep22-6.htm)). Tekken 8's Practice mode is where players repeat combos until they stick ([Wavu Wiki: Training mode](https://wavu.wiki/t/Training_mode)).
+
+**Why it suits Arthur:** The number is a cheer, not a score that changes `Hit Power`. Punch then kick, or star after a kick, says **2 hits!** in big text. A miss or a pause clears it. No long combo list to memorize.
+
+**Sprites:** the cheer can be Arthur's `say` block, with Arthur `set size to 100%` already. If the bubble is small on the tablet, use a new `Cheer` sprite, costume blank, `set size to 200%`, and the `say` block on that sprite.
+
+**Variables:** new `Hits In A Row`, new `Hit Fresh` (1 or 0).
+
+**Messages:** `arthur hits boss`.
+
+**Blocks:**
+
+1. `when I receive arthur hits boss`: `change Hits In A Row by 1`. `set Hit Fresh to 1`. `say (join Hits In A Row " hits!") for 0.8 seconds`.
+2. A second script, `forever`: `if Hit Fresh = 1` then `set Hit Fresh to 0`, `wait 1.5 seconds`, `if Hit Fresh = 0 then set Hits In A Row to 0`. A new hit during the wait sets `Hit Fresh` back to 1, so the row continues. A quiet 1.5 seconds clears it.
+3. The cheer does not change `Hit Power`, `Boss Health`, or `Boss Bar`. Punch stays 5. Kick stays 8. The star stays 16.
+4. Set `Hits In A Row` to 0 on `start fight` and on `boss hits arthur`, so a hit Arthur takes breaks the row.
+
+## 18. A practice fight
+
+A PRACTICE button on the title lets Arthur try punches while the boss stands still.
+
+**Where it shows up:** Street Fighter 6's Fighting Ground is where its battle system, including training, lives ([Capcom: Fighting Ground](https://www.streetfighter.com/6/en-us/mode/fightingground)). Tekken 8 Practice is an offline round with no time limit, and the opponent can be set to stand there, record moves, or fight back ([Wavu Wiki: Training mode](https://wavu.wiki/t/Training_mode)). Mortal Kombat 1 has a practice mode for learning a fighter's moves ([WB Games support](https://mortalkombatgamessupport.wbgames.com/hc/en-us/articles/19435787154963-Mortal-Kombat-1-Accessibility-Features-A11Y)).
+
+**Why it suits Arthur:** Brute, Ivy, and Quake already refuse to attack while `Fight On` is 0. Practice uses that. Arthur can still punch. Nothing is at stake: the boss health refills instead of ending the fight.
+
+**Sprites:** new `Practice Button` on the title, words PRACTICE, `set size to 160%`, near `Start Button`. Tap it again, before the fight, to cycle the dummy: Brute, then Ivy, then Quake. A small `say` tells him the name.
+
+**Variables:** new `Practice On` (1 or 0), new `Practice Picked` (1 or 0). Already there: `Which Fight`, `Fight On`, `Game State`, `Boss Health`, `Boss Max Health`.
+
+**Messages:** `start fight`, `intro done`. New message is not required. `Game State` becomes `practice`.
+
+**Blocks:**
+
+1. `Practice Button`, `when this sprite clicked`, only while `Game State` is `title`: `set Practice Picked to 1`. `change Which Fight by 1`. `if Which Fight < 2 or Which Fight > 4 then set Which Fight to 2`. `if Which Fight = 2 then say Brute for 1 second`. `if Which Fight = 3 then say Ivy for 1 second`. `if Which Fight = 4 then say Quake for 1 second`. Each tap picks the next boss. It does not start the fight.
+2. `Start Button` already sets `Which Fight` to 1 and broadcasts `start fight`. Add in front of that: `if Practice Picked = 1 then set Practice On to 1` and skip the line that sets `Which Fight` to 1, so the picked boss stays. Then `broadcast start fight` as usual.
+3. The Stage's `intro done` script sets `Fight On` to 1 and `Game State` to `boss` for fights 2, 3, and 4. Add at the bottom: `if Practice On = 1 then set Fight On to 0` and `set Game State to practice`. Brute's charge loop, Ivy's shot loop, and Quake's stomp loop all wait while `Fight On` is 0. They already `wait 0.1 seconds` in that branch.
+4. Arthur's punch, kick, and jump each start with `if Fight On = 1`. Add `or Game State = practice` to that check so he can move and hit. The boss loops do not get that extra check.
+5. On the Stage, where `Boss Health` under 1 would `broadcast arthur wins round`: `if Game State = practice then set Boss Health to Boss Max Health`, Arthur `says Nice practice! for 1 second`, and skip the win broadcast. No champion, no next fight.
+6. `Home Button` can show during practice too. Its click already `broadcast show title`. On `show title`: `set Practice On to 0`, `set Practice Picked to 0`. `Game State` goes back to `title`.
+
 ## Codex review
 
 Checked again on 2026-11-03, after Codex reviewed this pull request.
