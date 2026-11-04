@@ -361,7 +361,7 @@ class Builder:
         vid, vname = self.lookup(name)
         bid = self.b("data_changevariableby", fields={"VARIABLE": [vname, vid]})
         subb = self.b("operator_subtract", parent=bid)
-        self.blocks[subb]["inputs"] = {"OPERAND1": self.num(0), "OPERAND2": self.ivar(subb, sub)}
+        self.blocks[subb]["inputs"] = {"NUM1": self.num(0), "NUM2": self.ivar(subb, sub)}
         self.blocks[bid]["inputs"] = {"VALUE": [3, subb, [4, "0"]]}
         return bid
 
@@ -426,7 +426,7 @@ class Builder:
     def change_x_neg_var(self, name):
         bid = self.b("motion_changexby")
         subb = self.b("operator_subtract", parent=bid)
-        self.blocks[subb]["inputs"] = {"OPERAND1": self.num(0), "OPERAND2": self.ivar(subb, name)}
+        self.blocks[subb]["inputs"] = {"NUM1": self.num(0), "NUM2": self.ivar(subb, name)}
         self.blocks[bid]["inputs"] = {"DX": [3, subb, [4, "0"]]}
         return bid
 
@@ -533,14 +533,14 @@ class Builder:
     def gt_mul(self, parent, left, right, factor):
         bid = self.b("operator_gt", parent=parent)
         mul = self.b("operator_multiply", parent=bid)
-        self.blocks[mul]["inputs"] = {"OPERAND1": self.ivar(mul, right), "OPERAND2": self.num(factor)}
+        self.blocks[mul]["inputs"] = {"NUM1": self.ivar(mul, right), "NUM2": self.num(factor)}
         self.blocks[bid]["inputs"] = {"OPERAND1": self.ivar(bid, left), "OPERAND2": [3, mul, [4, "0"]]}
         return bid
 
     def lt_div(self, parent, left, right, divisor):
         bid = self.b("operator_lt", parent=parent)
         div = self.b("operator_divide", parent=bid)
-        self.blocks[div]["inputs"] = {"OPERAND1": self.ivar(div, right), "OPERAND2": self.num(divisor)}
+        self.blocks[div]["inputs"] = {"NUM1": self.ivar(div, right), "NUM2": self.num(divisor)}
         self.blocks[bid]["inputs"] = {"OPERAND1": self.ivar(bid, left), "OPERAND2": [3, div, [4, "0"]]}
         return bid
 
@@ -591,8 +591,8 @@ class Builder:
         bid = self.b("data_setvariableto", fields={"VARIABLE": [vname, vid]})
         mul = self.b("operator_multiply", parent=bid)
         div = self.b("operator_divide", parent=mul)
-        self.blocks[div]["inputs"] = {"OPERAND1": self.ivar(div, numer), "OPERAND2": self.ivar(div, denom)}
-        self.blocks[mul]["inputs"] = {"OPERAND1": [3, div, [4, "0"]], "OPERAND2": self.num(100)}
+        self.blocks[div]["inputs"] = {"NUM1": self.ivar(div, numer), "NUM2": self.ivar(div, denom)}
+        self.blocks[mul]["inputs"] = {"NUM1": [3, div, [4, "0"]], "NUM2": self.num(100)}
         self.blocks[bid]["inputs"] = {"VALUE": [3, mul, [4, "0"]]}
         return bid
 
@@ -600,7 +600,7 @@ class Builder:
         """set size to (Bar Percent * factor). Bar Percent is 0 to 100."""
         bid = self.b("looks_setsizeto")
         mul = self.b("operator_multiply", parent=bid)
-        self.blocks[mul]["inputs"] = {"OPERAND1": self.ivar(mul, "Bar Percent"), "OPERAND2": self.num(factor)}
+        self.blocks[mul]["inputs"] = {"NUM1": self.ivar(mul, "Bar Percent"), "NUM2": self.num(factor)}
         self.blocks[bid]["inputs"] = {"SIZE": [3, mul, [4, "100"]]}
         return bid
 
@@ -610,10 +610,10 @@ class Builder:
         div = self.b("operator_divide", parent=bid)
         mul = self.b("operator_multiply", parent=div)
         self.blocks[mul]["inputs"] = {
-            "OPERAND1": self.ivar(mul, "Bar Percent"),
-            "OPERAND2": self.ivar(mul, "Boss Bar Scale"),
+            "NUM1": self.ivar(mul, "Bar Percent"),
+            "NUM2": self.ivar(mul, "Boss Bar Scale"),
         }
-        self.blocks[div]["inputs"] = {"OPERAND1": [3, mul, [4, "0"]], "OPERAND2": self.num(100)}
+        self.blocks[div]["inputs"] = {"NUM1": [3, mul, [4, "0"]], "NUM2": self.num(100)}
         self.blocks[bid]["inputs"] = {"SIZE": [3, div, [4, "100"]]}
         return bid
 
@@ -1958,13 +1958,13 @@ def expr(builder, bid, id_to_name):
     if op == "motion_xposition":
         return "(x position)"
     if op == "operator_add":
-        return f"({value_of(builder, block, 'OPERAND1', id_to_name)} + {value_of(builder, block, 'OPERAND2', id_to_name)})"
+        return f"({value_of(builder, block, 'NUM1', id_to_name)} + {value_of(builder, block, 'NUM2', id_to_name)})"
     if op == "operator_subtract":
-        return f"({value_of(builder, block, 'OPERAND1', id_to_name)} - {value_of(builder, block, 'OPERAND2', id_to_name)})"
+        return f"({value_of(builder, block, 'NUM1', id_to_name)} - {value_of(builder, block, 'NUM2', id_to_name)})"
     if op == "operator_multiply":
-        return f"({value_of(builder, block, 'OPERAND1', id_to_name)} * {value_of(builder, block, 'OPERAND2', id_to_name)})"
+        return f"({value_of(builder, block, 'NUM1', id_to_name)} * {value_of(builder, block, 'NUM2', id_to_name)})"
     if op == "operator_divide":
-        return f"({value_of(builder, block, 'OPERAND1', id_to_name)} / {value_of(builder, block, 'OPERAND2', id_to_name)})"
+        return f"({value_of(builder, block, 'NUM1', id_to_name)} / {value_of(builder, block, 'NUM2', id_to_name)})"
     if op == "operator_equals":
         return f"<{value_of(builder, block, 'OPERAND1', id_to_name)} = {value_of(builder, block, 'OPERAND2', id_to_name)}>"
     if op == "operator_gt":
@@ -2072,7 +2072,8 @@ def write_sb3(stage, sprites, variables):
         "name": "Stage",
         "variables": {vid: [name, value] for name, (vid, value) in variables.items()},
         "lists": {},
-        "broadcasts": stage.bcasts,
+        # Scratch stores broadcasts as id -> name. The builder keeps name -> id.
+        "broadcasts": {bid: name for name, bid in stage.bcasts.items()},
         "blocks": stage.blocks,
         "comments": stage.comments,
         "currentCostume": 0,
@@ -2094,7 +2095,7 @@ def write_sb3(stage, sprites, variables):
         "monitors": [
             {
                 "id": variables["Arthur Health"][0],
-                "mode": "normal",
+                "mode": "default",
                 "opcode": "data_variable",
                 "params": {"VARIABLE": "Arthur Health"},
                 "spriteName": None,
@@ -2110,7 +2111,7 @@ def write_sb3(stage, sprites, variables):
             },
             {
                 "id": variables["Boss Health"][0],
-                "mode": "normal",
+                "mode": "default",
                 "opcode": "data_variable",
                 "params": {"VARIABLE": "Boss Health"},
                 "spriteName": None,
