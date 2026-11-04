@@ -157,8 +157,8 @@ end
 when I receive [show title]
 show
 clear graphic effects
-go to x: [-110] y: [-10]
-set size to [110] %
+go to x: [-160] y: [-110]
+set size to [80] %
 switch costume to (idle)
 say [I'm Arthur!] for [2] seconds
 
@@ -329,9 +329,9 @@ forever
       wait [0.7] seconds
     else
       if <(Arthur X) > (x position)> then
-        change x by [-5]
-      else
         change x by [5]
+      else
+        change x by [-5]
       end
       wait [0.05] seconds
     end

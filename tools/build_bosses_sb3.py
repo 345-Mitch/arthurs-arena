@@ -960,7 +960,7 @@ def build():
     stage.attach(champ, [stage.backdrop("Win"), stage.hide_var("Arthur Health"), stage.hide_var("Boss Health")])
 
     # --- Arthur ---
-    arthur = make("Arthur", visible=True, x=-110, y=-10, size=110, notes=["The hero. His costumes say Arthur."])
+    arthur = make("Arthur", visible=True, x=-160, y=-110, size=80, notes=["The hero. His costumes say Arthur."])
     for pose, face in (
         ("idle", "smile"),
         ("punch", "smile"),
@@ -983,8 +983,8 @@ def build():
         [
             arthur.show(),
             arthur.clear_fx(),
-            arthur.goto(-110, -10),
-            arthur.size(110),
+            arthur.goto(-160, -110),
+            arthur.size(80),
             arthur.costume("idle"),
             arthur.say("I'm Arthur!", 2),
         ],
@@ -1143,8 +1143,8 @@ def build():
                                 [
                                     rival.if_(
                                         lambda p: rival.gt_var_xpos(p, "Arthur X"),
-                                        [rival.change_x(-5)],
                                         [rival.change_x(5)],
+                                        [rival.change_x(-5)],
                                     ),
                                     rival.wait(0.05),
                                 ],

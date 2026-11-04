@@ -190,7 +190,7 @@ The boss sprite's own `start fight` script is the splash: big size, say his name
 | Brute | 200 | 150 |
 | Ivy | 180 | 130 |
 | Quake | 220 | 170 |
-| Arthur | 110 on the title | 100 in a fight |
+| Arthur | 80 on the title, standing low so the title stays clear | 100 in a fight |
 
 ## Sprites and costumes
 
