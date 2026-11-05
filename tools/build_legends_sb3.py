@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "2.6"
+VERSION = "2.7"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -118,6 +118,7 @@ WHIRL_COOLDOWN = 1.2
 DOUBLE_TAP = 0.6       # second KICK within this many seconds = WHIRLWIND KICK (HELICOPTER KICK in the air)
 HELI_HIT = 3           # each of the HELICOPTER KICK's hits (up to 6)
 HELI_FRAMES = 30       # how long the helicopter spins (frames)
+TALK_Y = 22             # the enemy's speech bubble starts this high (the health bars are near the top)
 HOLD_TIME = 0.22       # hold PUNCH or KICK this long to start charging a power move
 MELEE_RATE = 3         # charge per frame: full (100) in about a second
 JUMP_UP = 15        # first jump speed
@@ -1542,7 +1543,11 @@ class Target:
 
     # -- scripts
     def chain(self, ids):
-        ids = [i for i in ids if i]
+        # a step may be a list of blocks (a helper that makes several); it is spliced in place
+        flat = []
+        for i in ids:
+            flat.extend(i if isinstance(i, list) else [i])
+        ids = [i for i in flat if i]
         for left, right in zip(ids, ids[1:]):
             self.blocks[left]["next"] = right
             self.blocks[right]["parent"] = left
@@ -2746,7 +2751,7 @@ def build():
         ("Power Level", 1), ("Power XP", 0), ("XP Gain", 0), ("Want Power", 0), ("Power Ready At", 0), ("Power Move", "none"),
         ("Bolt X", 0), ("Bolt Y", GROUND), ("Bolt Owner", "hero"), ("Bolt Power", 0), ("Bolt Size", 100),
         ("Fire Held", 0), ("Charge", 0), ("Fire Power", 0), ("Fireball Out", 0),
-        ("Pop Seq", 0), ("Punch Held", 0), ("Kick Held", 0), ("Melee Charge", 0), ("Glow DX", 0), ("Glow DY", 60), ("Glow Kind", "punch"),
+        ("Pop Seq", 0), ("Enemy Says", ""), ("Punch Held", 0), ("Kick Held", 0), ("Melee Charge", 0), ("Glow DX", 0), ("Glow DY", 60), ("Glow Kind", "punch"),
         ("Swirl On", 0),
         ("Shot X", 999), ("Shot Live", 0), ("Shot Cancel", 0), ("Boom X", 0),
     ]:
@@ -3739,6 +3744,13 @@ def build():
             enemy.costume("shadow angry", fighter_svg("#7f1d1d", "raise", "crown", "angry", glow="#ef4444"), 50, 168)
             enemy.costume("shadow spikes", spike_armor_svg(fighter_svg("#1e1b4b", "raise", "crown", "angry", glow="#a855f7")), 50, 168)
     E = enemy
+
+    def enemy_say(message, secs=None):
+        """The enemy talks through the Enemy Talk sprite, so the bubble stays below the health bars."""
+        if secs is None:
+            return E.set("Enemy Says", message)
+        return [E.set("Enemy Says", message), E.wait(secs), E.set("Enemy Says", "")]
+    E.say = enemy_say
     E.local("Pick", 1)
     E.local("Line Until", 0)
 
@@ -4671,14 +4683,35 @@ def build():
     P.on_msg("popup", P.if_(eq(V("Is Clone"), 0), [
         P.set("My Text", V("Pop Text")), P.change("Pop Seq", 1),
         # top middle of the screen, above the fighters, so it never covers the fight
-        P.if_(eq(V("State"), "brawl"), [P.goto(-70, 92)], [P.goto(-70, 62)]),
+        P.if_(eq(V("State"), "brawl"), [P.goto(-70, 92)], [P.goto(-70, 80)]),
         P.clone()]),
              note="Shows Pop Text at the top middle of the screen, away from the fighters. A new pop-up replaces "
                   "the old one, so they never pile up. Clones hear messages too, so only the original makes new clones.")
     P.on_clone(P.set("Is Clone", 1), P.set("My Seq", V("Pop Seq")), P.show(), P.say(V("My Text")),
                P.repeat(18, [P.if_(gt(V("Pop Seq"), V("My Seq")), [P.delete_clone()]), P.wait(0.06)]), P.delete_clone())
     P.on_msg("super ready", P.if_(eq(V("Is Clone"), 0), [
-        P.set("My Text", "SUPER READY! Tap SUPER"), P.change("Pop Seq", 1), P.goto(-70, 62), P.clone()]))
+        P.set("My Text", "SUPER READY! Tap SUPER"), P.change("Pop Seq", 1), P.goto(-70, 80), P.clone()]))
+
+    talk = game.sprite("Enemy Talk", size=100, rotation="don't rotate")
+    talk.costume("dot", dot_svg(), 2, 2)
+    TK = talk
+    TK.local("Said", "")
+    TK.on_flag(
+        TK.set("Enemy Says", ""), TK.set("Said", ""), TK.say(""), TK.show(),
+        TK.forever([
+            TK.if_(not_(eq(V("Enemy Says"), "")), [
+                # beside the enemy, low enough that the bubble never covers the health bars at the top
+                TK.goto(sub(V("Enemy X"), 30), TALK_Y),
+                TK.if_(not_(eq(V("Said"), V("Enemy Says"))), [TK.set("Said", V("Enemy Says")), TK.say(V("Enemy Says"))]),
+                TK.front(),
+            ], [
+                TK.if_(not_(eq(V("Said"), "")), [TK.set("Said", ""), TK.say("")]),
+            ]),
+        ]),
+        note="Says what the enemy or boss says (Enemy Says), next to them but below the health bars.",
+    )
+    for m in ("show title", "choose hero", "brawl start", "intro"):
+        TK.on_msg(m, TK.set("Enemy Says", ""))
 
     spark = game.sprite("Hit Spark", size=50, rotation="all around")
     spark.costume("spark", spark_svg(), 40, 40)

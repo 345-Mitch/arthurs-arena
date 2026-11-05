@@ -1057,8 +1057,10 @@ async function bossTest () {
         await T.step();
         T.set('Hero HP', 100); // keep the hero alive; we only watch the attacks
         T.set('Hero Max', 100);
-        const bubble = (T.sprite('Enemy').getCustomState('Scratch.looks') || {}).text || '';
+        const bubble = T.get('Enemy Says') || '';
         if (bubble === 'SPIKE ROLL!') seen.roll = true;
+        if (bubble && T.sprite('Enemy Talk').y > 30) fail(`boss: the speech bubble is up at y ${T.sprite('Enemy Talk').y}, over the health bars`);
+        if (bubble) seen.talkShown = seen.talkShown || ((T.sprite('Enemy Talk').getCustomState('Scratch.looks') || {}).text === bubble);
         const shot = T.sprite('Enemy Shot');
         if (shot.visible && T.costume('Enemy Shot') === 'spike') seen.spikeShot = true;
         if (T.clones('Spike Rain').length) {
@@ -1069,6 +1071,7 @@ async function bossTest () {
     if (!seen.rain) fail('boss: MEGA SPIKE never used Spike Rain');
     if (!seen.spikeShot) fail('boss: MEGA SPIKE never shot spikes');
     if (!seen.roll) fail('boss: MEGA SPIKE never did a Spike Roll');
+    if (!seen.talkShown) fail('boss: MEGA SPIKE spoke but the Enemy Talk bubble never showed it');
     // Spike Rain hurts a hero who stands still under it
     T.set('Hero HP', 100);
     T.set('Hero Safe Until', 0);

@@ -3853,7 +3853,9 @@ repeat until <(Fight On) = [0]>
             wait ([0.35] * (Pace)) seconds
             if <(pick random [1] to [2]) = [1]> then
                 switch costume to (join (Enemy Name) [ windup])
-                say [Low!] for ([0.45] * (Pace)) seconds
+                set [Enemy Says] to [Low!]
+                wait ([0.45] * (Pace)) seconds
+                set [Enemy Says] to []
                 set [Shot Y] to [-57]
                 set [Shot Dir] to (Enemy Facing)
                 switch costume to (join (Enemy Name) [ attack])
@@ -3861,7 +3863,9 @@ repeat until <(Fight On) = [0]>
                 switch costume to (join (Enemy Name) [ idle])
             else
                 switch costume to (join (Enemy Name) [ windup])
-                say [High!] for ([0.45] * (Pace)) seconds
+                set [Enemy Says] to [High!]
+                wait ([0.45] * (Pace)) seconds
+                set [Enemy Says] to []
                 set [Shot Y] to [50]
                 set [Shot Dir] to (Enemy Facing)
                 switch costume to (join (Enemy Name) [ attack])
@@ -3872,7 +3876,9 @@ repeat until <(Fight On) = [0]>
         end
         if <(Enemy Type) = [3]> then
             switch costume to (join (Enemy Name) [ windup])
-            say [Ready?] for ([0.75] * (Pace)) seconds
+            set [Enemy Says] to [Ready?]
+            wait ([0.75] * (Pace)) seconds
+            set [Enemy Says] to []
             set [Pick] to (Hero X)
             switch costume to (join (Enemy Name) [ attack])
             broadcast [swing sfx]
@@ -3897,7 +3903,9 @@ repeat until <(Fight On) = [0]>
         end
         if <(Enemy Type) = [4]> then
             switch costume to (join (Enemy Name) [ windup])
-            say [SPIKES OUT!] for ([0.55] * (Pace)) seconds
+            set [Enemy Says] to [SPIKES OUT!]
+            wait ([0.55] * (Pace)) seconds
+            set [Enemy Says] to []
             set [Spikes] to [1]
             switch costume to (join (Enemy Name) [ attack])
             broadcast [spikes out]
@@ -3924,12 +3932,16 @@ repeat until <(Fight On) = [0]>
             end
             set [Spikes] to [0]
             switch costume to (join (Enemy Name) [ idle])
-            say [Cooling down...] for ([1.7] * (Pace)) seconds
+            set [Enemy Says] to [Cooling down...]
+            wait ([1.7] * (Pace)) seconds
+            set [Enemy Says] to []
         end
         if <(Enemy Type) = [5]> then
             if <<(Power Level) > [2]> and <(pick random [1] to [4]) = [1]>> then
                 switch costume to (join (Enemy Name) [ windup])
-                say [LIGHTNING!] for ([0.5] * (Pace)) seconds
+                set [Enemy Says] to [LIGHTNING!]
+                wait ([0.5] * (Pace)) seconds
+                set [Enemy Says] to []
                 switch costume to (join (Enemy Name) [ attack])
                 set [Enemy Swing Until] to ((timer) + [0.3])
                 repeat (Power Level)
@@ -3948,7 +3960,9 @@ repeat until <(Fight On) = [0]>
                 set [Pick] to (pick random [1] to [3])
                 if <(Pick) = [1]> then
                     switch costume to (join (Enemy Name) [ windup])
-                    say [SPIKE ROLL!] for ([0.6] * (Pace)) seconds
+                    set [Enemy Says] to [SPIKE ROLL!]
+                    wait ([0.6] * (Pace)) seconds
+                    set [Enemy Says] to []
                     set [Spikes] to [1]
                     switch costume to (join (Enemy Name) [ attack])
                     broadcast [spikes out]
@@ -3976,14 +3990,18 @@ repeat until <(Fight On) = [0]>
                 end
                 if <(Pick) = [2]> then
                     switch costume to (join (Enemy Name) [ windup])
-                    say [Low!] for ([0.45] * (Pace)) seconds
+                    set [Enemy Says] to [Low!]
+                    wait ([0.45] * (Pace)) seconds
+                    set [Enemy Says] to []
                     set [Shot Y] to [-57]
                     set [Shot Dir] to (Enemy Facing)
                     switch costume to (join (Enemy Name) [ attack])
                     broadcast [enemy shot] and wait
                     switch costume to (join (Enemy Name) [ idle])
                     switch costume to (join (Enemy Name) [ windup])
-                    say [High!] for ([0.45] * (Pace)) seconds
+                    set [Enemy Says] to [High!]
+                    wait ([0.45] * (Pace)) seconds
+                    set [Enemy Says] to []
                     set [Shot Y] to [50]
                     set [Shot Dir] to (Enemy Facing)
                     switch costume to (join (Enemy Name) [ attack])
@@ -3991,7 +4009,9 @@ repeat until <(Fight On) = [0]>
                     switch costume to (join (Enemy Name) [ idle])
                     if <(Enemy Phase) = [2]> then
                         switch costume to (join (Enemy Name) [ windup])
-                        say [Low!] for ([0.45] * (Pace)) seconds
+                        set [Enemy Says] to [Low!]
+                        wait ([0.45] * (Pace)) seconds
+                        set [Enemy Says] to []
                         set [Shot Y] to [-57]
                         set [Shot Dir] to (Enemy Facing)
                         switch costume to (join (Enemy Name) [ attack])
@@ -4001,20 +4021,26 @@ repeat until <(Fight On) = [0]>
                 end
                 if <(Pick) = [3]> then
                     switch costume to (join (Enemy Name) [ windup])
-                    say [SPIKE RAIN!] for ([0.6] * (Pace)) seconds
+                    set [Enemy Says] to [SPIKE RAIN!]
+                    wait ([0.6] * (Pace)) seconds
+                    set [Enemy Says] to []
                     switch costume to (join (Enemy Name) [ attack])
                     broadcast [spike rain] and wait
                 end
                 set [Spikes] to [0]
                 switch costume to (join (Enemy Name) [ idle])
-                say [Cooling down...] for ((Pace) * [1.4]) seconds
+                set [Enemy Says] to [Cooling down...]
+                wait ((Pace) * [1.4]) seconds
+                set [Enemy Says] to []
             end
         end
         if <(Enemy Type) = [6]> then
             set [Pick] to (pick random [1] to [4])
             if <(Pick) = [1]> then
                 switch costume to (join (Enemy Name) [ windup])
-                say [Shuriken!] for ([0.3] * (Pace)) seconds
+                set [Enemy Says] to [Shuriken!]
+                wait ([0.3] * (Pace)) seconds
+                set [Enemy Says] to []
                 set [Shot Y] to [-57]
                 set [Shot Dir] to (Enemy Facing)
                 switch costume to (join (Enemy Name) [ attack])
@@ -4024,7 +4050,9 @@ repeat until <(Fight On) = [0]>
             end
             if <(Pick) = [2]> then
                 switch costume to (join (Enemy Name) [ windup])
-                say [Hyah!] for ([0.35] * (Pace)) seconds
+                set [Enemy Says] to [Hyah!]
+                wait ([0.35] * (Pace)) seconds
+                set [Enemy Says] to []
                 switch costume to (join (Enemy Name) [ attack])
                 set [Enemy Swing Until] to ((timer) + [0.3])
                 broadcast [swing sfx]
@@ -4086,7 +4114,9 @@ repeat until <(Fight On) = [0]>
                 if <(Minions) < [1]> then
                     if <(Minions) < [3]> then
                         switch costume to (join (Enemy Name) [ windup])
-                        say [NINJA SQUAD!] for ([0.6] * (Pace)) seconds
+                        set [Enemy Says] to [NINJA SQUAD!]
+                        wait ([0.6] * (Pace)) seconds
+                        set [Enemy Says] to []
                         set [Summon Kind] to [ninja]
                         set [Summon Count] to [1]
                         broadcast [ninja summon]
@@ -4131,7 +4161,9 @@ repeat until <(Fight On) = [0]>
                     end
                 else
                     switch costume to (join (Enemy Name) [ windup])
-                    say [High!] for ([0.3] * (Pace)) seconds
+                    set [Enemy Says] to [High!]
+                    wait ([0.3] * (Pace)) seconds
+                    set [Enemy Says] to []
                     set [Shot Y] to [50]
                     set [Shot Dir] to (Enemy Facing)
                     switch costume to (join (Enemy Name) [ attack])
@@ -4144,7 +4176,9 @@ repeat until <(Fight On) = [0]>
         if <(Enemy Type) = [7]> then
             if <<(Power Level) > [2]> and <(pick random [1] to [4]) = [1]>> then
                 switch costume to (join (Enemy Name) [ windup])
-                say [LIGHTNING!] for ([0.5] * (Pace)) seconds
+                set [Enemy Says] to [LIGHTNING!]
+                wait ([0.5] * (Pace)) seconds
+                set [Enemy Says] to []
                 switch costume to (join (Enemy Name) [ attack])
                 set [Enemy Swing Until] to ((timer) + [0.3])
                 repeat (Power Level)
@@ -4162,21 +4196,27 @@ repeat until <(Fight On) = [0]>
                 set [Pick] to (pick random [1] to [5])
                 if <(Pick) = [1]> then
                     switch costume to (join (Enemy Name) [ windup])
-                    say [Shuriken!] for ([0.3] * (Pace)) seconds
+                    set [Enemy Says] to [Shuriken!]
+                    wait ([0.3] * (Pace)) seconds
+                    set [Enemy Says] to []
                     set [Shot Y] to [-57]
                     set [Shot Dir] to (Enemy Facing)
                     switch costume to (join (Enemy Name) [ attack])
                     broadcast [enemy shot] and wait
                     switch costume to (join (Enemy Name) [ idle])
                     switch costume to (join (Enemy Name) [ windup])
-                    say [High!] for ([0.3] * (Pace)) seconds
+                    set [Enemy Says] to [High!]
+                    wait ([0.3] * (Pace)) seconds
+                    set [Enemy Says] to []
                     set [Shot Y] to [50]
                     set [Shot Dir] to (Enemy Facing)
                     switch costume to (join (Enemy Name) [ attack])
                     broadcast [enemy shot] and wait
                     switch costume to (join (Enemy Name) [ idle])
                     switch costume to (join (Enemy Name) [ windup])
-                    say [Shuriken!] for ([0.3] * (Pace)) seconds
+                    set [Enemy Says] to [Shuriken!]
+                    wait ([0.3] * (Pace)) seconds
+                    set [Enemy Says] to []
                     set [Shot Y] to [-57]
                     set [Shot Dir] to (Enemy Facing)
                     switch costume to (join (Enemy Name) [ attack])
@@ -4258,7 +4298,9 @@ repeat until <(Fight On) = [0]>
                 end
                 if <(Pick) = [3]> then
                     switch costume to (join (Enemy Name) [ windup])
-                    say [Hyah!] for ([0.35] * (Pace)) seconds
+                    set [Enemy Says] to [Hyah!]
+                    wait ([0.35] * (Pace)) seconds
+                    set [Enemy Says] to []
                     switch costume to (join (Enemy Name) [ attack])
                     set [Enemy Swing Until] to ((timer) + [0.3])
                     broadcast [swing sfx]
@@ -4283,7 +4325,9 @@ repeat until <(Fight On) = [0]>
                     if <(Enemy Phase) = [2]> then
                         if <(Minions) < [3]> then
                             switch costume to (join (Enemy Name) [ windup])
-                            say [NINJA SQUAD!] for ([0.6] * (Pace)) seconds
+                            set [Enemy Says] to [NINJA SQUAD!]
+                            wait ([0.6] * (Pace)) seconds
+                            set [Enemy Says] to []
                             set [Summon Kind] to [ninja]
                             set [Summon Count] to [3]
                             broadcast [ninja summon]
@@ -4329,7 +4373,9 @@ repeat until <(Fight On) = [0]>
                     else
                         if <(Minions) < [3]> then
                             switch costume to (join (Enemy Name) [ windup])
-                            say [NINJA SQUAD!] for ([0.6] * (Pace)) seconds
+                            set [Enemy Says] to [NINJA SQUAD!]
+                            wait ([0.6] * (Pace)) seconds
+                            set [Enemy Says] to []
                             set [Summon Kind] to [ninja]
                             set [Summon Count] to [2]
                             broadcast [ninja summon]
@@ -4411,7 +4457,9 @@ repeat until <(Fight On) = [0]>
                     wait ([0.35] * (Pace)) seconds
                     switch costume to (join (Enemy Name) [ idle])
                     switch costume to (join (Enemy Name) [ windup])
-                    say [Shuriken!] for ([0.3] * (Pace)) seconds
+                    set [Enemy Says] to [Shuriken!]
+                    wait ([0.3] * (Pace)) seconds
+                    set [Enemy Says] to []
                     set [Shot Y] to [-57]
                     set [Shot Dir] to (Enemy Facing)
                     switch costume to (join (Enemy Name) [ attack])
@@ -4422,7 +4470,9 @@ repeat until <(Fight On) = [0]>
         end
         if <(Enemy Type) = [8]> then
             switch costume to (join (Enemy Name) [ windup])
-            say [STOMP!] for ([0.6] * (Pace)) seconds
+            set [Enemy Says] to [STOMP!]
+            wait ([0.6] * (Pace)) seconds
+            set [Enemy Says] to []
             switch costume to (join (Enemy Name) [ attack])
             set [Enemy Swing Until] to ((timer) + [0.3])
             change y by [10]
@@ -4448,7 +4498,9 @@ repeat until <(Fight On) = [0]>
         if <(Enemy Type) = [9]> then
             if <<(Power Level) > [2]> and <(pick random [1] to [4]) = [1]>> then
                 switch costume to (join (Enemy Name) [ windup])
-                say [LIGHTNING!] for ([0.5] * (Pace)) seconds
+                set [Enemy Says] to [LIGHTNING!]
+                wait ([0.5] * (Pace)) seconds
+                set [Enemy Says] to []
                 switch costume to (join (Enemy Name) [ attack])
                 set [Enemy Swing Until] to ((timer) + [0.3])
                 repeat (Power Level)
@@ -4472,7 +4524,9 @@ repeat until <(Fight On) = [0]>
                     switch costume to (shadow spikes)
                     set [Spikes] to [1]
                     broadcast [spikes out]
-                    say [SPIKE ARMOR!] for ([0.5] * (Pace)) seconds
+                    set [Enemy Says] to [SPIKE ARMOR!]
+                    wait ([0.5] * (Pace)) seconds
+                    set [Enemy Says] to []
                     repeat [25]
                         move (Enemy Speed) steps
                         if <(x position) < [-205]> then
@@ -4494,7 +4548,9 @@ repeat until <(Fight On) = [0]>
                 end
                 if <(Pick) = [1]> then
                     switch costume to (join (Enemy Name) [ windup])
-                    say [Ready?] for ([0.75] * (Pace)) seconds
+                    set [Enemy Says] to [Ready?]
+                    wait ([0.75] * (Pace)) seconds
+                    set [Enemy Says] to []
                     set [Pick] to (Hero X)
                     switch costume to (join (Enemy Name) [ attack])
                     broadcast [swing sfx]
@@ -4520,7 +4576,9 @@ repeat until <(Fight On) = [0]>
                 if <(Pick) = [2]> then
                     wait ([0.2] * (Pace)) seconds
                     switch costume to (join (Enemy Name) [ windup])
-                    say [Low!] for ([0.45] * (Pace)) seconds
+                    set [Enemy Says] to [Low!]
+                    wait ([0.45] * (Pace)) seconds
+                    set [Enemy Says] to []
                     set [Shot Y] to [-57]
                     set [Shot Dir] to (Enemy Facing)
                     switch costume to (join (Enemy Name) [ attack])
@@ -4528,7 +4586,9 @@ repeat until <(Fight On) = [0]>
                     switch costume to (join (Enemy Name) [ idle])
                     if <(Enemy Phase) = [2]> then
                         switch costume to (join (Enemy Name) [ windup])
-                        say [High!] for ([0.45] * (Pace)) seconds
+                        set [Enemy Says] to [High!]
+                        wait ([0.45] * (Pace)) seconds
+                        set [Enemy Says] to []
                         set [Shot Y] to [50]
                         set [Shot Dir] to (Enemy Facing)
                         switch costume to (join (Enemy Name) [ attack])
@@ -4539,7 +4599,9 @@ repeat until <(Fight On) = [0]>
                 end
                 if <(Pick) = [3]> then
                     switch costume to (join (Enemy Name) [ windup])
-                    say [STOMP!] for ([0.6] * (Pace)) seconds
+                    set [Enemy Says] to [STOMP!]
+                    wait ([0.6] * (Pace)) seconds
+                    set [Enemy Says] to []
                     switch costume to (join (Enemy Name) [ attack])
                     set [Enemy Swing Until] to ((timer) + [0.3])
                     change y by [10]
@@ -4624,19 +4686,25 @@ set [brightness] effect to [0]
 ```
 when I receive [king angry]
 if <(Enemy Type) = [7]> then
-    say [Shadow clones... ATTACK!] for [1.4] seconds
+    set [Enemy Says] to [Shadow clones... ATTACK!]
+    wait [1.4] seconds
+    set [Enemy Says] to []
     set [Summon Kind] to [ninja]
     set [Summon Count] to [2]
     broadcast [ninja summon]
 end
 if <(Enemy Type) = [9]> then
     switch costume to (shadow angry)
-    say [You're strong... but I'm STRONGER!] for [1.6] seconds
+    set [Enemy Says] to [You're strong... but I'm STRONGER!]
+    wait [1.6] seconds
+    set [Enemy Says] to []
     switch costume to (shadow idle)
 else
     if <(Enemy Type) = [5]> then
         switch costume to (megaspike attack)
-        say [OVERDRIVE!!] for [1.2] seconds
+        set [Enemy Says] to [OVERDRIVE!!]
+        wait [1.2] seconds
+        set [Enemy Says] to []
         switch costume to (megaspike idle)
     end
 end
@@ -4661,7 +4729,7 @@ point in direction [-90]
 set [Enemy Facing] to [-1]
 go to x: [150] y: [-75]
 switch costume to (join (Enemy Name) [ idle])
-say []
+set [Enemy Says] to []
 if <(Wave Phase) = [1]> then
     hide
 end
@@ -4679,7 +4747,9 @@ set [Smoke X] to [170]
 set [Smoke Y] to ([-75] + [40])
 broadcast [smoke]
 show
-say (Enemy Title) for [1.2] seconds
+set [Enemy Says] to (Enemy Title)
+wait [1.2] seconds
+set [Enemy Says] to []
 ```
 
 > ADVENTURE: the stage boss bursts in after the waves.
@@ -4701,15 +4771,15 @@ hide
 
 ```
 when I receive [enemy line]
-say (Line)
+set [Enemy Says] to (Line)
 set [Line Until] to ((timer) + (Line Secs))
 wait until <<(timer) > (Line Until)> or <(Skip) = [1]>>
-say []
+set [Enemy Says] to []
 ```
 
 ```
 when I receive [enemy down]
-say []
+set [Enemy Says] to []
 set [Spikes] to [0]
 wait [0.2] seconds
 set y to [-75]
@@ -4729,7 +4799,9 @@ set [ghost] effect to [0]
 when I receive [hero down]
 wait [0.3] seconds
 switch costume to (join (Enemy Name) [ idle])
-say [Ha! Try again!] for [2] seconds
+set [Enemy Says] to [Ha! Try again!]
+wait [2] seconds
+set [Enemy Says] to []
 ```
 
 ```
@@ -6283,7 +6355,7 @@ if <(Is Clone) = [0]> then
     if <(State) = [brawl]> then
         go to x: [-70] y: [92]
     else
-        go to x: [-70] y: [62]
+        go to x: [-70] y: [80]
     end
     create clone of (myself)
 end
@@ -6311,9 +6383,59 @@ when I receive [super ready]
 if <(Is Clone) = [0]> then
     set [My Text] to [SUPER READY! Tap SUPER]
     change [Pop Seq] by [1]
-    go to x: [-70] y: [62]
+    go to x: [-70] y: [80]
     create clone of (myself)
 end
+```
+
+## Enemy Talk
+
+Costumes: dot
+Sprite-only variables: Said
+
+```
+when green flag clicked
+set [Enemy Says] to []
+set [Said] to []
+say []
+show
+forever
+    if <not <(Enemy Says) = []>> then
+        go to x: ((Enemy X) - [30]) y: [22]
+        if <not <(Said) = (Enemy Says)>> then
+            set [Said] to (Enemy Says)
+            say (Enemy Says)
+        end
+        go to [front] layer
+    else
+        if <not <(Said) = []>> then
+            set [Said] to []
+            say []
+        end
+    end
+end
+```
+
+> Says what the enemy or boss says (Enemy Says), next to them but below the health bars.
+
+```
+when I receive [show title]
+set [Enemy Says] to []
+```
+
+```
+when I receive [choose hero]
+set [Enemy Says] to []
+```
+
+```
+when I receive [brawl start]
+set [Enemy Says] to []
+```
+
+```
+when I receive [intro]
+set [Enemy Says] to []
 ```
 
 ## Hit Spark
