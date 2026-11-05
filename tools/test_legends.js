@@ -112,10 +112,11 @@ function tools (vm) {
 // A bot that plays fair: it only uses what a player could see and the buttons.
 function makeBot (T, hero) {
     const stats = {punches: 0, kicks: 0, jumps: 0, dodges: 0, supers: 0, weapons: new Set(), perfect: 0,
-        combos: 0, breaks: 0, retries: 0, chapters: new Set(), waves: 0, popups: new Set()};
+        combos: 0, breaks: 0, fireballs: 0, ouches: 0, retries: 0, chapters: new Set(), waves: 0, popups: new Set()};
     let frame = 0;
     let lastMove = 0;
     let picked = false;
+    let charging = 0;
     const tick = () => {
         frame++;
         const state = T.get('State');
@@ -158,7 +159,32 @@ function makeBot (T, hero) {
                 return;
             }
         }
-        if (/windup$/.test(enemyPose) && T.get('Enemy Type') !== 2 && T.get('Enemy Type') !== 4) {
+        const name = T.get('Enemy Name');
+        // fireballs: hold FIRE for a while, then let go
+        if (charging > 0) {
+            charging--;
+            if (charging === 0) T.set('Fire Held', 0);
+            return;
+        }
+        if (name === 'spikebot' && T.get('Spikes') === 1) {
+            // never punch the spikes: jump over the roll, or charge a fireball from afar
+            if (d < 95 && T.get('Hero Air') === 0) {
+                T.set('Want Jump', 1);
+                stats.jumps++;
+            } else if (d >= 95 && T.get('Fireball Out') === 0) {
+                T.set('Fire Held', 1);
+                charging = 32;
+                stats.fireballs++;
+            }
+            return;
+        }
+        if (d > 160 && T.get('Fireball Out') === 0 && frame % 40 === 0) {
+            T.set('Fire Held', 1);
+            charging = frame % 80 === 0 ? 32 : 2; // sometimes a full charge, sometimes a quick tap
+            stats.fireballs++;
+            return;
+        }
+        if (/windup$/.test(enemyPose) && (name === 'brute' || name === 'shadow')) {
             // Brute and the King wind up before a charge: dodge late for a perfect dodge
             if (frame % 9 === 0 && T.get('Hero Lock') === 0) {
                 T.set('Want Dodge', 1);
@@ -193,7 +219,7 @@ function makeBot (T, hero) {
                 stats.punches++;
             }
         }
-        if (T.get('Enemy Type') === 2 && d < 40 && frame % 30 === 0) T.send(away);
+        if (name === 'ivy' && d < 40 && frame % 30 === 0) T.send(away);
     };
     return {tick, stats};
 }
@@ -217,6 +243,7 @@ function watch (T, stats, label) {
             if (/^COMBO/.test(pop)) stats.combos++;
             if (/PERFECT/.test(pop)) stats.perfect++;
             if (/broke/.test(pop)) stats.breaks++;
+            if (/SPIKES/.test(pop)) stats.ouches++;
             stats.popups.add(pop.replace(/x\d+/, 'xN'));
         }
         if (T.get('Weapon') !== 'none') stats.weapons.add(T.get('Weapon'));
@@ -390,11 +417,105 @@ async function weaponTest () {
     }
 }
 
+async function startArcadeAt (wave, hero = 'Pick Arthur') {
+    const {vm} = await boot();
+    const T = tools(vm);
+    await T.step(10);
+    T.click('Arcade Button');
+    await T.step(3);
+    T.click(hero);
+    await T.step(2);
+    T.set('Wave', wave);
+    T.send('start fight');
+    let frames = 0;
+    while (T.get('Fight On') !== 1 && frames < 300) {
+        await T.step();
+        frames++;
+    }
+    return T;
+}
+
+async function fireTest () {
+    const T = await startArcadeAt(1);
+    if (T.get('Fight On') !== 1) return fail('fire: fight did not start');
+    T.set('Enemy HP', 999);
+    T.set('Enemy Max', 999);
+    T.set('Hero Safe Until', 1e12);
+    const shoot = async holdFrames => {
+        T.sprite('Hero').setXY(T.get('Enemy X') > 0 ? T.get('Enemy X') - 170 : T.get('Enemy X') + 170, -75);
+        await T.step(2);
+        const hp = T.get('Enemy HP');
+        T.set('Fire Held', 1);
+        let maxCharge = 0;
+        for (let i = 0; i < holdFrames; i++) {
+            await T.step();
+            maxCharge = Math.max(maxCharge, T.get('Charge'));
+        }
+        T.set('Fire Held', 0);
+        let frames = 0;
+        await T.step(2);
+        while (T.get('Fireball Out') === 1 && frames < 90) {
+            await T.step();
+            frames++;
+            if (process.env.DEBUG_FIRE) process.stdout.write(`f${frames} charge ${T.get('Charge')} out ${T.get('Fireball Out')} lock ${T.get('Hero Lock')} fight ${T.get('Fight On')} costume ${T.costume('Hero')}\n`);
+        }
+        await T.step(3);
+        return {damage: hp - T.get('Enemy HP'), maxCharge, power: T.get('Fire Power'), out: T.get('Fireball Out')};
+    };
+    const tap = await shoot(1);
+    const full = await shoot(45);
+    if (tap.damage < 3 || tap.damage > 5) fail(`fire: tap fireball did ${tap.damage} damage (power ${tap.power})`);
+    if (full.maxCharge !== 100) fail(`fire: holding never reached full charge (${full.maxCharge})`);
+    if (full.damage < 14) fail(`fire: full fireball only did ${full.damage} damage`);
+    if (full.out !== 0 || T.get('Charge') !== 0) {
+        fail(`fire: fireball or charge stuck after shooting (out ${full.out}, charge ${T.get('Charge')}, held ${T.get('Fire Held')})`);
+    }
+    return {tap: tap.damage, full: full.damage};
+}
+
+async function spikeTest () {
+    const T = await startArcadeAt(4); // wave 4 is Spike Bot
+    if (T.get('Enemy Name') !== 'spikebot') return fail(`spikes: wave 4 is ${T.get('Enemy Name')}, not Spike Bot`);
+    // wait for the spikes to come out
+    let frames = 0;
+    while (T.get('Spikes') !== 1 && frames < 200) {
+        await T.step();
+        frames++;
+    }
+    if (T.get('Spikes') !== 1) return fail('spikes: Spike Bot never put its spikes out');
+    T.set('Enemy HP', 999);
+    T.set('Enemy Speed', 0); // hold it still: in punch reach, but not touching
+    T.sprite('Hero').setXY(T.get('Enemy X') > 0 ? T.get('Enemy X') - 70 : T.get('Enemy X') + 70, -75);
+    await T.step(2);
+    T.set('Hero Safe Until', 0);
+    const heroHp = T.get('Hero HP');
+    T.set('Want Punch', 1);
+    await T.step(4);
+    const hurt = heroHp - T.get('Hero HP');
+    if (T.get('Enemy HP') !== 999) fail('spikes: a bare-handed punch got through the spikes');
+    if (hurt < 5) fail(`spikes: punching spikes did not hurt Hero (lost ${hurt})`);
+    // let it cool down, then punching works again
+    frames = 0;
+    while (T.get('Spikes') !== 0 && frames < 200) {
+        await T.step();
+        frames++;
+    }
+    T.set('Hero Safe Until', 1e12);
+    T.sprite('Hero').setXY(T.get('Enemy X') > 0 ? T.get('Enemy X') - 50 : T.get('Enemy X') + 50, -75);
+    await T.step(2);
+    T.set('Want Punch', 1);
+    await T.step(6);
+    if (T.get('Enemy HP') >= 999) fail('spikes: punching a cooled-down Spike Bot did nothing');
+    return {spikeDamageToHero: hurt};
+}
+
 (async () => {
     const t0 = Date.now();
     const results = {};
     for (const hero of [1, 2, 3]) results[`story ${hero}`] = await storyRun(hero);
     results.arcade = await arcadeRun(1);
+    results.fire = await fireTest();
+    results.spikes = await spikeTest();
     await mashTest();
     await weaponTest();
     const show = r => JSON.stringify(r, (k, v) => (v instanceof Set ? [...v] : v));

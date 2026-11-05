@@ -59,9 +59,12 @@ ENEMIES = [
     dict(n=1, key="rival", tag="RIVAL", color="#64748b", size=78, hp=24, pow=6, speed=4, body=10, gear="none"),
     dict(n=2, key="ivy", tag="IVY", color="#7c3aed", size=82, hp=32, pow=8, speed=1, body=10, gear="leaf"),
     dict(n=3, key="brute", tag="BRUTE", color="#dc2626", size=110, hp=44, pow=12, speed=1, body=22, gear="horns"),
-    dict(n=4, key="quake", tag="QUAKE", color="#ea580c", size=120, hp=50, pow=12, speed=4, body=26, gear="spikes"),
-    dict(n=5, key="shadow", tag="SHADOW KING", color="#1e1b4b", size=125, hp=90, pow=12, speed=4, body=26, gear="crown"),
+    dict(n=4, key="spikebot", tag="SPIKE BOT", color="#64748b", size=100, hp=40, pow=10, speed=3, body=22, gear="robot"),
+    dict(n=5, key="quake", tag="QUAKE", color="#ea580c", size=120, hp=50, pow=12, speed=4, body=26, gear="spikes"),
+    dict(n=6, key="shadow", tag="SHADOW KING", color="#1e1b4b", size=125, hp=90, pow=12, speed=4, body=26, gear="crown"),
 ]
+KING = 6  # the Shadow King's Enemy Type
+SPIKEBOT = 4
 
 CHAPTERS = [
     # backdrop, chapter card lines, dialogue lines (speaker, text)
@@ -71,7 +74,9 @@ CHAPTERS = [
          talk=[("enemy", "My vines see everything."), ("hero", "Then watch me jump!")]),
     dict(backdrop="Pass", title="CHAPTER 3", lines=["The Rocky Pass", "Brute says Ready?", "then charges. Move!"],
          talk=[("enemy", "BRUTE... SMASH!"), ("hero", "Not if I move first!")]),
-    dict(backdrop="Volcano", title="CHAPTER 4", lines=["The Volcano Gate", "Quake stomps the ground.", "Jump over the wave!"],
+    dict(backdrop="Factory", title="CHAPTER 4", lines=["The Robot Factory", "Spikes out? Don't punch!", "Hold FIRE for a fireball."],
+         talk=[("enemy", "BZZT! SPIKES... ONLINE!"), ("hero", "Then I'll use FIREBALLS!")]),
+    dict(backdrop="Volcano", title="CHAPTER 5", lines=["The Volcano Gate", "Quake stomps the ground.", "Jump over the wave!"],
          talk=[("enemy", "Feel the ground shake!"), ("hero", "I'll jump right over it!")]),
     dict(backdrop="Castle", title="FINAL CHAPTER", lines=["Shadow Castle", "He uses every trick.", "Use your SUPER!"],
          talk=[("enemy", "The Golden Crown is MINE!"), ("hero", "Not for long!")]),
@@ -95,6 +100,9 @@ JOY_DEADZONE = 0.2
 JOY_SPEED = 0.28  # pixels per frame = Joy X * Step * this
 COMBO_BONUS = 3
 ARCADE_HEAL = 30
+SPIKE_OUCH = 5       # what bare hands take from punching spikes
+CHARGE_RATE = 3.5    # charge per frame: full (100) in about one second
+FIRE_FULL_BONUS = 4  # extra damage for a fully charged fireball
 
 # ------------------------------------------------------------------ svg --
 
@@ -346,6 +354,21 @@ def backdrop_svg(kind):
             '<path d="M230 110 L250 80 L270 110 Z" fill="#ffffff"/>'
             + f'<rect y="{g}" width="480" height="{360 - g}" fill="#78716c"/><rect y="{g}" width="480" height="6" fill="#57534e"/>'
         )
+    elif kind == "Factory":
+        def gear(cx, cy, r, fill):
+            teeth = "".join(
+                f'<rect x="{cx - 5}" y="{cy - r - 8}" width="10" height="12" fill="{fill}" transform="rotate({a} {cx} {cy})"/>'
+                for a in range(0, 360, 45))
+            return teeth + f'<circle cx="{cx}" cy="{cy}" r="{r}" fill="{fill}"/><circle cx="{cx}" cy="{cy}" r="{r / 3:.0f}" fill="#334155"/>'
+        body = (
+            '<rect width="480" height="360" fill="#475569"/>'
+            '<rect x="0" y="40" width="480" height="14" fill="#334155"/><rect x="0" y="100" width="480" height="10" fill="#334155"/>'
+            + gear(80, 120, 40, "#64748b") + gear(150, 80, 26, "#94a3b8") + gear(400, 130, 46, "#64748b")
+            + '<rect x="250" y="60" width="16" height="200" fill="#1e293b"/><rect x="250" y="60" width="120" height="16" fill="#1e293b"/>'
+            + '<circle cx="310" cy="160" r="12" fill="#ef4444"/><circle cx="310" cy="160" r="5" fill="#fecaca"/>'
+            + f'<rect y="{g}" width="480" height="{360 - g}" fill="#1f2937"/>'
+            + "".join(f'<path d="M{x} {g} l20 0 l-14 14 l-20 0 Z" fill="#facc15"/>' for x in range(0, 500, 40))
+        )
     elif kind == "Volcano":
         body = (
             '<rect width="480" height="360" fill="#7f1d1d"/>'
@@ -386,6 +409,70 @@ def backdrop_svg(kind):
     else:
         raise ValueError(kind)
     return svg_doc(480, 360, body)
+
+
+def robot_svg(pose):
+    """Spike Bot: a box robot on treads, facing right. Spikes come out to attack."""
+    spikes = pose in ("attack", "windup")
+    eye = "#ef4444" if spikes else "#22d3ee"
+    parts = []
+    if pose == "attack":
+        parts.append('<ellipse cx="50" cy="110" rx="48" ry="62" fill="#ef4444" opacity="0.25"/>')
+    spike_pts = []
+    long_ = 16 if pose == "attack" else (9 if spikes else 4)
+    for y in (96, 116, 136):
+        spike_pts.append(f"24,{y - 6} {24 - long_},{y} 24,{y + 6}")
+        spike_pts.append(f"76,{y - 6} {76 + long_},{y} 76,{y + 6}")
+    for x in (38, 50, 62):
+        spike_pts.append(f"{x - 6},50 {x},{50 - long_} {x + 6},50")
+    spike_svg = "".join(f'<polygon points="{pt}" fill="#e5e7eb" stroke="#1f2937" stroke-width="2.5" stroke-linejoin="round"/>'
+                        for pt in spike_pts)
+    arm = ('<rect x="70" y="100" width="26" height="9" rx="4" fill="#64748b" stroke="#1f2937" stroke-width="2.5"/>'
+           if pose == "attack" else
+           '<rect x="72" y="96" width="9" height="28" rx="4" fill="#64748b" stroke="#1f2937" stroke-width="2.5"/>')
+    face = (f'<path d="M50 62 l8 8 m0 -8 l-8 8 M60 62 l8 8 m0 -8 l-8 8" stroke="#1f2937" stroke-width="3"/>'
+            if pose == "down" else f'<rect x="46" y="60" width="26" height="13" rx="5" fill="{eye}" stroke="#1f2937" stroke-width="2"/>'
+            '<rect x="50" y="63" width="8" height="4" rx="2" fill="#ffffff" opacity="0.8"/>')
+    bot = (
+        spike_svg
+        + '<rect x="16" y="146" width="68" height="22" rx="11" fill="#334155" stroke="#0f172a" stroke-width="3"/>'
+        + "".join(f'<circle cx="{x}" cy="157" r="6.5" fill="#94a3b8" stroke="#0f172a" stroke-width="2"/>' for x in (28, 50, 72))
+        + '<rect x="24" y="86" width="52" height="62" rx="10" fill="#94a3b8" stroke="#1f2937" stroke-width="4"/>'
+        + '<g><rect x="33" y="112" width="34" height="18" rx="3" fill="#facc15" stroke="#1f2937" stroke-width="2"/>'
+        + "".join(f'<path d="M{x} 112 l8 0 l-8 18 l-8 0 Z" fill="#1f2937"/>' for x in (39, 51, 63)) + '</g>'
+        + arm
+        + '<line x1="50" y1="50" x2="50" y2="34" stroke="#1f2937" stroke-width="3"/>'
+        + f'<circle cx="50" cy="30" r="5.5" fill="{eye}" stroke="#1f2937" stroke-width="2"/>'
+        + '<rect x="30" y="48" width="42" height="38" rx="12" fill="#cbd5e1" stroke="#1f2937" stroke-width="4"/>'
+        + face
+    )
+    if pose == "hurt":
+        bot = f'<g transform="rotate(-10 50 160)">{bot}</g><path d="M78 60 l8 -8 l-2 8 l8 -4" stroke="#facc15" stroke-width="3" fill="none"/>'
+    elif pose == "down":
+        bot = (f'<g transform="translate(-2 74) rotate(-90 50 100) scale(0.95)">{bot}</g>'
+               '<circle cx="70" cy="110" r="8" fill="#94a3b8" opacity="0.6"/><circle cx="80" cy="96" r="10" fill="#94a3b8" opacity="0.45"/>')
+    elif pose == "attack":
+        bot = f'<g transform="rotate(8 50 160)">{bot}</g>'
+    parts.append(bot)
+    return svg_doc(100, 180, "".join(parts))
+
+
+def fireball_svg(frame):
+    flick = 4 if frame else -4
+    return svg_doc(80, 52, (
+        f'<path d="M6 26 Q20 {10 + flick} 34 14 Q30 22 44 18 Q40 26 46 34 Q30 32 34 40 Q20 {42 - flick} 6 26 Z" fill="#f97316" opacity="0.85"/>'
+        '<circle cx="54" cy="26" r="22" fill="#f97316"/>'
+        '<circle cx="57" cy="25" r="15" fill="#facc15"/>'
+        '<circle cx="60" cy="24" r="7" fill="#fff7ed"/>'
+    ))
+
+
+def glow_svg():
+    return svg_doc(60, 60, (
+        '<circle cx="30" cy="30" r="28" fill="#fb923c" opacity="0.35"/>'
+        '<circle cx="30" cy="30" r="18" fill="#f97316" opacity="0.8"/>'
+        '<circle cx="30" cy="30" r="9" fill="#fef3c7"/>'
+    ))
 
 
 def wave_svg():
@@ -464,6 +551,13 @@ SOUNDS = {
     "super": [(0.45, 200, 1200, "square", 0.3)],
     "perfect": [(0.08, 1200, 1200, "sine", 0.5), (0.18, 1600, 1600, "sine", 0.5)],
     "ko": [(0.6, 500, 60, "square", 0.35)],
+    "charge": [(0.95, 180, 900, "sine", 0.35)],
+    "charged": [(0.07, 1320, 1320, "square", 0.3), (0.07, 1760, 1760, "square", 0.3), (0.16, 2093, 2093, "sine", 0.4)],
+    "fireball": [(0.22, 1400, 300, "noise", 0.5)],
+    "big fireball": [(0.12, 900, 400, "noise", 0.7), (0.35, 160, 60, "square", 0.45)],
+    "boom": [(0.08, 800, 200, "noise", 1.0), (0.45, 90, 30, "noise", 0.9)],
+    "spikes": [(0.05, 2400, 2400, "square", 0.3), (0.05, 3000, 3000, "square", 0.3), (0.1, 1800, 1200, "square", 0.25)],
+    "clang": [(0.04, 3200, 3200, "square", 0.5), (0.25, 900, 700, "sine", 0.5)],
     "win": [(0.12, 523, 523, "square", 0.3), (0.12, 659, 659, "square", 0.3), (0.3, 784, 784, "square", 0.3)],
 }
 
@@ -550,7 +644,8 @@ TIMER = ("sensing_timer",)
 MOUSE_DOWN = ("sensing_mousedown",)
 SIZE = ("looks_size",)
 
-BOOL_OPS = {"operator_equals", "operator_lt", "operator_gt", "operator_and", "operator_or", "operator_not", "sensing_mousedown"}
+BOOL_OPS = {"operator_equals", "operator_lt", "operator_gt", "operator_and", "operator_or", "operator_not", "sensing_mousedown",
+            "keypressed"}
 BINARY = {
     "operator_add": ("NUM1", "NUM2", "num"),
     "operator_subtract": ("NUM1", "NUM2", "num"),
@@ -702,6 +797,10 @@ class Target:
         elif op == "mathop":
             bid = self.blk("operator_mathop", fields={"OPERATOR": [e[1], None]})
             self.set_input(bid, "NUM", ("num", e[2]))
+        elif op == "keypressed":
+            bid = self.blk("sensing_keypressed")
+            menu = self.blk("sensing_keyoptions", fields={"KEY_OPTION": [e[1], None]}, shadow=True)
+            self.set_input(bid, "KEY_OPTION", [1, menu])
         elif op in ("motion_xposition", "motion_yposition", "sensing_timer", "sensing_mousedown", "looks_size"):
             bid = self.blk(op)
         else:
@@ -840,6 +939,9 @@ class Target:
         self.set_input(bid, "SOUND_MENU", [1, menu])
         return bid
 
+    def stop_sounds(self):
+        return self.blk("sound_stopallsounds")
+
     def say(self, message, secs=None):
         if secs is None:
             return self.blk("looks_say", {"MESSAGE": ("text", message)})
@@ -948,13 +1050,15 @@ def build():
         ("Chapter", 1), ("Wave", 1), ("Score", 0), ("Best", 0), ("Crown", 0), ("Fight On", 0),
         ("Hit Power", 5), ("Hurt Power", 6), ("Shot Y", GROUND + 18), ("Shot Dir", -1), ("Wave Dir", -1),
         ("Line", ""), ("Line Secs", 2), ("Skip", 0), ("Pop Text", ""), ("Banner", "fight"),
-        ("Joy X", 0), ("Touch Pad", 0),
+        ("Joy X", 0), ("Touch Pad", 0), ("Spikes", 0),
+        ("Fire Held", 0), ("Charge", 0), ("Fire Power", 0), ("Fireball Out", 0),
+        ("Shot X", 999), ("Shot Live", 0), ("Shot Cancel", 0), ("Boom X", 0),
     ]:
         G(name, value)
 
     stage = Target(game, "Stage", is_stage=True)
     game.stage = stage
-    for kind in ("Title", "Select", "Yard", "Woods", "Pass", "Volcano", "Castle", "Arcade", "Ending"):
+    for kind in ("Title", "Select", "Yard", "Woods", "Pass", "Factory", "Volcano", "Castle", "Arcade", "Ending"):
         stage.costume(kind, backdrop_svg(kind), 240, 180)
     for name in SOUNDS:
         stage.sound(name)
@@ -1001,9 +1105,9 @@ def build():
         "load enemy",
         s.if_(eq(V("Mode"), "story"),
               [s.set("Enemy Type", V("Chapter")), *chapter_backdrops, s.set("Pace", 1)],
-              [s.if_(eq(mod(V("Wave"), 5), 0),
-                     [s.set("Enemy Type", 5)],
-                     [s.set("Enemy Type", add(mod(sub(V("Wave"), 1), 5), 1))]),
+              [s.if_(eq(mod(V("Wave"), KING), 0),
+                     [s.set("Enemy Type", KING)],
+                     [s.set("Enemy Type", add(mod(sub(V("Wave"), 1), KING), 1))]),
                s.backdrop("Arcade"),
                s.set("Pace", div(8, add(7, V("Wave"))))]),
         *loads,
@@ -1012,7 +1116,7 @@ def build():
             s.change("Enemy Power", floor_(div(sub(V("Wave"), 1), 2))),
         ]),
         s.set("Enemy HP", V("Enemy Max")), s.set("Enemy Phase", 1),
-        note="Story: the chapter picks the enemy. Arcade: waves 1-4 cycle, every 5th wave is the Shadow King, and each wave is tougher and faster.",
+        note="Story: the chapter picks the enemy. Arcade: waves 1-5 cycle, every 6th wave is the Shadow King, and each wave is tougher and faster.",
     )
 
     s.on_msg(
@@ -1023,6 +1127,7 @@ def build():
         s.show_var("Score"), s.hide_var("Best"),
         s.set("Combo", 0), s.set("Weapon", "none"), s.set("Weapon Uses", 0), s.set("Boomerang Out", 0),
         s.set("Hero Lock", 0), s.set("Hero Safe", 0), s.set("Hero Air", 0),
+        s.set("Spikes", 0), s.set("Charge", 0), s.set("Fireball Out", 0), s.set("Shot Live", 0),
         s.set("Hero Safe Until", 0), s.set("Enemy Stun Until", 0),
         s.broadcast("fighters ready", wait=True),
         s.set("Banner", "ready"), s.broadcast("banner"), s.wait(1.1),
@@ -1050,7 +1155,7 @@ def build():
                 s.if_(not_(lt(V("Super"), 100)), [s.set("Super", 100), s.broadcast("super ready")]),
             ]),
             s.broadcast("enemy hurt"),
-            s.if_(and_(eq(V("Enemy Type"), 5), eq(V("Enemy Phase"), 1), gt(V("Enemy HP"), 0),
+            s.if_(and_(eq(V("Enemy Type"), KING), eq(V("Enemy Phase"), 1), gt(V("Enemy HP"), 0),
                        lt(V("Enemy HP"), div(V("Enemy Max"), 2))), [
                 s.set("Enemy Phase", 2), s.set("Pace", mul(V("Pace"), 0.7)), s.broadcast("king angry"),
             ]),
@@ -1087,6 +1192,18 @@ def build():
     )
 
     s.on_msg("enemy hurt", s.play("hit"))
+    s.on_msg("charge start", s.play("charge"))
+    s.on_msg("charge full", s.play("charged"), s.set("Pop Text", "FULL POWER!"), s.broadcast("popup"))
+    s.on_msg("fire", s.stop_sounds(), s.if_(lt(V("Fire Power"), 100), [s.play("fireball")], [s.play("big fireball")]),
+             note="Each stage of the fireball has its own sound: charging, full power, small or big fireball, and BOOM.")
+    s.on_msg("boom", s.play("boom"))
+    s.on_msg("spikes out", s.play("spikes"))
+    s.on_msg(
+        "spike ouch",
+        s.play("clang"), s.set("Pop Text", "OUCH! SPIKES!"), s.broadcast("popup"),
+        s.set("Hurt Power", SPIKE_OUCH), s.broadcast("enemy hits hero"),
+        note="Punching Spike Bot with bare hands while its spikes are out hurts you. Fireballs, weapons and SUPER still work.",
+    )
     s.on_msg("hero hurt", s.play("hurt"))
     s.on_msg("shake", s.play("big hit"))
     s.on_msg("weapon get", s.play("pickup"))
@@ -1130,7 +1247,7 @@ def build():
     s.on_msg("ending", s.set("State", "ending"), s.backdrop("Ending"), s.hide_var("Wave"), s.hide_var("Score"))
 
     # keyboard, for a laptop
-    s.on_key("left arrow", s.broadcast("move left"), note="Keyboard: arrows move, up or space jumps, Z punch, X kick, C dodge, V super.")
+    s.on_key("left arrow", s.broadcast("move left"), note="Keyboard: arrows move, up or space jumps, Z punch, X kick, C dodge, V super. Hold F to charge a fireball (Hero's fire loop checks the F key).")
     s.on_key("right arrow", s.broadcast("move right"))
     s.on_key("up arrow", s.set("Want Jump", 1))
     s.on_key("space", s.set("Want Jump", 1))
@@ -1138,6 +1255,7 @@ def build():
     s.on_key("x", s.set("Want Kick", 1))
     s.on_key("c", s.set("Want Dodge", 1))
     s.on_key("v", s.set("Want Super", 1))
+
 
     # ------------------------------------------------------------ floor --
     floor = game.sprite("Ground Shake", x=0, y=GROUND - 5, visible=True, rotation="don't rotate")
@@ -1149,10 +1267,11 @@ def build():
     # ------------------------------------------------------------- hero --
     hero = game.sprite("Hero", x=-150, y=GROUND, size=75, visible=True)
     for h in HEROES:
-        for pose in ("idle", "punch", "kick", "jump", "hurt", "win", "dodge", "special", "down"):
+        for pose in ("idle", "punch", "kick", "jump", "hurt", "win", "dodge", "special", "down", "charge"):
             face = "hurt" if pose == "hurt" else ("ko" if pose == "down" else "smile")
-            hero.costume(f"{h['key']} {pose}", fighter_svg(h["color"], pose, h["gear"], face,
-                                                          glow="#facc15" if pose == "special" else None), 50, 168)
+            glow = {"special": "#facc15", "charge": "#fb923c"}.get(pose)
+            hero.costume(f"{h['key']} {pose}", fighter_svg(h["color"], "aim" if pose == "charge" else pose, h["gear"], face,
+                                                          glow=glow), 50, 168)
     H = hero
 
     def pose(name):
@@ -1167,6 +1286,11 @@ def build():
 
     def in_reach(reach):
         return lt(abs_(sub(V("Enemy X"), V("Hero X"))), add(add(reach, V("Weapon Reach")), V("Enemy Body")))
+
+    def land_hit():
+        return H.if_(and_(eq(V("Spikes"), 1), eq(V("Weapon Bonus"), 0)), [H.broadcast("spike ouch")], [
+            H.broadcast("hero hits"), H.if_(eq(V("Weapon"), "hammer"), [H.broadcast("shake")]),
+        ])
 
     def weapon_swing():
         return H.if_(gt(V("Weapon Bonus"), 0), [
@@ -1193,8 +1317,7 @@ def build():
         ], [
             H.set("Hit Power", add(V("Punch Power"), V("Weapon Bonus"))),
             weapon_swing(),
-            H.if_(in_reach(PUNCH_REACH), [H.broadcast("hero hits"),
-                                           H.if_(eq(V("Weapon"), "hammer"), [H.broadcast("shake")])]),
+            H.if_(in_reach(PUNCH_REACH), [land_hit()]),
         ]),
         H.wait(0.16), break_check(), rest_pose(),
     ]
@@ -1202,7 +1325,7 @@ def build():
         pose("kick"), H.move(14), *H.clamp_x(-215, 215),
         H.set("Hit Power", add(V("Kick Power"), V("Weapon Bonus"))),
         weapon_swing(),
-        H.if_(in_reach(KICK_REACH), [H.broadcast("hero hits"), H.if_(eq(V("Weapon"), "hammer"), [H.broadcast("shake")])]),
+        H.if_(in_reach(KICK_REACH), [land_hit()]),
         H.wait(0.22), H.move(-14), *H.clamp_x(-215, 215), break_check(), rest_pose(),
     ]
     dodge = [
@@ -1269,6 +1392,28 @@ def build():
         ]),
         note="The jump loop runs beside the action loop, so you can punch and kick in the air.",
     )
+    holding = or_(eq(V("Fire Held"), 1), ("keypressed", "f"))
+    H.on_flag(
+        H.forever([
+            H.if_(and_(eq(V("Fight On"), 1), eq(V("Fireball Out"), 0), eq(V("Hero Lock"), 0), holding), [
+                H.set("Charge", 1), H.broadcast("charge start"), pose("charge"),
+                H.until(or_(not_(holding), eq(V("Fight On"), 0), eq(V("Hero Lock"), 1)), [
+                    H.if_(lt(V("Charge"), 100), [
+                        H.change("Charge", CHARGE_RATE),
+                        H.if_(not_(lt(V("Charge"), 100)), [H.set("Charge", 100), H.broadcast("charge full")]),
+                    ]),
+                ]),
+                H.set("Fire Held", 0),
+                H.if_(and_(eq(V("Fight On"), 1), eq(V("Hero Lock"), 0)), [
+                    H.set("Fire Power", V("Charge")), H.set("Charge", 0), H.set("Fireball Out", 1), H.broadcast("fire"),
+                    pose("punch"), H.wait(0.15), rest_pose(),
+                ]),
+                H.set("Charge", 0),
+            ]),
+        ]),
+        note="The fire loop. Hold FIRE (or F) to charge; let go to shoot. "
+             "A quick tap is a small fireball; a full charge (about 1 second) is a giant one that explodes.",
+    )
     H.on_flag(
         H.forever([
             H.if_(and_(eq(V("Fight On"), 1), eq(V("Hero Lock"), 0),
@@ -1307,12 +1452,15 @@ def build():
     for e in ENEMIES:
         angry = "angry" if e["n"] >= 3 else "smile"
         for p in ("idle", "windup", "attack", "hurt", "down"):
-            src = {"attack": {1: "punch", 2: "aim", 3: "charge", 4: "slam", 5: "special"}[e["n"]],
-                   "windup": {1: "windup", 2: "windup", 3: "windup", 4: "raise", 5: "raise"}[e["n"]]}.get(p, p)
+            if e["gear"] == "robot":
+                enemy.costume(f"{e['key']} {p}", robot_svg(p), 50, 168)
+                continue
+            src = {"attack": {"rival": "punch", "ivy": "aim", "brute": "charge", "quake": "slam", "shadow": "special"}[e["key"]],
+                   "windup": {"quake": "raise", "shadow": "raise"}.get(e["key"], "windup")}.get(p, p)
             face = {"hurt": "hurt", "down": "ko"}.get(p, angry)
             enemy.costume(f"{e['key']} {p}", fighter_svg(e["color"], src, e["gear"], face,
-                                                        glow="#a855f7" if e["n"] == 5 else None), 50, 168)
-        if e["n"] == 5:
+                                                        glow="#a855f7" if e["n"] == KING else None), 50, 168)
+        if e["n"] == KING:
             enemy.costume("shadow angry", fighter_svg("#7f1d1d", "raise", "crown", "angry", glow="#ef4444"), 50, 168)
     E = enemy
     E.local("Pick", 1)
@@ -1377,6 +1525,22 @@ def build():
             E.if_(gt(abs_(sub(V("Hero X"), XPOS)), 160), [E.repeat(8, [E.move(V("Enemy Speed"))]), *E.clamp_x(-205, 205)]),
         ]
 
+    def spikebot():
+        return [
+            epose("windup"), E.say("SPIKES OUT!", pw(0.55)),
+            E.set("Spikes", 1), epose("attack"), E.broadcast("spikes out"),
+            E.set("Pick", 0),
+            E.until(or_(gt(V("Pick"), 40), eq(V("Fight On"), 0)), [
+                E.change("Pick", 1), E.move(mul(V("Enemy Speed"), 2)), *E.clamp_x(-210, 210),
+                E.if_(or_(gt(XPOS, 209), lt(XPOS, -209)), [E.set("Pick", 99)]),
+                E.if_(and_(lt(abs_(sub(V("Hero X"), XPOS)), add(30, V("Enemy Body"))), lt(sub(V("Hero Y"), GROUND), 55)), [
+                    *hit_hero(), E.broadcast("shake"), E.set("Pick", 99),
+                ]),
+            ]),
+            E.set("Spikes", 0), epose("idle"),
+            E.say("Cooling down...", pw(1.7)),
+        ]
+
     def king():
         return [
             E.set("Pick", rnd(1, 4)),
@@ -1403,13 +1567,15 @@ def build():
                 E.if_(eq(V("Enemy Type"), 1), walker()),
                 E.if_(eq(V("Enemy Type"), 2), thrower()),
                 E.if_(eq(V("Enemy Type"), 3), charger()),
-                E.if_(eq(V("Enemy Type"), 4), stomper()),
-                E.if_(eq(V("Enemy Type"), 5), king()),
+                E.if_(eq(V("Enemy Type"), SPIKEBOT), spikebot()),
+                E.if_(eq(V("Enemy Type"), 5), stomper()),
+                E.if_(eq(V("Enemy Type"), KING), king()),
                 E.if_(eq(V("Fight On"), 1), [epose("idle")]),
             ]),
         ]),
         note="One brain for every enemy. 1 Rival walks in and punches. 2 Ivy throws low and high shots. "
-             "3 Brute says Ready? then charges where you were. 4 Quake stomps a ground wave. 5 the Shadow King mixes them all.",
+             "3 Brute says Ready? then charges where you were. 4 Spike Bot rolls at you with spikes out, then cools down. "
+             "5 Quake stomps a ground wave. 6 the Shadow King mixes them all.",
     )
     E.on_msg("enemy hurt", epose("hurt"), E.move(-12), *E.clamp_x(-210, 210), E.effect("BRIGHTNESS", 60),
              E.wait(0.1), E.effect("BRIGHTNESS", 0))
@@ -1422,7 +1588,7 @@ def build():
     E.on_msg("story scene", E.hide())
     E.on_msg("enemy line", E.say(V("Line")), E.set("Line Until", add(TIMER, V("Line Secs"))),
              E.wait_until(or_(gt(TIMER, V("Line Until")), eq(V("Skip"), 1))), E.say(""))
-    E.on_msg("enemy down", E.say(""), E.wait(0.2), E.set_y(GROUND), epose("down"), E.wait(1.3),
+    E.on_msg("enemy down", E.say(""), E.set("Spikes", 0), E.wait(0.2), E.set_y(GROUND), epose("down"), E.wait(1.3),
              E.repeat(10, [E.effect_by("GHOST", 10), E.wait(0.03)]),
              E.if_(not_(and_(eq(V("Mode"), "story"), eq(V("Chapter"), len(CHAPTERS)))), [E.hide()]),
              E.effect("GHOST", 0))
@@ -1438,15 +1604,17 @@ def build():
     S.on_msg(
         "enemy shot",
         S.goto(add(V("Enemy X"), mul(30, V("Shot Dir"))), V("Shot Y")), S.set("Hit", 0), S.show(), S.front(),
-        S.until(or_(gt(abs_(XPOS), 235), eq(V("Hit"), 1), eq(V("Fight On"), 0)), [
-            S.dx(mul(12, V("Shot Dir"))),
+        S.set("Shot Cancel", 0), S.set("Shot Live", 1),
+        S.until(or_(gt(abs_(XPOS), 235), eq(V("Hit"), 1), eq(V("Fight On"), 0), eq(V("Shot Cancel"), 1)), [
+            S.dx(mul(12, V("Shot Dir"))), S.set("Shot X", XPOS),
             S.if_(and_(lt(abs_(sub(XPOS, V("Hero X"))), 18), gt(sub(V("Shot Y"), V("Hero Y")), -10),
                        lt(sub(V("Shot Y"), V("Hero Y")), 108)), [
                 S.set("Hit", 1), S.set("Hurt Power", V("Enemy Power")), S.broadcast("enemy hits hero"),
             ]),
         ]),
-        S.hide(),
-        note="Low shots fly at knee height: jump them. High shots fly over your head: stay down. Dodge works on both.",
+        S.hide(), S.set("Shot Live", 0), S.set("Shot X", 999),
+        note="Low shots fly at knee height: jump them. High shots fly over your head: stay down. Dodge works on both. "
+             "A fireball can knock a shot out of the air.",
     )
     for m in FIGHT_HIDE:
         S.on_msg(m, S.hide())
@@ -1570,6 +1738,68 @@ def build():
     for m in FIGHT_HIDE:
         BM.on_msg(m, BM.hide(), BM.set("Boomerang Out", 0))
 
+    # ---------------------------------------------------------- fireball --
+    glow = game.sprite("Charge Glow", size=30, rotation="don't rotate")
+    glow.costume("glow", glow_svg(), 30, 30)
+    CG = glow
+    CG.on_flag(
+        CG.hide(),
+        CG.forever([
+            CG.if_(and_(gt(V("Charge"), 0), eq(V("State"), "fight")), [
+                CG.goto(add(V("Hero X"), mul(36, V("Facing"))), add(V("Hero Y"), 66)),
+                CG.size_to(add(25, mul(V("Charge"), 0.9))),
+                CG.if_(eq(V("Charge"), 100), [CG.effect("BRIGHTNESS", mul(30, mod(round_(mul(TIMER, 8)), 2)))],
+                       [CG.effect("BRIGHTNESS", 0)]),
+                CG.show(), CG.front(),
+            ], [CG.hide()]),
+        ]),
+        note="The glowing ball in Hero's hand grows while FIRE is held.",
+    )
+
+    fb = game.sprite("Fireball", size=60, rotation="left-right")
+    fb.costume("flame 1", fireball_svg(0), 54, 26)
+    fb.costume("flame 2", fireball_svg(1), 54, 26)
+    F = fb
+    F.local("Power", 0)
+    F.local("Dir", 1)
+    F.local("Done", 0)
+    F.on_flag(F.hide(), F.set("Fireball Out", 0))
+    F.on_msg(
+        "fire",
+        F.set("Power", V("Fire Power")), F.set("Dir", V("Facing")), F.set("Done", 0),
+        F.point(mul(90, V("Dir"))), F.size_to(add(35, mul(V("Power"), 0.9))),
+        F.goto(add(V("Hero X"), mul(40, V("Dir"))), add(V("Hero Y"), 62)), F.show(), F.front(),
+        F.until(or_(gt(abs_(XPOS), 235), eq(V("Done"), 1), eq(V("Fight On"), 0)), [
+            F.dx(mul(add(9, div(V("Power"), 25)), V("Dir"))),
+            F.if_(eq(mod(round_(mul(TIMER, 12)), 2), 0), [F.wear("flame 1")], [F.wear("flame 2")]),
+            # knock an enemy shot out of the air
+            F.if_(and_(eq(V("Shot Live"), 1), lt(abs_(sub(XPOS, V("Shot X"))), 26), lt(abs_(sub(YPOS, V("Shot Y"))), 34)), [
+                F.set("Shot Cancel", 1), F.set("Pop Text", "BLOCKED!"), F.broadcast("popup"),
+                F.if_(lt(V("Power"), 100), [F.set("Done", 1)]),
+            ]),
+            F.if_(lt(abs_(sub(XPOS, V("Enemy X"))), add(add(14, V("Enemy Body")), div(V("Power"), 8))), [
+                F.set("Done", 1),
+                F.set("Hit Power", add(3, round_(div(V("Power"), 12)))),
+                F.if_(eq(V("Power"), 100), [
+                    F.change("Hit Power", FIRE_FULL_BONUS), F.set("Boom X", XPOS), F.broadcast("boom"), F.broadcast("shake"),
+                ]),
+                F.broadcast("hero hits"),
+            ]),
+        ]),
+        F.hide(), F.set("Fireball Out", 0),
+        note="Flies forward. Small fireball: 3 to 7 damage. Full power: 15 damage, a BOOM and a shake. "
+             "It always gets past Spike Bot's spikes.",
+    )
+    for m in FIGHT_HIDE:
+        F.on_msg(m, F.hide(), F.set("Fireball Out", 0))
+
+    boom = game.sprite("Explosion", size=60, rotation="all around")
+    boom.costume("boom", spark_svg().replace("#fde047", "#fb923c").replace("#f97316", "#dc2626"), 40, 40)
+    BX = boom
+    BX.on_flag(BX.hide())
+    BX.on_msg("boom", BX.goto(V("Boom X"), add(GROUND, 70)), BX.size_to(60), BX.effect("GHOST", 0), BX.show(), BX.front(),
+              BX.repeat(8, [BX.size_by(25), BX.turn(15), BX.effect_by("GHOST", 12), BX.wait(0.02)]), BX.hide())
+
     # ------------------------------------------------------------ crown --
     crown = game.sprite("Crown", size=80, rotation="don't rotate")
     crown.costume("crown", crown_svg(), 22, 30)
@@ -1634,7 +1864,7 @@ def build():
     enemy_tag = game.sprite("Enemy Tag", x=228, y=174, rotation="don't rotate")
     for e in ENEMIES:
         word = e["tag"]
-        enemy_tag.costume(e["key"], tag_svg(word, e["color"] if e["n"] != 5 else "#581c87"), 12 + 10 * len(word), 10)
+        enemy_tag.costume(e["key"], tag_svg(word, e["color"] if e["n"] != KING else "#581c87"), 12 + 10 * len(word), 10)
     enemy_tag.on_flag(enemy_tag.hide(), enemy_tag.forever([
         enemy_tag.if_(eq(V("State"), "fight"), [enemy_tag.wear(V("Enemy Name")), enemy_tag.goto(228, 174), enemy_tag.show()],
                       [enemy_tag.hide()])]))
@@ -1675,7 +1905,7 @@ def build():
     card.costume("prologue", card_svg("THE GOLDEN CROWN", [
         "The Shadow King stole the", "Golden Crown of the Arena!", "Win it back, champion!"], "#7c3aed"), 210, 120)
     for i, c in enumerate(CHAPTERS, start=1):
-        card.costume(f"chapter {i}", card_svg(c["title"], c["lines"], ["#2563eb", "#16a34a", "#dc2626", "#ea580c", "#4c1d95"][i - 1]), 210, 120)
+        card.costume(f"chapter {i}", card_svg(c["title"], c["lines"], ["#2563eb", "#16a34a", "#dc2626", "#475569", "#ea580c", "#4c1d95"][i - 1]), 210, 120)
     card.costume("game over", card_svg("GAME OVER", ["Tap RETRY to fight again", "or HOME for the title."], "#475569"), 210, 120)
     card.costume("arcade over", card_svg("GAME OVER", ["How far did you get?", "Check Score and Best.", "Tap RETRY or HOME."], "#db2777"), 210, 120)
     card.costume("the end", card_svg("THE END", ["The Golden Crown is back!", "You are the CHAMPION.", "Now try ARCADE mode!"], "#ca8a04"), 210, 120)
@@ -1746,12 +1976,16 @@ def build():
         ("Dodge Button", "DODGE", "#64748b", "Want Dodge"),
         ("Punch Button", "PUNCH", "#ea580c", "Want Punch"),
         ("Kick Button", "KICK", "#ca8a04", "Want Kick"),
+        ("Fire Button", "FIRE", "#dc2626", "Fire Held"),
         ("Super Button", "SUPER", "#475569", "Want Super"),
     ]
     for i, (name, label, fill, action) in enumerate(controls):
-        x = -207 + 69 * i
-        b = button(name, label, fill, x, -152)
-        if action.startswith("move"):
+        x = -206 + 59 * i
+        b = button(name, label, fill, x, -152, width=56, size=11)
+        if action == "Fire Held":
+            b.on_click(b.set("Fire Held", 1), b.wait_until(not_(MOUSE_DOWN)), b.set("Fire Held", 0),
+                       note="Hold to charge a fireball, let go to shoot.")
+        elif action.startswith("move"):
             b.on_click(b.broadcast(action), b.wait(0.25),
                        b.until(not_(MOUSE_DOWN), [b.broadcast(action), b.wait(0.09)]),
                        note="Tap to step. Hold to keep walking.")
@@ -1762,7 +1996,7 @@ def build():
         for m in FIGHT_HIDE:
             b.on_msg(m, b.hide())
         if name == "Super Button":
-            b.costume("ready", button_svg("SUPER!", "#facc15", "#7c2d12"), 31, 22)
+            b.costume("ready", button_svg("SUPER!", "#facc15", "#7c2d12", 56, 44, 11), 28, 22)
             b.on_flag(b.forever([b.if_(eq(V("Super"), 100), [b.wear("ready")], [b.wear("button")])]))
 
     story_btn = button("Story Button", "STORY", "#2563eb", -75, -20, width=120, height=52, size=20)
@@ -1951,7 +2185,9 @@ def listing(game):
             return f"(round {f('NUM')})"
         if op == "operator_mathop":
             return f"({b['fields']['OPERATOR'][0]} of {f('NUM')})"
-        if op in ("looks_costume", "looks_backdrops", "sound_sounds_menu", "control_create_clone_of_menu"):
+        if op == "sensing_keypressed":
+            return f"<key {f('KEY_OPTION')} pressed?>"
+        if op in ("looks_costume", "looks_backdrops", "sound_sounds_menu", "control_create_clone_of_menu", "sensing_keyoptions"):
             return f"({list(b['fields'].values())[0][0]})"
         names = {"motion_xposition": "(x position)", "motion_yposition": "(y position)", "sensing_timer": "(timer)",
                  "sensing_mousedown": "<mouse down?>", "looks_size": "(size)"}
@@ -1998,6 +2234,7 @@ def listing(game):
                 "motion_turnright": f"turn right {f('DEGREES')} degrees",
                 "motion_pointindirection": f"point in direction {f('DIRECTION')}",
                 "sound_play": f"start sound {f('SOUND_MENU')}",
+                "sound_stopallsounds": "stop all sounds",
                 "control_create_clone_of": "create clone of (myself)",
                 "control_delete_this_clone": "delete this clone",
                 "control_stop": f"stop [{b['fields'].get('STOP_OPTION', [''])[0]}]",

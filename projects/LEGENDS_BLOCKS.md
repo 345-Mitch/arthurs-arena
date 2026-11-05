@@ -5,8 +5,8 @@ Made by `tools/build_legends_sb3.py` from the same blocks that are inside
 
 ## Stage
 
-Costumes: Title, Select, Yard, Woods, Pass, Volcano, Castle, Arcade, Ending
-Sounds: hit, big hit, hurt, jump, swing, pickup, super, perfect, ko, win
+Costumes: Title, Select, Yard, Woods, Pass, Factory, Volcano, Castle, Arcade, Ending
+Sounds: hit, big hit, hurt, jump, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, win
 
 ```
 when green flag clicked
@@ -100,17 +100,20 @@ if <(Mode) = [story]> then
         switch backdrop to (Pass)
     end
     if <(Chapter) = [4]> then
-        switch backdrop to (Volcano)
+        switch backdrop to (Factory)
     end
     if <(Chapter) = [5]> then
+        switch backdrop to (Volcano)
+    end
+    if <(Chapter) = [6]> then
         switch backdrop to (Castle)
     end
     set [Pace] to [1]
 else
-    if <((Wave) mod [5]) = [0]> then
-        set [Enemy Type] to [5]
+    if <((Wave) mod [6]) = [0]> then
+        set [Enemy Type] to [6]
     else
-        set [Enemy Type] to ((((Wave) - [1]) mod [5]) + [1])
+        set [Enemy Type] to ((((Wave) - [1]) mod [6]) + [1])
     end
     switch backdrop to (Arcade)
     set [Pace] to ([8] / ([7] + (Wave)))
@@ -143,6 +146,15 @@ if <(Enemy Type) = [3]> then
     set [Enemy Size] to [110]
 end
 if <(Enemy Type) = [4]> then
+    set [Enemy Name] to [spikebot]
+    set [Enemy Title] to [SPIKE BOT]
+    set [Enemy Max] to [40]
+    set [Enemy Power] to [10]
+    set [Enemy Speed] to [3]
+    set [Enemy Body] to [22]
+    set [Enemy Size] to [100]
+end
+if <(Enemy Type) = [5]> then
     set [Enemy Name] to [quake]
     set [Enemy Title] to [QUAKE]
     set [Enemy Max] to [50]
@@ -151,7 +163,7 @@ if <(Enemy Type) = [4]> then
     set [Enemy Body] to [26]
     set [Enemy Size] to [120]
 end
-if <(Enemy Type) = [5]> then
+if <(Enemy Type) = [6]> then
     set [Enemy Name] to [shadow]
     set [Enemy Title] to [SHADOW KING]
     set [Enemy Max] to [90]
@@ -168,7 +180,7 @@ set [Enemy HP] to (Enemy Max)
 set [Enemy Phase] to [1]
 ```
 
-> Story: the chapter picks the enemy. Arcade: waves 1-4 cycle, every 5th wave is the Shadow King, and each wave is tougher and faster.
+> Story: the chapter picks the enemy. Arcade: waves 1-5 cycle, every 6th wave is the Shadow King, and each wave is tougher and faster.
 
 ```
 when I receive [start fight]
@@ -189,6 +201,10 @@ set [Boomerang Out] to [0]
 set [Hero Lock] to [0]
 set [Hero Safe] to [0]
 set [Hero Air] to [0]
+set [Spikes] to [0]
+set [Charge] to [0]
+set [Fireball Out] to [0]
+set [Shot Live] to [0]
 set [Hero Safe Until] to [0]
 set [Enemy Stun Until] to [0]
 broadcast [fighters ready] and wait
@@ -234,7 +250,7 @@ if <<(Fight On) = [1]> and <(timer) > (Enemy Stun Until)>> then
         end
     end
     broadcast [enemy hurt]
-    if <<<<(Enemy Type) = [5]> and <(Enemy Phase) = [1]>> and <(Enemy HP) > [0]>> and <(Enemy HP) < ((Enemy Max) / [2])>> then
+    if <<<<(Enemy Type) = [6]> and <(Enemy Phase) = [1]>> and <(Enemy HP) > [0]>> and <(Enemy HP) < ((Enemy Max) / [2])>> then
         set [Enemy Phase] to [2]
         set [Pace] to ((Pace) * [0.7])
         broadcast [king angry]
@@ -295,6 +311,51 @@ start sound (hit)
 ```
 
 ```
+when I receive [charge start]
+start sound (charge)
+```
+
+```
+when I receive [charge full]
+start sound (charged)
+set [Pop Text] to [FULL POWER!]
+broadcast [popup]
+```
+
+```
+when I receive [fire]
+stop all sounds
+if <(Fire Power) < [100]> then
+    start sound (fireball)
+else
+    start sound (big fireball)
+end
+```
+
+> Each stage of the fireball has its own sound: charging, full power, small or big fireball, and BOOM.
+
+```
+when I receive [boom]
+start sound (boom)
+```
+
+```
+when I receive [spikes out]
+start sound (spikes)
+```
+
+```
+when I receive [spike ouch]
+start sound (clang)
+set [Pop Text] to [OUCH! SPIKES!]
+broadcast [popup]
+set [Hurt Power] to [5]
+broadcast [enemy hits hero]
+```
+
+> Punching Spike Bot with bare hands while its spikes are out hurts you. Fireballs, weapons and SUPER still work.
+
+```
 when I receive [hero hurt]
 start sound (hurt)
 ```
@@ -344,7 +405,7 @@ set [Banner] to [ko]
 broadcast [banner]
 wait [1.4] seconds
 if <(Mode) = [story]> then
-    if <(Chapter) = [5]> then
+    if <(Chapter) = [6]> then
         change [Score] by ([1000] + ((Hero HP) * [5]))
         if <(Score) > (Best)> then
             set [Best] to (Score)
@@ -408,7 +469,7 @@ when [left arrow] key pressed
 broadcast [move left]
 ```
 
-> Keyboard: arrows move, up or space jumps, Z punch, X kick, C dodge, V super.
+> Keyboard: arrows move, up or space jumps, Z punch, X kick, C dodge, V super. Hold F to charge a fireball (Hero's fire loop checks the F key).
 
 ```
 when [right arrow] key pressed
@@ -468,7 +529,7 @@ go to x: [0] y: [-80]
 
 ## Hero
 
-Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur win, arthur dodge, arthur special, arthur down, nova idle, nova punch, nova kick, nova jump, nova hurt, nova win, nova dodge, nova special, nova down, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko win, rocko dodge, rocko special, rocko down
+Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur win, arthur dodge, arthur special, arthur down, arthur charge, nova idle, nova punch, nova kick, nova jump, nova hurt, nova win, nova dodge, nova special, nova down, nova charge, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko win, rocko dodge, rocko special, rocko down, rocko charge
 Sprite-only variables: Line Until
 
 ```
@@ -574,9 +635,13 @@ forever
                     broadcast [swing sfx]
                 end
                 if <(abs of ((Enemy X) - (Hero X))) < (([70] + (Weapon Reach)) + (Enemy Body))> then
-                    broadcast [hero hits]
-                    if <(Weapon) = [hammer]> then
-                        broadcast [shake]
+                    if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
+                        broadcast [spike ouch]
+                    else
+                        broadcast [hero hits]
+                        if <(Weapon) = [hammer]> then
+                            broadcast [shake]
+                        end
                     end
                 end
             end
@@ -608,9 +673,13 @@ forever
                 broadcast [swing sfx]
             end
             if <(abs of ((Enemy X) - (Hero X))) < (([82] + (Weapon Reach)) + (Enemy Body))> then
-                broadcast [hero hits]
-                if <(Weapon) = [hammer]> then
-                    broadcast [shake]
+                if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
+                    broadcast [spike ouch]
+                else
+                    broadcast [hero hits]
+                    if <(Weapon) = [hammer]> then
+                        broadcast [shake]
+                    end
                 end
             end
             wait [0.22] seconds
@@ -693,6 +762,43 @@ end
 ```
 
 > The jump loop runs beside the action loop, so you can punch and kick in the air.
+
+```
+when green flag clicked
+forever
+    if <<<<(Fight On) = [1]> and <(Fireball Out) = [0]>> and <(Hero Lock) = [0]>> and <<(Fire Held) = [1]> or <key (f) pressed?>>> then
+        set [Charge] to [1]
+        broadcast [charge start]
+        switch costume to (join (Hero Name) [ charge])
+        repeat until <<<not <<(Fire Held) = [1]> or <key (f) pressed?>>> or <(Fight On) = [0]>> or <(Hero Lock) = [1]>>
+            if <(Charge) < [100]> then
+                change [Charge] by [3.5]
+                if <not <(Charge) < [100]>> then
+                    set [Charge] to [100]
+                    broadcast [charge full]
+                end
+            end
+        end
+        set [Fire Held] to [0]
+        if <<(Fight On) = [1]> and <(Hero Lock) = [0]>> then
+            set [Fire Power] to (Charge)
+            set [Charge] to [0]
+            set [Fireball Out] to [1]
+            broadcast [fire]
+            switch costume to (join (Hero Name) [ punch])
+            wait [0.15] seconds
+            if <(Hero Air) = [1]> then
+                switch costume to (join (Hero Name) [ jump])
+            else
+                switch costume to (join (Hero Name) [ idle])
+            end
+        end
+        set [Charge] to [0]
+    end
+end
+```
+
+> The fire loop. Hold FIRE (or F) to charge; let go to shoot. A quick tap is a small fireball; a full charge (about 1 second) is a giant one that explodes.
 
 ```
 when green flag clicked
@@ -853,7 +959,7 @@ switch costume to (join (Hero Name) [ win])
 
 ## Enemy
 
-Costumes: rival idle, rival windup, rival attack, rival hurt, rival down, ivy idle, ivy windup, ivy attack, ivy hurt, ivy down, brute idle, brute windup, brute attack, brute hurt, brute down, quake idle, quake windup, quake attack, quake hurt, quake down, shadow idle, shadow windup, shadow attack, shadow hurt, shadow down, shadow angry
+Costumes: rival idle, rival windup, rival attack, rival hurt, rival down, ivy idle, ivy windup, ivy attack, ivy hurt, ivy down, brute idle, brute windup, brute attack, brute hurt, brute down, spikebot idle, spikebot windup, spikebot attack, spikebot hurt, spikebot down, quake idle, quake windup, quake attack, quake hurt, quake down, shadow idle, shadow windup, shadow attack, shadow hurt, shadow down, shadow angry
 Sprite-only variables: Pick, Line Until
 
 ```
@@ -962,6 +1068,36 @@ repeat until <(Fight On) = [0]>
         end
         if <(Enemy Type) = [4]> then
             switch costume to (join (Enemy Name) [ windup])
+            say [SPIKES OUT!] for ([0.55] * (Pace)) seconds
+            set [Spikes] to [1]
+            switch costume to (join (Enemy Name) [ attack])
+            broadcast [spikes out]
+            set [Pick] to [0]
+            repeat until <<(Pick) > [40]> or <(Fight On) = [0]>>
+                change [Pick] by [1]
+                move ((Enemy Speed) * [2]) steps
+                if <(x position) < [-210]> then
+                    set x to [-210]
+                end
+                if <(x position) > [210]> then
+                    set x to [210]
+                end
+                if <<(x position) > [209]> or <(x position) < [-209]>> then
+                    set [Pick] to [99]
+                end
+                if <<(abs of ((Hero X) - (x position))) < ([30] + (Enemy Body))> and <((Hero Y) - [-75]) < [55]>> then
+                    set [Hurt Power] to (Enemy Power)
+                    broadcast [enemy hits hero]
+                    broadcast [shake]
+                    set [Pick] to [99]
+                end
+            end
+            set [Spikes] to [0]
+            switch costume to (join (Enemy Name) [ idle])
+            say [Cooling down...] for ([1.7] * (Pace)) seconds
+        end
+        if <(Enemy Type) = [5]> then
+            switch costume to (join (Enemy Name) [ windup])
             say [STOMP!] for ([0.6] * (Pace)) seconds
             switch costume to (join (Enemy Name) [ attack])
             change y by [10]
@@ -984,7 +1120,7 @@ repeat until <(Fight On) = [0]>
                 end
             end
         end
-        if <(Enemy Type) = [5]> then
+        if <(Enemy Type) = [6]> then
             set [Pick] to (pick random [1] to [4])
             if <(Pick) = [1]> then
                 switch costume to (join (Enemy Name) [ windup])
@@ -1089,7 +1225,7 @@ repeat until <(Fight On) = [0]>
 end
 ```
 
-> One brain for every enemy. 1 Rival walks in and punches. 2 Ivy throws low and high shots. 3 Brute says Ready? then charges where you were. 4 Quake stomps a ground wave. 5 the Shadow King mixes them all.
+> One brain for every enemy. 1 Rival walks in and punches. 2 Ivy throws low and high shots. 3 Brute says Ready? then charges where you were. 4 Spike Bot rolls at you with spikes out, then cools down. 5 Quake stomps a ground wave. 6 the Shadow King mixes them all.
 
 ```
 when I receive [enemy hurt]
@@ -1161,6 +1297,7 @@ say []
 ```
 when I receive [enemy down]
 say []
+set [Spikes] to [0]
 wait [0.2] seconds
 set y to [-75]
 switch costume to (join (Enemy Name) [ down])
@@ -1169,7 +1306,7 @@ repeat [10]
     change [ghost] effect by [10]
     wait [0.03] seconds
 end
-if <not <<(Mode) = [story]> and <(Chapter) = [5]>>> then
+if <not <<(Mode) = [story]> and <(Chapter) = [6]>>> then
     hide
 end
 set [ghost] effect to [0]
@@ -1206,8 +1343,11 @@ go to x: ((Enemy X) + ([30] * (Shot Dir))) y: (Shot Y)
 set [Hit] to [0]
 show
 go to [front] layer
-repeat until <<<(abs of (x position)) > [235]> or <(Hit) = [1]>> or <(Fight On) = [0]>>
+set [Shot Cancel] to [0]
+set [Shot Live] to [1]
+repeat until <<<<(abs of (x position)) > [235]> or <(Hit) = [1]>> or <(Fight On) = [0]>> or <(Shot Cancel) = [1]>>
     change x by ([12] * (Shot Dir))
+    set [Shot X] to (x position)
     if <<<(abs of ((x position) - (Hero X))) < [18]> and <((Shot Y) - (Hero Y)) > [-10]>> and <((Shot Y) - (Hero Y)) < [108]>> then
         set [Hit] to [1]
         set [Hurt Power] to (Enemy Power)
@@ -1215,9 +1355,11 @@ repeat until <<<(abs of (x position)) > [235]> or <(Hit) = [1]>> or <(Fight On) 
     end
 end
 hide
+set [Shot Live] to [0]
+set [Shot X] to [999]
 ```
 
-> Low shots fly at knee height: jump them. High shots fly over your head: stay down. Dodge works on both.
+> Low shots fly at knee height: jump them. High shots fly over your head: stay down. Dodge works on both. A fireball can knock a shot out of the air.
 
 ```
 when I receive [show title]
@@ -1540,6 +1682,147 @@ hide
 set [Boomerang Out] to [0]
 ```
 
+## Charge Glow
+
+Costumes: glow
+
+```
+when green flag clicked
+hide
+forever
+    if <<(Charge) > [0]> and <(State) = [fight]>> then
+        go to x: ((Hero X) + ([36] * (Facing))) y: ((Hero Y) + [66])
+        set size to ([25] + ((Charge) * [0.9])) %
+        if <(Charge) = [100]> then
+            set [brightness] effect to ([30] * ((round ((timer) * [8])) mod [2]))
+        else
+            set [brightness] effect to [0]
+        end
+        show
+        go to [front] layer
+    else
+        hide
+    end
+end
+```
+
+> The glowing ball in Hero's hand grows while FIRE is held.
+
+## Fireball
+
+Costumes: flame 1, flame 2
+Sprite-only variables: Power, Dir, Done
+
+```
+when green flag clicked
+hide
+set [Fireball Out] to [0]
+```
+
+```
+when I receive [fire]
+set [Power] to (Fire Power)
+set [Dir] to (Facing)
+set [Done] to [0]
+point in direction ([90] * (Dir))
+set size to ([35] + ((Power) * [0.9])) %
+go to x: ((Hero X) + ([40] * (Dir))) y: ((Hero Y) + [62])
+show
+go to [front] layer
+repeat until <<<(abs of (x position)) > [235]> or <(Done) = [1]>> or <(Fight On) = [0]>>
+    change x by (([9] + ((Power) / [25])) * (Dir))
+    if <((round ((timer) * [12])) mod [2]) = [0]> then
+        switch costume to (flame 1)
+    else
+        switch costume to (flame 2)
+    end
+    if <<<(Shot Live) = [1]> and <(abs of ((x position) - (Shot X))) < [26]>> and <(abs of ((y position) - (Shot Y))) < [34]>> then
+        set [Shot Cancel] to [1]
+        set [Pop Text] to [BLOCKED!]
+        broadcast [popup]
+        if <(Power) < [100]> then
+            set [Done] to [1]
+        end
+    end
+    if <(abs of ((x position) - (Enemy X))) < (([14] + (Enemy Body)) + ((Power) / [8]))> then
+        set [Done] to [1]
+        set [Hit Power] to ([3] + (round ((Power) / [12])))
+        if <(Power) = [100]> then
+            change [Hit Power] by [4]
+            set [Boom X] to (x position)
+            broadcast [boom]
+            broadcast [shake]
+        end
+        broadcast [hero hits]
+    end
+end
+hide
+set [Fireball Out] to [0]
+```
+
+> Flies forward. Small fireball: 3 to 7 damage. Full power: 15 damage, a BOOM and a shake. It always gets past Spike Bot's spikes.
+
+```
+when I receive [show title]
+hide
+set [Fireball Out] to [0]
+```
+
+```
+when I receive [choose hero]
+hide
+set [Fireball Out] to [0]
+```
+
+```
+when I receive [story scene]
+hide
+set [Fireball Out] to [0]
+```
+
+```
+when I receive [hero down]
+hide
+set [Fireball Out] to [0]
+```
+
+```
+when I receive [enemy down]
+hide
+set [Fireball Out] to [0]
+```
+
+```
+when I receive [ending]
+hide
+set [Fireball Out] to [0]
+```
+
+## Explosion
+
+Costumes: boom
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [boom]
+go to x: (Boom X) y: ([-75] + [70])
+set size to [60] %
+set [ghost] effect to [0]
+show
+go to [front] layer
+repeat [8]
+    change size by [25]
+    turn right [15] degrees
+    change [ghost] effect by [12]
+    wait [0.02] seconds
+end
+hide
+```
+
 ## Crown
 
 Costumes: crown
@@ -1736,7 +2019,7 @@ end
 
 ## Enemy Tag
 
-Costumes: rival, ivy, brute, quake, shadow
+Costumes: rival, ivy, brute, spikebot, quake, shadow
 
 ```
 when green flag clicked
@@ -1869,7 +2152,7 @@ hide
 
 ## Story Card
 
-Costumes: prologue, chapter 1, chapter 2, chapter 3, chapter 4, chapter 5, game over, arcade over, the end, angry
+Costumes: prologue, chapter 1, chapter 2, chapter 3, chapter 4, chapter 5, chapter 6, game over, arcade over, the end, angry
 Sprite-only variables: Until
 
 ```
@@ -1965,6 +2248,27 @@ if <(Chapter) = [4]> then
     hide
     broadcast [scene setup] and wait
     if <(Skip) = [0]> then
+        set [Line] to [BZZT! SPIKES... ONLINE!]
+        set [Line Secs] to [2.2]
+        broadcast [enemy line] and wait
+    end
+    if <(Skip) = [0]> then
+        set [Line] to [Then I'll use FIREBALLS!]
+        set [Line Secs] to [2.2]
+        broadcast [hero line] and wait
+    end
+end
+if <(Chapter) = [5]> then
+    switch costume to (chapter 5)
+    set size to [100] %
+    go to x: [0] y: [30]
+    show
+    go to [front] layer
+    set [Until] to ((timer) + [2.6])
+    wait until <<(timer) > (Until)> or <(Skip) = [1]>>
+    hide
+    broadcast [scene setup] and wait
+    if <(Skip) = [0]> then
         set [Line] to [Feel the ground shake!]
         set [Line Secs] to [2.2]
         broadcast [enemy line] and wait
@@ -1975,8 +2279,8 @@ if <(Chapter) = [4]> then
         broadcast [hero line] and wait
     end
 end
-if <(Chapter) = [5]> then
-    switch costume to (chapter 5)
+if <(Chapter) = [6]> then
+    switch costume to (chapter 6)
     set size to [100] %
     go to x: [0] y: [30]
     show
@@ -2106,7 +2410,7 @@ end
 
 ```
 when I receive [fight on]
-go to x: [-207] y: [-152]
+go to x: [-206] y: [-152]
 if <(Touch Pad) = [0]> then
     show
     go to [front] layer
@@ -2168,7 +2472,7 @@ end
 
 ```
 when I receive [fight on]
-go to x: [-138] y: [-152]
+go to x: [-147] y: [-152]
 if <(Touch Pad) = [0]> then
     show
     go to [front] layer
@@ -2225,7 +2529,7 @@ set [Want Jump] to [1]
 
 ```
 when I receive [fight on]
-go to x: [-69] y: [-152]
+go to x: [-88] y: [-152]
 if <(Touch Pad) = [0]> then
     show
     go to [front] layer
@@ -2282,7 +2586,7 @@ set [Want Dodge] to [1]
 
 ```
 when I receive [fight on]
-go to x: [0] y: [-152]
+go to x: [-29] y: [-152]
 if <(Touch Pad) = [0]> then
     show
     go to [front] layer
@@ -2339,7 +2643,7 @@ set [Want Punch] to [1]
 
 ```
 when I receive [fight on]
-go to x: [69] y: [-152]
+go to x: [30] y: [-152]
 if <(Touch Pad) = [0]> then
     show
     go to [front] layer
@@ -2396,7 +2700,66 @@ set [Want Kick] to [1]
 
 ```
 when I receive [fight on]
-go to x: [138] y: [-152]
+go to x: [89] y: [-152]
+if <(Touch Pad) = [0]> then
+    show
+    go to [front] layer
+end
+```
+
+> Hidden in the Android app, which has its own joystick and buttons (Touch Pad is 1 there).
+
+```
+when I receive [show title]
+hide
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when I receive [story scene]
+hide
+```
+
+```
+when I receive [hero down]
+hide
+```
+
+```
+when I receive [enemy down]
+hide
+```
+
+```
+when I receive [ending]
+hide
+```
+
+## Fire Button
+
+Costumes: button
+
+```
+when green flag clicked
+hide
+```
+
+```
+when this sprite clicked
+set [Fire Held] to [1]
+wait until <not <mouse down?>>
+set [Fire Held] to [0]
+```
+
+> Hold to charge a fireball, let go to shoot.
+
+```
+when I receive [fight on]
+go to x: [148] y: [-152]
 if <(Touch Pad) = [0]> then
     show
     go to [front] layer

@@ -2,7 +2,7 @@
 
 Written 2026-11-05 for Arthur.
 
-This is the big version of Arthur's Arena. It has a **Story** with five chapters, an **Arcade** mode that never ends, three fighters to pick from, falling weapons, combos, and a SUPER move.
+This is the big version of Arthur's Arena. It has a **Story** with six chapters, an **Arcade** mode that never ends, three fighters to pick from, a charge-up **fireball**, a spiky robot, falling weapons, combos, and a SUPER move.
 
 The playable file is `projects/arthurs-arena-legends.sb3`. The boss game from before (`projects/arthurs-arena-bosses.sb3`, see `BOSSES.md`) is still there.
 
@@ -24,12 +24,13 @@ On the tablet, the file has to be on the Scratch website first. Sign in, load th
 | 1 | The Training Yard | **Rival** | He walks up and punches. Punch back! |
 | 2 | Ivy's Woods | **Ivy** | She shouts **Low!** or **High!** before she throws. Jump the low shots. Stay down for the high ones. |
 | 3 | The Rocky Pass | **Brute** | He says **Ready?**, then charges where you are standing. Move or DODGE. |
-| 4 | The Volcano Gate | **Quake** | He shouts **STOMP!** and sends a wave along the ground. Jump over it. |
-| 5 | Shadow Castle | **The Shadow King** | He uses all of those tricks. At half health he gets **angry**: he gets faster and throws two shots. |
+| 4 | The Robot Factory | **Spike Bot** | It shouts **SPIKES OUT!** and rolls at you. Don't punch the spikes, it hurts! Jump over it, shoot a **fireball**, or hit it while it says **Cooling down...** |
+| 5 | The Volcano Gate | **Quake** | He shouts **STOMP!** and sends a wave along the ground. Jump over it. |
+| 6 | Shadow Castle | **The Shadow King** | He uses all of those tricks. At half health he gets **angry**: he gets faster and throws two shots. |
 
 Before each fight there is a chapter card, and then the hero and the enemy talk. Tap **SKIP** if you just want to fight.
 
-Win chapter 5 and the Golden Crown drops onto your fighter's head. After that, **every fighter wears the crown** in every fight. Save the project to keep it.
+Win chapter 6 and the Golden Crown drops onto your fighter's head. After that, **every fighter wears the crown** in every fight. Save the project to keep it.
 
 If you get knocked out, tap **RETRY** to try the same chapter again. You get full health, and the talking is skipped.
 
@@ -37,7 +38,7 @@ If you get knocked out, tap **RETRY** to try the same chapter again. You get ful
 
 Fight wave after wave until you get knocked down.
 
-- Waves 1 to 4 are Rival, Ivy, Brute and Quake. Every 5th wave is the Shadow King.
+- Waves 1 to 5 are Rival, Ivy, Brute, Spike Bot and Quake. Every 6th wave is the Shadow King.
 - Every wave, enemies get more health, hit a little harder, and attack faster.
 - Clearing a wave gives you back 30 health.
 - **Score** goes up for every hit, for combos, for perfect dodges and for every wave. **Best** is your top score. It shows on the title screen.
@@ -63,6 +64,7 @@ The buttons are along the bottom of the screen.
 | DODGE | C | Hop backwards and turn see-through. Nothing can hurt you while you dodge. |
 | PUNCH | Z | Quick hit. With a boomerang, PUNCH throws it. |
 | KICK | X | Steps in and hits harder. |
+| FIRE | F (hold) | **Hold** to charge a fireball, **let go** to shoot it. See below. |
 | SUPER | V | Your fighter's SUPER move. It works when the button is gold and you are on the ground. |
 | ✕ (top middle) | | Go back to the title. |
 
@@ -76,6 +78,17 @@ In the Android app these buttons are replaced by a thumb joystick and game-pad b
 - **SUPER meter.** The thin bar under your health fills when you land hits or get hurt. When it is full it flashes, the SUPER button turns gold, and you see **SUPER READY!** You can't be hurt during your SUPER.
 - **Perfect dodge.** If you DODGE just as an attack would have hit you, you see **PERFECT DODGE!** You take no damage, a big chunk of SUPER fills up, and you get 100 points. Try it when Brute charges!
 - **Tap ahead.** If you tap PUNCH while a kick is still going, the punch happens right after. Big fighting games call this an input buffer.
+
+## Fireball
+
+Hold **FIRE** and a glowing ball grows in your hand, with a rising sound. Let go to shoot it.
+
+- **Quick tap:** a small, fast fireball (3 damage).
+- **Hold about 1 second:** you hear a *ding* and see **FULL POWER!** Let go for a giant fireball that does 15 damage, explodes with a **BOOM**, and shakes the ground.
+- Fireballs get past Spike Bot's spikes, and they can knock Ivy's and the Shadow King's shots out of the air (**BLOCKED!**). A full-power fireball keeps going after it blocks a shot.
+- One fireball at a time: you can charge the next one when the last one is gone.
+
+On the Android app, the FIRE button fills up gold as it charges.
 
 ## Weapons
 

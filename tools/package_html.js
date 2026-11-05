@@ -81,6 +81,8 @@ const PAD_JS = `
         ' border:.6vmin solid rgba(255,255,255,.85);box-shadow:0 .7vmin 0 rgba(0,0,0,.35);opacity:.88;box-sizing:border-box}',
         '.pb.down{transform:translateY(.5vmin) scale(.93);box-shadow:0 .2vmin 0 rgba(0,0,0,.35);opacity:1}',
         '#bP{background:#ea580c}#bK{background:#ca8a04}#bJ{background:#16a34a}#bD{background:#64748b}',
+        '#bF{background:#dc2626;width:17vmin;height:17vmin;margin:-8.5vmin 0 0 -8.5vmin;font-size:3.1vmin;text-shadow:0 .3vmin 0 rgba(0,0,0,.4)}',
+        '#bF.full{animation:glow .3s infinite alternate}',
         '#bS{background:#475569;width:13vmin;height:13vmin;margin:-6.5vmin 0 0 -6.5vmin;font-size:2.4vmin}',
         '#bS.ready{background:#facc15;color:#7c2d12;animation:glow .5s infinite alternate}',
         '@keyframes glow{from{box-shadow:0 0 1vmin #fde047}to{box-shadow:0 0 4vmin #fde047}}'
@@ -92,7 +94,8 @@ const PAD_JS = `
     pad.id = 'pad';
     pad.innerHTML = '<div id="joy"><div id="base"><div id="knob"></div></div></div>' +
         '<div class="pb" id="bP">PUNCH</div><div class="pb" id="bK">KICK</div>' +
-        '<div class="pb" id="bJ">JUMP</div><div class="pb" id="bD">DODGE</div><div class="pb" id="bS">SUPER</div>';
+        '<div class="pb" id="bJ">JUMP</div><div class="pb" id="bD">DODGE</div><div class="pb" id="bS">SUPER</div>' +
+        '<div class="pb" id="bF">FIRE</div>';
     document.body.appendChild(pad);
 
     // right-hand buttons in a diamond, like a game controller
@@ -102,7 +105,7 @@ const PAD_JS = `
         el.style.left = 'calc(' + cx + ' + ' + dx + ' * ' + r + ')';
         el.style.top = 'calc(' + cy + ' + ' + dy + ' * ' + r + ')';
     }
-    place('bP', 0, 1); place('bK', 1, 0); place('bJ', 0, -1); place('bD', -1, 0); place('bS', -1.15, -1.55);
+    place('bP', 0, 1); place('bK', 1, 0); place('bJ', 0, -1); place('bD', -1, 0); place('bS', -1.15, -1.55); place('bF', -2.15, 0.85);
 
     var vars = null;
     function v (name) {
@@ -134,6 +137,19 @@ const PAD_JS = `
         el.addEventListener('pointerup', up);
         el.addEventListener('pointercancel', up);
     });
+
+    // FIRE: hold to charge a fireball, let go to shoot
+    var bF = document.getElementById('bF');
+    bF.addEventListener('pointerdown', function (e) {
+        e.preventDefault();
+        bF.setPointerCapture(e.pointerId);
+        bF.classList.add('down');
+        set('Fire Held', 1);
+        buzz();
+    });
+    function fireUp () { bF.classList.remove('down'); set('Fire Held', 0); }
+    bF.addEventListener('pointerup', fireUp);
+    bF.addEventListener('pointercancel', fireUp);
 
     // floating joystick: put your thumb anywhere in the bottom-left area
     var joy = document.getElementById('joy'), base = document.getElementById('base'), knob = document.getElementById('knob');
@@ -190,6 +206,9 @@ const PAD_JS = `
                 home();
             }
             bS.classList.toggle('ready', Number(get('Super')) >= 100);
+            var c = Number(get('Charge')) || 0;   // the FIRE button fills up gold while charging
+            bF.style.background = c > 0 ? 'conic-gradient(#facc15 ' + (c * 3.6) + 'deg, #dc2626 0)' : '';
+            bF.classList.toggle('full', c >= 100);
         }
         requestAnimationFrame(tick);
     })();

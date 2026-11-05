@@ -8,6 +8,7 @@ During a fight the app shows game-pad controls, and you can use both thumbs at o
 
 - **Joystick (left thumb):** put your thumb anywhere in the bottom-left corner and the stick appears under it. Push left or right to walk; push further to walk faster. **Flick it up to jump.**
 - **Buttons (right thumb):** **PUNCH** (bottom), **KICK** (right), **JUMP** (top), **DODGE** (left). Hold PUNCH or KICK to keep attacking.
+- **FIRE** (big red button, bottom left of the others): hold it to charge a fireball. The button fills up gold, and glows at full power. Let go to shoot.
 - **SUPER** (above the buttons) glows gold when your super move is ready.
 - Each button gives a tiny buzz when you press it.
 
@@ -34,7 +35,7 @@ To update later, install the new APK the same way. It installs over the old one 
 ## Good to know
 
 - Scratch on its own only follows one finger, so the joystick and buttons are part of the app's page, not Scratch sprites. They set the same variables the Scratch buttons do (`Want Punch` and so on, plus `Joy X` for walking). `Touch Pad` = 1 tells the game to hide its own buttons.
-- Version 1.1 (joystick) installs over 1.0 and keeps the Best score.
+- Version 1.2 (fireball and Spike Bot) installs over 1.0 and 1.1 and keeps the Best score.
 - The Android back button closes the game.
 - The app is signed with a debug key (`android/debug.keystore`, password `arthursarena`). That's fine for installing at home. The Play Store would need a private key.
 
