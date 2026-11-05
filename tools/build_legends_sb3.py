@@ -60,11 +60,15 @@ ENEMIES = [
     dict(n=2, key="ivy", tag="IVY", color="#7c3aed", size=82, hp=32, pow=8, speed=1, body=10, gear="leaf"),
     dict(n=3, key="brute", tag="BRUTE", color="#dc2626", size=110, hp=44, pow=12, speed=1, body=22, gear="horns"),
     dict(n=4, key="spikebot", tag="SPIKE BOT", color="#64748b", size=100, hp=40, pow=10, speed=3, body=22, gear="robot"),
-    dict(n=5, key="quake", tag="QUAKE", color="#ea580c", size=120, hp=50, pow=12, speed=4, body=26, gear="spikes"),
-    dict(n=6, key="shadow", tag="SHADOW KING", color="#1e1b4b", size=125, hp=90, pow=12, speed=4, body=26, gear="crown"),
+    dict(n=5, key="megaspike", tag="MEGA SPIKE", color="#7f1d1d", size=125, hp=80, pow=12, speed=4, body=34, gear="robot"),
+    dict(n=6, key="quake", tag="QUAKE", color="#ea580c", size=120, hp=50, pow=12, speed=4, body=26, gear="spikes"),
+    dict(n=7, key="shadow", tag="SHADOW KING", color="#1e1b4b", size=125, hp=90, pow=12, speed=4, body=26, gear="crown"),
 ]
-KING = 6  # the Shadow King's Enemy Type
 SPIKEBOT = 4
+MEGA = 5   # MEGA SPIKE, the spiked robot boss
+QUAKE = 6
+KING = 7   # the Shadow King's Enemy Type
+BOSSES = (MEGA, KING)
 
 CHAPTERS = [
     # backdrop, chapter card lines, dialogue lines (speaker, text)
@@ -76,7 +80,9 @@ CHAPTERS = [
          talk=[("enemy", "BRUTE... SMASH!"), ("hero", "Not if I move first!")]),
     dict(backdrop="Factory", title="CHAPTER 4", lines=["The Robot Factory", "Spikes out? Don't punch!", "Hold FIRE for a fireball."],
          talk=[("enemy", "BZZT! SPIKES... ONLINE!"), ("hero", "Then I'll use FIREBALLS!")]),
-    dict(backdrop="Volcano", title="CHAPTER 5", lines=["The Volcano Gate", "Quake stomps the ground.", "Jump over the wave!"],
+    dict(backdrop="Fortress", title="BOSS: CHAPTER 5", lines=["The Spike Fortress", "MEGA SPIKE is spiky ALL over.", "Hit it while it cools down!"],
+         talk=[("enemy", "I AM MEGA SPIKE! FEEL MY SPIKES!"), ("hero", "Then I'll fight smart!")]),
+    dict(backdrop="Volcano", title="CHAPTER 6", lines=["The Volcano Gate", "Quake stomps the ground.", "Jump over the wave!"],
          talk=[("enemy", "Feel the ground shake!"), ("hero", "I'll jump right over it!")]),
     dict(backdrop="Castle", title="FINAL CHAPTER", lines=["Shadow Castle", "He uses every trick.", "Use your SUPER!"],
          talk=[("enemy", "The Golden Crown is MINE!"), ("hero", "Not for long!")]),
@@ -101,6 +107,8 @@ JOY_SPEED = 0.28  # pixels per frame = Joy X * Step * this
 COMBO_BONUS = 3
 ARCADE_HEAL = 30
 SPIKE_OUCH = 5       # what bare hands take from punching spikes
+RAIN_SPIKES = 5      # spikes in one Spike Rain
+RAIN_HURT = 8
 CHARGE_RATE = 3.5    # charge per frame: full (100) in about one second
 FIRE_FULL_BONUS = 4  # extra damage for a fully charged fireball
 
@@ -369,6 +377,18 @@ def backdrop_svg(kind):
             + f'<rect y="{g}" width="480" height="{360 - g}" fill="#1f2937"/>'
             + "".join(f'<path d="M{x} {g} l20 0 l-14 14 l-20 0 Z" fill="#facc15"/>' for x in range(0, 500, 40))
         )
+    elif kind == "Fortress":
+        wall_spikes = "".join(f'<polygon points="{x},{y} {x + 14},{y} {x + 7},{y - 26}" fill="#d6d3d1" stroke="#1c1917" stroke-width="2"/>'
+                              for x in range(0, 480, 24) for y in (110,))
+        body = (
+            '<rect width="480" height="360" fill="#450a0a"/>'
+            '<circle cx="380" cy="60" r="34" fill="#f87171" opacity="0.5"/>'
+            '<rect x="0" y="110" width="480" height="150" fill="#292524"/>' + wall_spikes
+            + "".join(f'<rect x="{x}" y="140" width="40" height="70" rx="4" fill="#1c1917"/>' for x in (40, 150, 290, 400))
+            + "".join(f'<circle cx="{x + 20}" cy="160" r="6" fill="#ef4444"/>' for x in (40, 150, 290, 400))
+            + f'<rect y="{g}" width="480" height="{360 - g}" fill="#1c1917"/>'
+            + "".join(f'<polygon points="{x},{g} {x + 10},{g} {x + 5},{g - 10}" fill="#78716c"/>' for x in range(0, 480, 30))
+        )
     elif kind == "Volcano":
         body = (
             '<rect width="480" height="360" fill="#7f1d1d"/>'
@@ -411,22 +431,27 @@ def backdrop_svg(kind):
     return svg_doc(480, 360, body)
 
 
-def robot_svg(pose):
-    """Spike Bot: a box robot on treads, facing right. Spikes come out to attack."""
+def robot_svg(pose, mega=False):
+    """Spike Bot: a box robot on treads, facing right. Spikes come out to attack.
+    mega=True is MEGA SPIKE: dark armor, a spike crown, and spikes that never fully go in."""
     spikes = pose in ("attack", "windup")
-    eye = "#ef4444" if spikes else "#22d3ee"
+    eye = "#ef4444" if spikes else ("#f97316" if mega else "#22d3ee")
     parts = []
     if pose == "attack":
         parts.append('<ellipse cx="50" cy="110" rx="48" ry="62" fill="#ef4444" opacity="0.25"/>')
     spike_pts = []
     long_ = 16 if pose == "attack" else (9 if spikes else 4)
+    if mega:
+        long_ += 5
     for y in (96, 116, 136):
         spike_pts.append(f"24,{y - 6} {24 - long_},{y} 24,{y + 6}")
         spike_pts.append(f"76,{y - 6} {76 + long_},{y} 76,{y + 6}")
     for x in (38, 50, 62):
         spike_pts.append(f"{x - 6},50 {x},{50 - long_} {x + 6},50")
-    spike_svg = "".join(f'<polygon points="{pt}" fill="#e5e7eb" stroke="#1f2937" stroke-width="2.5" stroke-linejoin="round"/>'
-                        for pt in spike_pts)
+    if mega:  # spiked shoulders and a big spike crown
+        spike_pts += ["22,88 8,74 30,84", "78,88 92,74 70,84", "34,48 28,22 42,46", "66,48 72,22 58,46", "44,46 50,10 56,46"]
+    spike_svg = "".join(f'<polygon points="{pt}" fill="{"#fca5a5" if mega and spikes else "#e5e7eb"}" stroke="#1f2937" '
+                        'stroke-width="2.5" stroke-linejoin="round"/>' for pt in spike_pts)
     arm = ('<rect x="70" y="100" width="26" height="9" rx="4" fill="#64748b" stroke="#1f2937" stroke-width="2.5"/>'
            if pose == "attack" else
            '<rect x="72" y="96" width="9" height="28" rx="4" fill="#64748b" stroke="#1f2937" stroke-width="2.5"/>')
@@ -437,13 +462,13 @@ def robot_svg(pose):
         spike_svg
         + '<rect x="16" y="146" width="68" height="22" rx="11" fill="#334155" stroke="#0f172a" stroke-width="3"/>'
         + "".join(f'<circle cx="{x}" cy="157" r="6.5" fill="#94a3b8" stroke="#0f172a" stroke-width="2"/>' for x in (28, 50, 72))
-        + '<rect x="24" y="86" width="52" height="62" rx="10" fill="#94a3b8" stroke="#1f2937" stroke-width="4"/>'
+        + f'<rect x="24" y="86" width="52" height="62" rx="10" fill="{"#57534e" if mega else "#94a3b8"}" stroke="#1f2937" stroke-width="4"/>'
         + '<g><rect x="33" y="112" width="34" height="18" rx="3" fill="#facc15" stroke="#1f2937" stroke-width="2"/>'
         + "".join(f'<path d="M{x} 112 l8 0 l-8 18 l-8 0 Z" fill="#1f2937"/>' for x in (39, 51, 63)) + '</g>'
         + arm
         + '<line x1="50" y1="50" x2="50" y2="34" stroke="#1f2937" stroke-width="3"/>'
         + f'<circle cx="50" cy="30" r="5.5" fill="{eye}" stroke="#1f2937" stroke-width="2"/>'
-        + '<rect x="30" y="48" width="42" height="38" rx="12" fill="#cbd5e1" stroke="#1f2937" stroke-width="4"/>'
+        + f'<rect x="30" y="48" width="42" height="38" rx="12" fill="{"#78716c" if mega else "#cbd5e1"}" stroke="#1f2937" stroke-width="4"/>'
         + face
     )
     if pose == "hurt":
@@ -455,6 +480,34 @@ def robot_svg(pose):
         bot = f'<g transform="rotate(8 50 160)">{bot}</g>'
     parts.append(bot)
     return svg_doc(100, 180, "".join(parts))
+
+
+def spike_armor_svg(base_svg):
+    """Adds a ring of spikes around a stick figure (the Shadow King's Spike Armor)."""
+    pts = []
+    for k in range(12):
+        a = -math.pi / 2 + k * 2 * math.pi / 12
+        cx, cy = 50 + 30 * math.cos(a), 100 + 62 * math.sin(a)
+        tx, ty = 50 + 48 * math.cos(a), 100 + 82 * math.sin(a)
+        nx, ny = -math.sin(a) * 6, math.cos(a) * 6
+        pts.append(f"{cx + nx:.1f},{cy + ny:.1f} {tx:.1f},{ty:.1f} {cx - nx:.1f},{cy - ny:.1f}")
+    ring = "".join(f'<polygon points="{p}" fill="#c084fc" stroke="#1e1b4b" stroke-width="2.5" stroke-linejoin="round"/>' for p in pts)
+    inner = base_svg[base_svg.index(">") + 1: -len("</svg>")]
+    return svg_doc(100, 180, ring + inner)
+
+
+def falling_spike_svg():
+    return svg_doc(30, 64, '<polygon points="4,0 26,0 15,62" fill="#e5e7eb" stroke="#1f2937" stroke-width="3" stroke-linejoin="round"/>'
+                           '<rect x="4" y="0" width="22" height="8" fill="#7f1d1d"/>')
+
+
+def warning_svg():
+    return svg_doc(60, 16, '<ellipse cx="30" cy="8" rx="28" ry="7" fill="#ef4444" opacity="0.75" stroke="#7f1d1d" stroke-width="2"/>')
+
+
+def spike_shot_svg():
+    return svg_doc(50, 20, '<polygon points="0,4 36,4 50,10 36,16 0,16" fill="#e5e7eb" stroke="#1f2937" stroke-width="2.5" stroke-linejoin="round"/>'
+                           '<rect x="0" y="4" width="10" height="12" fill="#7f1d1d"/>')
 
 
 def fireball_svg(frame):
@@ -558,6 +611,8 @@ SOUNDS = {
     "boom": [(0.08, 800, 200, "noise", 1.0), (0.45, 90, 30, "noise", 0.9)],
     "spikes": [(0.05, 2400, 2400, "square", 0.3), (0.05, 3000, 3000, "square", 0.3), (0.1, 1800, 1200, "square", 0.25)],
     "clang": [(0.04, 3200, 3200, "square", 0.5), (0.25, 900, 700, "sine", 0.5)],
+    "alarm": [(0.18, 880, 660, "square", 0.3), (0.18, 880, 660, "square", 0.3), (0.18, 880, 660, "square", 0.3)],
+    "spike fall": [(0.25, 2000, 400, "sine", 0.3)],
     "win": [(0.12, 523, 523, "square", 0.3), (0.12, 659, 659, "square", 0.3), (0.3, 784, 784, "square", 0.3)],
 }
 
@@ -1058,7 +1113,7 @@ def build():
 
     stage = Target(game, "Stage", is_stage=True)
     game.stage = stage
-    for kind in ("Title", "Select", "Yard", "Woods", "Pass", "Factory", "Volcano", "Castle", "Arcade", "Ending"):
+    for kind in ("Title", "Select", "Yard", "Woods", "Pass", "Factory", "Fortress", "Volcano", "Castle", "Arcade", "Ending"):
         stage.costume(kind, backdrop_svg(kind), 240, 180)
     for name in SOUNDS:
         stage.sound(name)
@@ -1116,7 +1171,7 @@ def build():
             s.change("Enemy Power", floor_(div(sub(V("Wave"), 1), 2))),
         ]),
         s.set("Enemy HP", V("Enemy Max")), s.set("Enemy Phase", 1),
-        note="Story: the chapter picks the enemy. Arcade: waves 1-5 cycle, every 6th wave is the Shadow King, and each wave is tougher and faster.",
+        note="Story: the chapter picks the enemy. Arcade: waves 1-6 cycle (wave 5 is the MEGA SPIKE boss), every 7th wave is the Shadow King, and each wave is tougher and faster.",
     )
 
     s.on_msg(
@@ -1130,6 +1185,9 @@ def build():
         s.set("Spikes", 0), s.set("Charge", 0), s.set("Fireball Out", 0), s.set("Shot Live", 0),
         s.set("Hero Safe Until", 0), s.set("Enemy Stun Until", 0),
         s.broadcast("fighters ready", wait=True),
+        s.if_(or_(*[eq(V("Enemy Type"), b) for b in BOSSES]), [
+            s.play("alarm"), s.set("Banner", "boss"), s.broadcast("banner"), s.wait(1.5),
+        ]),
         s.set("Banner", "ready"), s.broadcast("banner"), s.wait(1.1),
         s.set("Banner", "fight"), s.broadcast("banner"), s.wait(0.3),
         s.set("Want Punch", 0), s.set("Want Kick", 0), s.set("Want Jump", 0), s.set("Want Dodge", 0), s.set("Want Super", 0),
@@ -1155,7 +1213,7 @@ def build():
                 s.if_(not_(lt(V("Super"), 100)), [s.set("Super", 100), s.broadcast("super ready")]),
             ]),
             s.broadcast("enemy hurt"),
-            s.if_(and_(eq(V("Enemy Type"), KING), eq(V("Enemy Phase"), 1), gt(V("Enemy HP"), 0),
+            s.if_(and_(or_(*[eq(V("Enemy Type"), b) for b in BOSSES]), eq(V("Enemy Phase"), 1), gt(V("Enemy HP"), 0),
                        lt(V("Enemy HP"), div(V("Enemy Max"), 2))), [
                 s.set("Enemy Phase", 2), s.set("Pace", mul(V("Pace"), 0.7)), s.broadcast("king angry"),
             ]),
@@ -1198,6 +1256,7 @@ def build():
              note="Each stage of the fireball has its own sound: charging, full power, small or big fireball, and BOOM.")
     s.on_msg("boom", s.play("boom"))
     s.on_msg("spikes out", s.play("spikes"))
+    s.on_msg("spike fall sfx", s.wait(0.7), s.play("spike fall"))
     s.on_msg(
         "spike ouch",
         s.play("clang"), s.set("Pop Text", "OUCH! SPIKES!"), s.broadcast("popup"),
@@ -1453,7 +1512,7 @@ def build():
         angry = "angry" if e["n"] >= 3 else "smile"
         for p in ("idle", "windup", "attack", "hurt", "down"):
             if e["gear"] == "robot":
-                enemy.costume(f"{e['key']} {p}", robot_svg(p), 50, 168)
+                enemy.costume(f"{e['key']} {p}", robot_svg(p, mega=e["n"] == MEGA), 50, 168)
                 continue
             src = {"attack": {"rival": "punch", "ivy": "aim", "brute": "charge", "quake": "slam", "shadow": "special"}[e["key"]],
                    "windup": {"quake": "raise", "shadow": "raise"}.get(e["key"], "windup")}.get(p, p)
@@ -1462,6 +1521,7 @@ def build():
                                                         glow="#a855f7" if e["n"] == KING else None), 50, 168)
         if e["n"] == KING:
             enemy.costume("shadow angry", fighter_svg("#7f1d1d", "raise", "crown", "angry", glow="#ef4444"), 50, 168)
+            enemy.costume("shadow spikes", spike_armor_svg(fighter_svg("#1e1b4b", "raise", "crown", "angry", glow="#a855f7")), 50, 168)
     E = enemy
     E.local("Pick", 1)
     E.local("Line Until", 0)
@@ -1541,9 +1601,41 @@ def build():
             E.say("Cooling down...", pw(1.7)),
         ]
 
+    def spike_roll(steps, speed_mul):
+        return [
+            E.set("Spikes", 1), epose("attack"), E.broadcast("spikes out"),
+            E.set("Pick", 0),
+            E.until(or_(gt(V("Pick"), steps), eq(V("Fight On"), 0)), [
+                E.change("Pick", 1), E.move(mul(V("Enemy Speed"), speed_mul)), *E.clamp_x(-205, 205),
+                E.if_(or_(gt(XPOS, 204), lt(XPOS, -204)), [E.set("Pick", 999)]),
+                E.if_(and_(lt(abs_(sub(V("Hero X"), XPOS)), add(30, V("Enemy Body"))), lt(sub(V("Hero Y"), GROUND), 70)), [
+                    *hit_hero(), E.broadcast("shake"), E.set("Pick", 999),
+                ]),
+            ]),
+        ]
+
+    def megaspike():
+        cool = mul(V("Pace"), 1.4)
+        return [
+            E.set("Spikes", 1), E.set("Pick", rnd(1, 3)),
+            E.if_(eq(V("Pick"), 1), [epose("windup"), E.say("SPIKE ROLL!", pw(0.6)), *spike_roll(45, 2.2)]),
+            E.if_(eq(V("Pick"), 2), [*shot(False), *shot(True),
+                                      E.if_(eq(V("Enemy Phase"), 2), shot(False))]),
+            E.if_(eq(V("Pick"), 3), [epose("windup"), E.say("SPIKE RAIN!", pw(0.6)), epose("attack"),
+                                      E.broadcast("spike rain", wait=True)]),
+            E.set("Spikes", 0), epose("idle"), E.say("Cooling down...", cool),
+        ]
+
     def king():
         return [
-            E.set("Pick", rnd(1, 4)),
+            E.if_(eq(V("Enemy Phase"), 2), [E.set("Pick", rnd(1, 5))], [E.set("Pick", rnd(1, 4))]),
+            E.if_(eq(V("Pick"), 5), [
+                E.wear("shadow spikes"), E.set("Spikes", 1), E.broadcast("spikes out"), E.say("SPIKE ARMOR!", pw(0.5)),
+                E.repeat(25, [E.move(V("Enemy Speed")), *E.clamp_x(-205, 205),
+                              E.if_(and_(lt(abs_(sub(V("Hero X"), XPOS)), add(30, V("Enemy Body"))),
+                                         lt(sub(V("Hero Y"), GROUND), 60)), [*hit_hero()])]),
+                E.wait(pw(0.6)), E.set("Spikes", 0), epose("idle"), E.wait(pw(0.4)),
+            ]),
             E.if_(eq(V("Pick"), 1), charger()),
             E.if_(eq(V("Pick"), 2), [
                 E.wait(pw(0.2)), *shot(False),
@@ -1568,18 +1660,23 @@ def build():
                 E.if_(eq(V("Enemy Type"), 2), thrower()),
                 E.if_(eq(V("Enemy Type"), 3), charger()),
                 E.if_(eq(V("Enemy Type"), SPIKEBOT), spikebot()),
-                E.if_(eq(V("Enemy Type"), 5), stomper()),
+                E.if_(eq(V("Enemy Type"), MEGA), megaspike()),
+                E.if_(eq(V("Enemy Type"), QUAKE), stomper()),
                 E.if_(eq(V("Enemy Type"), KING), king()),
                 E.if_(eq(V("Fight On"), 1), [epose("idle")]),
             ]),
         ]),
         note="One brain for every enemy. 1 Rival walks in and punches. 2 Ivy throws low and high shots. "
              "3 Brute says Ready? then charges where you were. 4 Spike Bot rolls at you with spikes out, then cools down. "
-             "5 Quake stomps a ground wave. 6 the Shadow King mixes them all.",
+             "5 BOSS MEGA SPIKE: spike roll, spike shots and Spike Rain, then it cools down. "
+             "6 Quake stomps a ground wave. 7 the Shadow King mixes them all, and grows Spike Armor when angry.",
     )
     E.on_msg("enemy hurt", epose("hurt"), E.move(-12), *E.clamp_x(-210, 210), E.effect("BRIGHTNESS", 60),
              E.wait(0.1), E.effect("BRIGHTNESS", 0))
-    E.on_msg("king angry", E.wear("shadow angry"), E.say("You're strong... but I'm STRONGER!", 1.6), E.wear("shadow idle"))
+    E.on_msg("king angry",
+             E.if_(eq(V("Enemy Type"), KING), [E.wear("shadow angry"), E.say("You're strong... but I'm STRONGER!", 1.6),
+                                                E.wear("shadow idle")],
+                   [E.wear("megaspike attack"), E.say("OVERDRIVE!!", 1.2), E.wear("megaspike idle")]))
     for m in ("show title", "choose hero"):
         E.on_msg(m, E.hide())
     E.on_msg("fighters ready", E.show(), E.clear_fx(), E.size_to(V("Enemy Size")), E.point(-90), E.set("Enemy Facing", -1),
@@ -1596,13 +1693,15 @@ def build():
     E.on_msg("ending", E.show(), E.goto(170, GROUND), E.point(-90), E.wear("shadow down"))
 
     # ------------------------------------------------------- projectiles --
-    shot_s = game.sprite("Enemy Shot", size=100, rotation="don't rotate")
+    shot_s = game.sprite("Enemy Shot", size=100, rotation="left-right")
     shot_s.costume("ball", shot_svg(), 14, 14)
+    shot_s.costume("spike", spike_shot_svg(), 25, 10)
     S = shot_s
     S.local("Hit", 0)
     S.on_flag(S.hide())
     S.on_msg(
         "enemy shot",
+        S.if_(eq(V("Enemy Name"), "megaspike"), [S.wear("spike")], [S.wear("ball")]), S.point(mul(90, V("Shot Dir"))),
         S.goto(add(V("Enemy X"), mul(30, V("Shot Dir"))), V("Shot Y")), S.set("Hit", 0), S.show(), S.front(),
         S.set("Shot Cancel", 0), S.set("Shot Live", 1),
         S.until(or_(gt(abs_(XPOS), 235), eq(V("Hit"), 1), eq(V("Fight On"), 0), eq(V("Shot Cancel"), 1)), [
@@ -1737,6 +1836,42 @@ def build():
     )
     for m in FIGHT_HIDE:
         BM.on_msg(m, BM.hide(), BM.set("Boomerang Out", 0))
+
+    # -------------------------------------------------------- spike rain --
+    rain = game.sprite("Spike Rain", size=100, rotation="don't rotate")
+    rain.costume("warning", warning_svg(), 30, 8)
+    rain.costume("spike", falling_spike_svg(), 15, 62)
+    RN = rain
+    RN.local("Hit", 0)
+    RN.on_flag(RN.hide())
+    RN.local("Is Clone", 0)
+    RN.on_msg(
+        "spike rain",
+        RN.if_(eq(V("Is Clone"), 0), [
+            RN.wear("warning"),
+            RN.goto(V("Hero X"), GROUND), RN.clone(),
+            RN.repeat(RAIN_SPIKES - 1, [RN.goto(rnd(-210, 210), GROUND), RN.clone()]),
+            RN.broadcast("spike fall sfx"),
+            RN.wait(1.6),
+        ]),
+        note="One spike falls where the hero is standing and the rest land anywhere. A red mark shows where. Move away, or DODGE. "
+             "Only the original makes spikes (clones hear messages too).",
+    )
+    RN.on_clone(
+        RN.set("Is Clone", 1), RN.wear("warning"), RN.set_y(GROUND), RN.set("Hit", 0), RN.show(),
+        RN.repeat(4, [RN.effect("GHOST", 50), RN.wait(0.09), RN.effect("GHOST", 0), RN.wait(0.09)]),
+        RN.wear("spike"), RN.set_y(190), RN.front(),
+        RN.until(or_(lt(YPOS, GROUND + 4), eq(V("Fight On"), 0)), [
+            RN.dy(-22),
+            RN.if_(and_(eq(V("Hit"), 0), lt(abs_(sub(XPOS, V("Hero X"))), 20),
+                        lt(YPOS, add(V("Hero Y"), 120)), gt(YPOS, sub(V("Hero Y"), 10))), [
+                RN.set("Hit", 1), RN.set("Hurt Power", RAIN_HURT), RN.broadcast("enemy hits hero"),
+            ]),
+        ]),
+        RN.wait(0.25), RN.delete_clone(),
+    )
+    for m in FIGHT_HIDE:
+        RN.on_msg(m, RN.hide())
 
     # ---------------------------------------------------------- fireball --
     glow = game.sprite("Charge Glow", size=30, rotation="don't rotate")
@@ -1875,23 +2010,29 @@ def build():
     P = pop
     P.local("My Text", "")
     P.on_flag(P.hide())
-    P.on_msg("popup", P.set("My Text", V("Pop Text")), P.goto(add(V("Hero X"), 10), add(V("Hero Y"), 125)), P.clone(),
-             note="Copies Pop Text into a clone so two pop-ups in a row both show.")
-    P.on_clone(P.show(), P.say(V("My Text")), P.repeat(14, [P.dy(2), P.wait(0.06)]), P.delete_clone())
-    P.on_msg("super ready", P.set("My Text", "SUPER READY! Tap SUPER"), P.goto(-150, 120), P.clone())
+    P.local("Is Clone", 0)
+    P.on_msg("popup", P.if_(eq(V("Is Clone"), 0), [
+        P.set("My Text", V("Pop Text")), P.goto(add(V("Hero X"), 10), add(V("Hero Y"), 125)), P.clone()]),
+             note="Copies Pop Text into a clone so two pop-ups in a row both show. Clones hear messages too, "
+                  "so only the original (Is Clone = 0) makes new clones.")
+    P.on_clone(P.set("Is Clone", 1), P.show(), P.say(V("My Text")), P.repeat(14, [P.dy(2), P.wait(0.06)]), P.delete_clone())
+    P.on_msg("super ready", P.if_(eq(V("Is Clone"), 0), [
+        P.set("My Text", "SUPER READY! Tap SUPER"), P.goto(-150, 120), P.clone()]))
 
     spark = game.sprite("Hit Spark", size=50, rotation="all around")
     spark.costume("spark", spark_svg(), 40, 40)
     SP = spark
     SP.on_flag(SP.hide())
-    SP.on_msg("enemy hurt", SP.goto(V("Enemy X"), add(GROUND, 60)), SP.clone())
-    SP.on_msg("hero hurt", SP.goto(V("Hero X"), add(GROUND, 50)), SP.clone())
-    SP.on_clone(SP.point(rnd(0, 90)), SP.size_to(40), SP.show(), SP.front(),
+    SP.local("Is Clone", 0)
+    SP.on_msg("enemy hurt", SP.if_(eq(V("Is Clone"), 0), [SP.goto(V("Enemy X"), add(GROUND, 60)), SP.clone()]),
+              note="Only the original makes sparks; clones hear messages too.")
+    SP.on_msg("hero hurt", SP.if_(eq(V("Is Clone"), 0), [SP.goto(V("Hero X"), add(GROUND, 50)), SP.clone()]))
+    SP.on_clone(SP.set("Is Clone", 1), SP.point(rnd(0, 90)), SP.size_to(40), SP.show(), SP.front(),
                 SP.repeat(5, [SP.size_by(14), SP.effect_by("GHOST", 18), SP.wait(0.02)]), SP.delete_clone())
 
     banner = game.sprite("Banner", x=0, y=40, rotation="don't rotate")
     for key, word, fill in (("ready", "READY...", "#facc15"), ("fight", "FIGHT!", "#ef4444"), ("ko", "K.O.!", "#f97316"),
-                            ("clear", "CHAPTER CLEAR!", "#22c55e"), ("wave clear", "WAVE CLEAR!", "#22d3ee")):
+                            ("clear", "CHAPTER CLEAR!", "#22c55e"), ("wave clear", "WAVE CLEAR!", "#22d3ee"), ("boss", "BOSS FIGHT!", "#ef4444")):
         banner.costume(key, banner_svg(word, fill), banner_size(word)[1] / 2, 45)
     BN = banner
     BN.on_flag(BN.hide())
@@ -1905,11 +2046,12 @@ def build():
     card.costume("prologue", card_svg("THE GOLDEN CROWN", [
         "The Shadow King stole the", "Golden Crown of the Arena!", "Win it back, champion!"], "#7c3aed"), 210, 120)
     for i, c in enumerate(CHAPTERS, start=1):
-        card.costume(f"chapter {i}", card_svg(c["title"], c["lines"], ["#2563eb", "#16a34a", "#dc2626", "#475569", "#ea580c", "#4c1d95"][i - 1]), 210, 120)
+        card.costume(f"chapter {i}", card_svg(c["title"], c["lines"], ["#2563eb", "#16a34a", "#dc2626", "#475569", "#991b1b", "#ea580c", "#4c1d95"][i - 1]), 210, 120)
     card.costume("game over", card_svg("GAME OVER", ["Tap RETRY to fight again", "or HOME for the title."], "#475569"), 210, 120)
     card.costume("arcade over", card_svg("GAME OVER", ["How far did you get?", "Check Score and Best.", "Tap RETRY or HOME."], "#db2777"), 210, 120)
     card.costume("the end", card_svg("THE END", ["The Golden Crown is back!", "You are the CHAMPION.", "Now try ARCADE mode!"], "#ca8a04"), 210, 120)
-    card.costume("angry", card_svg("HE'S ANGRY!", ["The Shadow King is faster", "and throws double shots!"], "#b91c1c"), 210, 120)
+    card.costume("angry", card_svg("HE'S ANGRY!", ["Faster, double shots,", "and SPIKE ARMOR!"], "#b91c1c"), 210, 120)
+    card.costume("overdrive", card_svg("OVERDRIVE!", ["MEGA SPIKE is faster", "and shoots more spikes!"], "#b91c1c"), 210, 120)
     K = card
     K.local("Until", 0)
 
@@ -1953,7 +2095,7 @@ def build():
         K.broadcast("show home"),
         note="After the Shadow King: the crown drops onto the hero. Beating Story once gives every fighter the crown.",
     )
-    K.on_msg("king angry", K.wear("angry"), K.size_to(80), K.goto(0, 60), K.show(), K.front(), K.wait(1.4), K.hide())
+    K.on_msg("king angry", K.if_(eq(V("Enemy Type"), KING), [K.wear("angry")], [K.wear("overdrive")]), K.size_to(80), K.goto(0, 60), K.show(), K.front(), K.wait(1.4), K.hide())
     K.on_msg("game over", K.if_(eq(V("Mode"), "arcade"), [K.wear("arcade over")], [K.wear("game over")]),
              K.size_to(85), K.goto(0, -5), K.show(), K.front())
     for m in ("show title", "choose hero", "start fight", "fight on"):
@@ -2095,6 +2237,10 @@ def validate(game):
                         errors.append(f"{t.name}: broadcast {item}")
         if not t.costumes:
             errors.append(f"{t.name}: no costumes")
+        # Clones hear every message too. A sprite that makes clones from a message
+        # must check "Is Clone" or each clone makes more clones.
+        if any(b["opcode"] == "control_create_clone_of" for b in t.blocks.values()) and "Is Clone" not in t.locals:
+            errors.append(f"{t.name}: makes clones but has no Is Clone guard")
     # every message that is listened for is also sent, and the other way round
     sent, heard = set(), set()
     for t in [game.stage, *game.targets]:

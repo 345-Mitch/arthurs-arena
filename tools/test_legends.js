@@ -112,7 +112,7 @@ function tools (vm) {
 // A bot that plays fair: it only uses what a player could see and the buttons.
 function makeBot (T, hero) {
     const stats = {punches: 0, kicks: 0, jumps: 0, dodges: 0, supers: 0, weapons: new Set(), perfect: 0,
-        combos: 0, breaks: 0, fireballs: 0, ouches: 0, retries: 0, chapters: new Set(), waves: 0, popups: new Set()};
+        combos: 0, breaks: 0, fireballs: 0, ouches: 0, rainDodges: 0, retries: 0, chapters: new Set(), waves: 0, popups: new Set()};
     let frame = 0;
     let lastMove = 0;
     let picked = false;
@@ -166,7 +166,18 @@ function makeBot (T, hero) {
             if (charging === 0) T.set('Fire Held', 0);
             return;
         }
-        if (name === 'spikebot' && T.get('Spikes') === 1) {
+        // Spike Rain: step away from a red mark under the hero
+        const marks = T.clones('Spike Rain').filter(c => c.visible && c.getCostumes()[c.currentCostume].name === 'warning');
+        const danger = marks.find(c => Math.abs(c.x - hx) < 34);
+        if (danger) {
+            if (frame - lastMove > 2) {
+                T.send(danger.x > hx || hx > 190 ? 'move left' : 'move right');
+                lastMove = frame;
+            }
+            stats.rainDodges++;
+            return;
+        }
+        if ((name === 'spikebot' || name === 'megaspike' || name === 'shadow') && T.get('Spikes') === 1) {
             // never punch the spikes: jump over the roll, or charge a fireball from afar
             if (d < 95 && T.get('Hero Air') === 0) {
                 T.set('Want Jump', 1);
@@ -473,6 +484,55 @@ async function fireTest () {
     return {tap: tap.damage, full: full.damage};
 }
 
+async function bossTest () {
+    const T = await startArcadeAt(5); // wave 5 is the MEGA SPIKE boss
+    if (T.get('Enemy Name') !== 'megaspike') return fail(`boss: wave 5 is ${T.get('Enemy Name')}, not MEGA SPIKE`);
+    T.set('Enemy HP', 999);
+    T.set('Enemy Max', 999);
+    const seen = {rain: false, spikeShot: false, roll: false};
+    const heroStart = T.get('Hero HP');
+    for (let i = 0; i < 30 * 40 && !(seen.rain && seen.spikeShot && seen.roll); i++) {
+        await T.step();
+        T.set('Hero HP', 100); // keep the hero alive; we only watch the attacks
+        T.set('Hero Max', 100);
+        const bubble = (T.sprite('Enemy').getCustomState('Scratch.looks') || {}).text || '';
+        if (bubble === 'SPIKE ROLL!') seen.roll = true;
+        const shot = T.sprite('Enemy Shot');
+        if (shot.visible && T.costume('Enemy Shot') === 'spike') seen.spikeShot = true;
+        if (T.clones('Spike Rain').length) {
+            seen.rain = true;
+            T.set('Hero Safe Until', 0);
+        }
+    }
+    if (!seen.rain) fail('boss: MEGA SPIKE never used Spike Rain');
+    if (!seen.spikeShot) fail('boss: MEGA SPIKE never shot spikes');
+    if (!seen.roll) fail('boss: MEGA SPIKE never did a Spike Roll');
+    // Spike Rain hurts a hero who stands still under it
+    T.set('Hero HP', 100);
+    T.set('Hero Safe Until', 0);
+    T.set('Hero Safe', 0);
+    T.send('spike rain');
+    await T.step(50);
+    if (T.get('Hero HP') >= 100) fail('boss: standing under Spike Rain did not hurt');
+    // two Spike Rains close together: clones must not make more clones
+    await T.step(60);
+    T.send('spike rain');
+    await T.step(5);
+    T.send('spike rain');
+    await T.step(5);
+    const spikes = T.clones('Spike Rain').length;
+    if (spikes > 10) fail(`boss: two Spike Rains made ${spikes} spikes (clones copying clones)`);
+    // half health starts OVERDRIVE
+    T.set('Enemy Max', 80);
+    T.set('Enemy HP', 41);
+    T.set('Hit Power', 2);
+    T.set('Enemy Stun Until', 0);
+    T.send('hero hits');
+    await T.step(3);
+    if (T.get('Enemy Phase') !== 2) fail('boss: OVERDRIVE did not start at half health');
+    return {attacks: Object.keys(seen).filter(k => seen[k]), heroStart};
+}
+
 async function spikeTest () {
     const T = await startArcadeAt(4); // wave 4 is Spike Bot
     if (T.get('Enemy Name') !== 'spikebot') return fail(`spikes: wave 4 is ${T.get('Enemy Name')}, not Spike Bot`);
@@ -516,6 +576,7 @@ async function spikeTest () {
     results.arcade = await arcadeRun(1);
     results.fire = await fireTest();
     results.spikes = await spikeTest();
+    results.boss = await bossTest();
     await mashTest();
     await weaponTest();
     const show = r => JSON.stringify(r, (k, v) => (v instanceof Set ? [...v] : v));

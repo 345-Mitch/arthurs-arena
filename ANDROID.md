@@ -35,7 +35,7 @@ To update later, install the new APK the same way. It installs over the old one 
 ## Good to know
 
 - Scratch on its own only follows one finger, so the joystick and buttons are part of the app's page, not Scratch sprites. They set the same variables the Scratch buttons do (`Want Punch` and so on, plus `Joy X` for walking). `Touch Pad` = 1 tells the game to hide its own buttons.
-- Version 1.2 (fireball and Spike Bot) installs over 1.0 and 1.1 and keeps the Best score.
+- Version 1.3 (spiky bosses) installs over earlier versions and keeps the Best score.
 - The Android back button closes the game.
 - The app is signed with a debug key (`android/debug.keystore`, password `arthursarena`). That's fine for installing at home. The Play Store would need a private key.
 

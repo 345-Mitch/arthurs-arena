@@ -2,7 +2,7 @@
 
 Written 2026-11-05 for Arthur.
 
-This is the big version of Arthur's Arena. It has a **Story** with six chapters, an **Arcade** mode that never ends, three fighters to pick from, a charge-up **fireball**, a spiky robot, falling weapons, combos, and a SUPER move.
+This is the big version of Arthur's Arena. It has a **Story** with seven chapters, an **Arcade** mode that never ends, three fighters to pick from, a charge-up **fireball**, spiky robots and spiky bosses, falling weapons, combos, and a SUPER move.
 
 The playable file is `projects/arthurs-arena-legends.sb3`. The boss game from before (`projects/arthurs-arena-bosses.sb3`, see `BOSSES.md`) is still there.
 
@@ -25,12 +25,13 @@ On the tablet, the file has to be on the Scratch website first. Sign in, load th
 | 2 | Ivy's Woods | **Ivy** | She shouts **Low!** or **High!** before she throws. Jump the low shots. Stay down for the high ones. |
 | 3 | The Rocky Pass | **Brute** | He says **Ready?**, then charges where you are standing. Move or DODGE. |
 | 4 | The Robot Factory | **Spike Bot** | It shouts **SPIKES OUT!** and rolls at you. Don't punch the spikes, it hurts! Jump over it, shoot a **fireball**, or hit it while it says **Cooling down...** |
-| 5 | The Volcano Gate | **Quake** | He shouts **STOMP!** and sends a wave along the ground. Jump over it. |
-| 6 | Shadow Castle | **The Shadow King** | He uses all of those tricks. At half health he gets **angry**: he gets faster and throws two shots. |
+| 5 | The Spike Fortress | **BOSS: MEGA SPIKE** | A giant robot covered in spikes. It has three attacks: **SPIKE ROLL!** (jump over it), spike shots (**Low!** / **High!**), and **SPIKE RAIN!** (red marks show where spikes will fall, so move off them or DODGE). After each attack it says **Cooling down...** with its spikes in: that's when to punch. At half health it goes into **OVERDRIVE**: faster, with more spikes. |
+| 6 | The Volcano Gate | **Quake** | He shouts **STOMP!** and sends a wave along the ground. Jump over it. |
+| 7 | Shadow Castle | **BOSS: The Shadow King** | He uses all of those tricks. At half health he gets **angry**: he gets faster, throws two shots, and grows **SPIKE ARMOR**. Don't punch the armor; use a fireball or wait for it to go away. |
 
 Before each fight there is a chapter card, and then the hero and the enemy talk. Tap **SKIP** if you just want to fight.
 
-Win chapter 6 and the Golden Crown drops onto your fighter's head. After that, **every fighter wears the crown** in every fight. Save the project to keep it.
+Win chapter 7 and the Golden Crown drops onto your fighter's head. After that, **every fighter wears the crown** in every fight. Save the project to keep it.
 
 If you get knocked out, tap **RETRY** to try the same chapter again. You get full health, and the talking is skipped.
 
@@ -38,7 +39,8 @@ If you get knocked out, tap **RETRY** to try the same chapter again. You get ful
 
 Fight wave after wave until you get knocked down.
 
-- Waves 1 to 5 are Rival, Ivy, Brute, Spike Bot and Quake. Every 6th wave is the Shadow King.
+- Waves 1 to 6 are Rival, Ivy, Brute, Spike Bot, the MEGA SPIKE boss, and Quake. Every 7th wave is the Shadow King.
+- Boss fights start with a **BOSS FIGHT!** warning and an alarm.
 - Every wave, enemies get more health, hit a little harder, and attack faster.
 - Clearing a wave gives you back 30 health.
 - **Score** goes up for every hit, for combos, for perfect dodges and for every wave. **Best** is your top score. It shows on the title screen.

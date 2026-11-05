@@ -6,11 +6,11 @@ Arthur's stickman fighting game, built in Scratch, with an Android tablet in min
 
 `projects/arthurs-arena-legends.sb3` is the full game:
 
-- **Story mode**: six chapters to win back the Golden Crown from the Shadow King, with talking scenes you can skip.
+- **Story mode**: seven chapters to win back the Golden Crown from the Shadow King, with talking scenes you can skip.
 - **Arcade mode**: endless waves that get harder, with a score and a best score.
 - **Three fighters**: Arthur, Nova and Rocko, each with their own speed, power, health and SUPER move.
 - **Moves**: punch, kick, jump, air attacks, dodge, combos, a SUPER meter, perfect dodges, and a **fireball** you hold to charge up.
-- **Spike Bot**: a robot that rolls at you with spikes out. Punching the spikes hurts!
+- **Spiky enemies and bosses**: Spike Bot, the giant **MEGA SPIKE** boss (Spike Roll, spike shots and Spike Rain), and a Shadow King who grows Spike Armor. Punching spikes hurts!
 - **Weapons** fall into the arena: a sword, a hammer and a boomerang. Each one breaks after a few uses.
 - Beat Story mode to unlock the **Golden Crown** for every fighter.
 

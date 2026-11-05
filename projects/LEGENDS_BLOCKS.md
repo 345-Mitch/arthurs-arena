@@ -5,8 +5,8 @@ Made by `tools/build_legends_sb3.py` from the same blocks that are inside
 
 ## Stage
 
-Costumes: Title, Select, Yard, Woods, Pass, Factory, Volcano, Castle, Arcade, Ending
-Sounds: hit, big hit, hurt, jump, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, win
+Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Volcano, Castle, Arcade, Ending
+Sounds: hit, big hit, hurt, jump, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, alarm, spike fall, win
 
 ```
 when green flag clicked
@@ -103,17 +103,20 @@ if <(Mode) = [story]> then
         switch backdrop to (Factory)
     end
     if <(Chapter) = [5]> then
-        switch backdrop to (Volcano)
+        switch backdrop to (Fortress)
     end
     if <(Chapter) = [6]> then
+        switch backdrop to (Volcano)
+    end
+    if <(Chapter) = [7]> then
         switch backdrop to (Castle)
     end
     set [Pace] to [1]
 else
-    if <((Wave) mod [6]) = [0]> then
-        set [Enemy Type] to [6]
+    if <((Wave) mod [7]) = [0]> then
+        set [Enemy Type] to [7]
     else
-        set [Enemy Type] to ((((Wave) - [1]) mod [6]) + [1])
+        set [Enemy Type] to ((((Wave) - [1]) mod [7]) + [1])
     end
     switch backdrop to (Arcade)
     set [Pace] to ([8] / ([7] + (Wave)))
@@ -155,6 +158,15 @@ if <(Enemy Type) = [4]> then
     set [Enemy Size] to [100]
 end
 if <(Enemy Type) = [5]> then
+    set [Enemy Name] to [megaspike]
+    set [Enemy Title] to [MEGA SPIKE]
+    set [Enemy Max] to [80]
+    set [Enemy Power] to [12]
+    set [Enemy Speed] to [4]
+    set [Enemy Body] to [34]
+    set [Enemy Size] to [125]
+end
+if <(Enemy Type) = [6]> then
     set [Enemy Name] to [quake]
     set [Enemy Title] to [QUAKE]
     set [Enemy Max] to [50]
@@ -163,7 +175,7 @@ if <(Enemy Type) = [5]> then
     set [Enemy Body] to [26]
     set [Enemy Size] to [120]
 end
-if <(Enemy Type) = [6]> then
+if <(Enemy Type) = [7]> then
     set [Enemy Name] to [shadow]
     set [Enemy Title] to [SHADOW KING]
     set [Enemy Max] to [90]
@@ -180,7 +192,7 @@ set [Enemy HP] to (Enemy Max)
 set [Enemy Phase] to [1]
 ```
 
-> Story: the chapter picks the enemy. Arcade: waves 1-5 cycle, every 6th wave is the Shadow King, and each wave is tougher and faster.
+> Story: the chapter picks the enemy. Arcade: waves 1-6 cycle (wave 5 is the MEGA SPIKE boss), every 7th wave is the Shadow King, and each wave is tougher and faster.
 
 ```
 when I receive [start fight]
@@ -208,6 +220,12 @@ set [Shot Live] to [0]
 set [Hero Safe Until] to [0]
 set [Enemy Stun Until] to [0]
 broadcast [fighters ready] and wait
+if <<(Enemy Type) = [5]> or <(Enemy Type) = [7]>> then
+    start sound (alarm)
+    set [Banner] to [boss]
+    broadcast [banner]
+    wait [1.5] seconds
+end
 set [Banner] to [ready]
 broadcast [banner]
 wait [1.1] seconds
@@ -250,7 +268,7 @@ if <<(Fight On) = [1]> and <(timer) > (Enemy Stun Until)>> then
         end
     end
     broadcast [enemy hurt]
-    if <<<<(Enemy Type) = [6]> and <(Enemy Phase) = [1]>> and <(Enemy HP) > [0]>> and <(Enemy HP) < ((Enemy Max) / [2])>> then
+    if <<<<<(Enemy Type) = [5]> or <(Enemy Type) = [7]>> and <(Enemy Phase) = [1]>> and <(Enemy HP) > [0]>> and <(Enemy HP) < ((Enemy Max) / [2])>> then
         set [Enemy Phase] to [2]
         set [Pace] to ((Pace) * [0.7])
         broadcast [king angry]
@@ -345,6 +363,12 @@ start sound (spikes)
 ```
 
 ```
+when I receive [spike fall sfx]
+wait [0.7] seconds
+start sound (spike fall)
+```
+
+```
 when I receive [spike ouch]
 start sound (clang)
 set [Pop Text] to [OUCH! SPIKES!]
@@ -405,7 +429,7 @@ set [Banner] to [ko]
 broadcast [banner]
 wait [1.4] seconds
 if <(Mode) = [story]> then
-    if <(Chapter) = [6]> then
+    if <(Chapter) = [7]> then
         change [Score] by ([1000] + ((Hero HP) * [5]))
         if <(Score) > (Best)> then
             set [Best] to (Score)
@@ -959,7 +983,7 @@ switch costume to (join (Hero Name) [ win])
 
 ## Enemy
 
-Costumes: rival idle, rival windup, rival attack, rival hurt, rival down, ivy idle, ivy windup, ivy attack, ivy hurt, ivy down, brute idle, brute windup, brute attack, brute hurt, brute down, spikebot idle, spikebot windup, spikebot attack, spikebot hurt, spikebot down, quake idle, quake windup, quake attack, quake hurt, quake down, shadow idle, shadow windup, shadow attack, shadow hurt, shadow down, shadow angry
+Costumes: rival idle, rival windup, rival attack, rival hurt, rival down, ivy idle, ivy windup, ivy attack, ivy hurt, ivy down, brute idle, brute windup, brute attack, brute hurt, brute down, spikebot idle, spikebot windup, spikebot attack, spikebot hurt, spikebot down, megaspike idle, megaspike windup, megaspike attack, megaspike hurt, megaspike down, quake idle, quake windup, quake attack, quake hurt, quake down, shadow idle, shadow windup, shadow attack, shadow hurt, shadow down, shadow angry, shadow spikes
 Sprite-only variables: Pick, Line Until
 
 ```
@@ -1097,6 +1121,71 @@ repeat until <(Fight On) = [0]>
             say [Cooling down...] for ([1.7] * (Pace)) seconds
         end
         if <(Enemy Type) = [5]> then
+            set [Spikes] to [1]
+            set [Pick] to (pick random [1] to [3])
+            if <(Pick) = [1]> then
+                switch costume to (join (Enemy Name) [ windup])
+                say [SPIKE ROLL!] for ([0.6] * (Pace)) seconds
+                set [Spikes] to [1]
+                switch costume to (join (Enemy Name) [ attack])
+                broadcast [spikes out]
+                set [Pick] to [0]
+                repeat until <<(Pick) > [45]> or <(Fight On) = [0]>>
+                    change [Pick] by [1]
+                    move ((Enemy Speed) * [2.2]) steps
+                    if <(x position) < [-205]> then
+                        set x to [-205]
+                    end
+                    if <(x position) > [205]> then
+                        set x to [205]
+                    end
+                    if <<(x position) > [204]> or <(x position) < [-204]>> then
+                        set [Pick] to [999]
+                    end
+                    if <<(abs of ((Hero X) - (x position))) < ([30] + (Enemy Body))> and <((Hero Y) - [-75]) < [70]>> then
+                        set [Hurt Power] to (Enemy Power)
+                        broadcast [enemy hits hero]
+                        broadcast [shake]
+                        set [Pick] to [999]
+                    end
+                end
+            end
+            if <(Pick) = [2]> then
+                switch costume to (join (Enemy Name) [ windup])
+                say [Low!] for ([0.45] * (Pace)) seconds
+                set [Shot Y] to [-57]
+                set [Shot Dir] to (Enemy Facing)
+                switch costume to (join (Enemy Name) [ attack])
+                broadcast [enemy shot] and wait
+                switch costume to (join (Enemy Name) [ idle])
+                switch costume to (join (Enemy Name) [ windup])
+                say [High!] for ([0.45] * (Pace)) seconds
+                set [Shot Y] to [50]
+                set [Shot Dir] to (Enemy Facing)
+                switch costume to (join (Enemy Name) [ attack])
+                broadcast [enemy shot] and wait
+                switch costume to (join (Enemy Name) [ idle])
+                if <(Enemy Phase) = [2]> then
+                    switch costume to (join (Enemy Name) [ windup])
+                    say [Low!] for ([0.45] * (Pace)) seconds
+                    set [Shot Y] to [-57]
+                    set [Shot Dir] to (Enemy Facing)
+                    switch costume to (join (Enemy Name) [ attack])
+                    broadcast [enemy shot] and wait
+                    switch costume to (join (Enemy Name) [ idle])
+                end
+            end
+            if <(Pick) = [3]> then
+                switch costume to (join (Enemy Name) [ windup])
+                say [SPIKE RAIN!] for ([0.6] * (Pace)) seconds
+                switch costume to (join (Enemy Name) [ attack])
+                broadcast [spike rain] and wait
+            end
+            set [Spikes] to [0]
+            switch costume to (join (Enemy Name) [ idle])
+            say [Cooling down...] for ((Pace) * [1.4]) seconds
+        end
+        if <(Enemy Type) = [6]> then
             switch costume to (join (Enemy Name) [ windup])
             say [STOMP!] for ([0.6] * (Pace)) seconds
             switch costume to (join (Enemy Name) [ attack])
@@ -1120,8 +1209,35 @@ repeat until <(Fight On) = [0]>
                 end
             end
         end
-        if <(Enemy Type) = [6]> then
-            set [Pick] to (pick random [1] to [4])
+        if <(Enemy Type) = [7]> then
+            if <(Enemy Phase) = [2]> then
+                set [Pick] to (pick random [1] to [5])
+            else
+                set [Pick] to (pick random [1] to [4])
+            end
+            if <(Pick) = [5]> then
+                switch costume to (shadow spikes)
+                set [Spikes] to [1]
+                broadcast [spikes out]
+                say [SPIKE ARMOR!] for ([0.5] * (Pace)) seconds
+                repeat [25]
+                    move (Enemy Speed) steps
+                    if <(x position) < [-205]> then
+                        set x to [-205]
+                    end
+                    if <(x position) > [205]> then
+                        set x to [205]
+                    end
+                    if <<(abs of ((Hero X) - (x position))) < ([30] + (Enemy Body))> and <((Hero Y) - [-75]) < [60]>> then
+                        set [Hurt Power] to (Enemy Power)
+                        broadcast [enemy hits hero]
+                    end
+                end
+                wait ([0.6] * (Pace)) seconds
+                set [Spikes] to [0]
+                switch costume to (join (Enemy Name) [ idle])
+                wait ([0.4] * (Pace)) seconds
+            end
             if <(Pick) = [1]> then
                 switch costume to (join (Enemy Name) [ windup])
                 say [Ready?] for ([0.75] * (Pace)) seconds
@@ -1225,7 +1341,7 @@ repeat until <(Fight On) = [0]>
 end
 ```
 
-> One brain for every enemy. 1 Rival walks in and punches. 2 Ivy throws low and high shots. 3 Brute says Ready? then charges where you were. 4 Spike Bot rolls at you with spikes out, then cools down. 5 Quake stomps a ground wave. 6 the Shadow King mixes them all.
+> One brain for every enemy. 1 Rival walks in and punches. 2 Ivy throws low and high shots. 3 Brute says Ready? then charges where you were. 4 Spike Bot rolls at you with spikes out, then cools down. 5 BOSS MEGA SPIKE: spike roll, spike shots and Spike Rain, then it cools down. 6 Quake stomps a ground wave. 7 the Shadow King mixes them all, and grows Spike Armor when angry.
 
 ```
 when I receive [enemy hurt]
@@ -1244,9 +1360,15 @@ set [brightness] effect to [0]
 
 ```
 when I receive [king angry]
-switch costume to (shadow angry)
-say [You're strong... but I'm STRONGER!] for [1.6] seconds
-switch costume to (shadow idle)
+if <(Enemy Type) = [7]> then
+    switch costume to (shadow angry)
+    say [You're strong... but I'm STRONGER!] for [1.6] seconds
+    switch costume to (shadow idle)
+else
+    switch costume to (megaspike attack)
+    say [OVERDRIVE!!] for [1.2] seconds
+    switch costume to (megaspike idle)
+end
 ```
 
 ```
@@ -1306,7 +1428,7 @@ repeat [10]
     change [ghost] effect by [10]
     wait [0.03] seconds
 end
-if <not <<(Mode) = [story]> and <(Chapter) = [6]>>> then
+if <not <<(Mode) = [story]> and <(Chapter) = [7]>>> then
     hide
 end
 set [ghost] effect to [0]
@@ -1329,7 +1451,7 @@ switch costume to (shadow down)
 
 ## Enemy Shot
 
-Costumes: ball
+Costumes: ball, spike
 Sprite-only variables: Hit
 
 ```
@@ -1339,6 +1461,12 @@ hide
 
 ```
 when I receive [enemy shot]
+if <(Enemy Name) = [megaspike]> then
+    switch costume to (spike)
+else
+    switch costume to (ball)
+end
+point in direction ([90] * (Shot Dir))
 go to x: ((Enemy X) + ([30] * (Shot Dir))) y: (Shot Y)
 set [Hit] to [0]
 show
@@ -1682,6 +1810,91 @@ hide
 set [Boomerang Out] to [0]
 ```
 
+## Spike Rain
+
+Costumes: warning, spike
+Sprite-only variables: Hit, Is Clone
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [spike rain]
+if <(Is Clone) = [0]> then
+    switch costume to (warning)
+    go to x: (Hero X) y: [-75]
+    create clone of (myself)
+    repeat [4]
+        go to x: (pick random [-210] to [210]) y: [-75]
+        create clone of (myself)
+    end
+    broadcast [spike fall sfx]
+    wait [1.6] seconds
+end
+```
+
+> One spike falls where the hero is standing and the rest land anywhere. A red mark shows where. Move away, or DODGE. Only the original makes spikes (clones hear messages too).
+
+```
+when I start as a clone
+set [Is Clone] to [1]
+switch costume to (warning)
+set y to [-75]
+set [Hit] to [0]
+show
+repeat [4]
+    set [ghost] effect to [50]
+    wait [0.09] seconds
+    set [ghost] effect to [0]
+    wait [0.09] seconds
+end
+switch costume to (spike)
+set y to [190]
+go to [front] layer
+repeat until <<(y position) < [-71]> or <(Fight On) = [0]>>
+    change y by [-22]
+    if <<<<(Hit) = [0]> and <(abs of ((x position) - (Hero X))) < [20]>> and <(y position) < ((Hero Y) + [120])>> and <(y position) > ((Hero Y) - [10])>> then
+        set [Hit] to [1]
+        set [Hurt Power] to [8]
+        broadcast [enemy hits hero]
+    end
+end
+wait [0.25] seconds
+delete this clone
+```
+
+```
+when I receive [show title]
+hide
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when I receive [story scene]
+hide
+```
+
+```
+when I receive [hero down]
+hide
+```
+
+```
+when I receive [enemy down]
+hide
+```
+
+```
+when I receive [ending]
+hide
+```
+
 ## Charge Glow
 
 Costumes: glow
@@ -2019,7 +2232,7 @@ end
 
 ## Enemy Tag
 
-Costumes: rival, ivy, brute, spikebot, quake, shadow
+Costumes: rival, ivy, brute, spikebot, megaspike, quake, shadow
 
 ```
 when green flag clicked
@@ -2038,7 +2251,7 @@ end
 ## Popup
 
 Costumes: dot
-Sprite-only variables: My Text
+Sprite-only variables: My Text, Is Clone
 
 ```
 when green flag clicked
@@ -2047,15 +2260,18 @@ hide
 
 ```
 when I receive [popup]
-set [My Text] to (Pop Text)
-go to x: ((Hero X) + [10]) y: ((Hero Y) + [125])
-create clone of (myself)
+if <(Is Clone) = [0]> then
+    set [My Text] to (Pop Text)
+    go to x: ((Hero X) + [10]) y: ((Hero Y) + [125])
+    create clone of (myself)
+end
 ```
 
-> Copies Pop Text into a clone so two pop-ups in a row both show.
+> Copies Pop Text into a clone so two pop-ups in a row both show. Clones hear messages too, so only the original (Is Clone = 0) makes new clones.
 
 ```
 when I start as a clone
+set [Is Clone] to [1]
 show
 say (My Text)
 repeat [14]
@@ -2067,14 +2283,17 @@ delete this clone
 
 ```
 when I receive [super ready]
-set [My Text] to [SUPER READY! Tap SUPER]
-go to x: [-150] y: [120]
-create clone of (myself)
+if <(Is Clone) = [0]> then
+    set [My Text] to [SUPER READY! Tap SUPER]
+    go to x: [-150] y: [120]
+    create clone of (myself)
+end
 ```
 
 ## Hit Spark
 
 Costumes: spark
+Sprite-only variables: Is Clone
 
 ```
 when green flag clicked
@@ -2083,18 +2302,25 @@ hide
 
 ```
 when I receive [enemy hurt]
-go to x: (Enemy X) y: ([-75] + [60])
-create clone of (myself)
+if <(Is Clone) = [0]> then
+    go to x: (Enemy X) y: ([-75] + [60])
+    create clone of (myself)
+end
 ```
+
+> Only the original makes sparks; clones hear messages too.
 
 ```
 when I receive [hero hurt]
-go to x: (Hero X) y: ([-75] + [50])
-create clone of (myself)
+if <(Is Clone) = [0]> then
+    go to x: (Hero X) y: ([-75] + [50])
+    create clone of (myself)
+end
 ```
 
 ```
 when I start as a clone
+set [Is Clone] to [1]
 point in direction (pick random [0] to [90])
 set size to [40] %
 show
@@ -2109,7 +2335,7 @@ delete this clone
 
 ## Banner
 
-Costumes: ready, fight, ko, clear, wave clear
+Costumes: ready, fight, ko, clear, wave clear, boss
 
 ```
 when green flag clicked
@@ -2152,7 +2378,7 @@ hide
 
 ## Story Card
 
-Costumes: prologue, chapter 1, chapter 2, chapter 3, chapter 4, chapter 5, chapter 6, game over, arcade over, the end, angry
+Costumes: prologue, chapter 1, chapter 2, chapter 3, chapter 4, chapter 5, chapter 6, chapter 7, game over, arcade over, the end, angry, overdrive
 Sprite-only variables: Until
 
 ```
@@ -2269,6 +2495,27 @@ if <(Chapter) = [5]> then
     hide
     broadcast [scene setup] and wait
     if <(Skip) = [0]> then
+        set [Line] to [I AM MEGA SPIKE! FEEL MY SPIKES!]
+        set [Line Secs] to [2.2]
+        broadcast [enemy line] and wait
+    end
+    if <(Skip) = [0]> then
+        set [Line] to [Then I'll fight smart!]
+        set [Line Secs] to [2.2]
+        broadcast [hero line] and wait
+    end
+end
+if <(Chapter) = [6]> then
+    switch costume to (chapter 6)
+    set size to [100] %
+    go to x: [0] y: [30]
+    show
+    go to [front] layer
+    set [Until] to ((timer) + [2.6])
+    wait until <<(timer) > (Until)> or <(Skip) = [1]>>
+    hide
+    broadcast [scene setup] and wait
+    if <(Skip) = [0]> then
         set [Line] to [Feel the ground shake!]
         set [Line Secs] to [2.2]
         broadcast [enemy line] and wait
@@ -2279,8 +2526,8 @@ if <(Chapter) = [5]> then
         broadcast [hero line] and wait
     end
 end
-if <(Chapter) = [6]> then
-    switch costume to (chapter 6)
+if <(Chapter) = [7]> then
+    switch costume to (chapter 7)
     set size to [100] %
     go to x: [0] y: [30]
     show
@@ -2341,7 +2588,11 @@ broadcast [show home]
 
 ```
 when I receive [king angry]
-switch costume to (angry)
+if <(Enemy Type) = [7]> then
+    switch costume to (angry)
+else
+    switch costume to (overdrive)
+end
 set size to [80] %
 go to x: [0] y: [60]
 show
