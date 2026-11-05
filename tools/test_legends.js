@@ -112,7 +112,7 @@ function tools (vm) {
 // A bot that plays fair: it only uses what a player could see and the buttons.
 function makeBot (T, hero) {
     const stats = {punches: 0, kicks: 0, jumps: 0, dodges: 0, supers: 0, weapons: new Set(), perfect: 0,
-        combos: 0, breaks: 0, fireballs: 0, ouches: 0, rainDodges: 0, retries: 0, chapters: new Set(), waves: 0, popups: new Set()};
+        combos: 0, breaks: 0, fireballs: 0, ouches: 0, rainDodges: 0, powerMoves: 0, retries: 0, chapters: new Set(), waves: 0, popups: new Set()};
     let frame = 0;
     let lastMove = 0;
     let picked = false;
@@ -137,6 +137,10 @@ function makeBot (T, hero) {
         const wave = T.sprite('Ground Wave');
         const drop = T.sprite('Weapon Drop');
 
+        if (T.get('Power Level') > 1 && d < 200 && frame % 45 === 0 && T.get('Hero Lock') === 0) {
+            T.set('Want Power', 1);
+            stats.powerMoves++;
+        }
         if (T.get('Super') === 100 && T.get('Hero Air') === 0 && T.get('Hero Lock') === 0) {
             T.set('Want Super', 1);
             stats.supers++;
@@ -296,13 +300,14 @@ async function storyRun (hero) {
     const minutes = (frames / 30 / 60).toFixed(1);
     if (T.get('State') !== 'ending') fail(`story hero ${hero}: did not reach the ending in ${minutes} min (chapter ${T.get('Chapter')})`);
     if (T.get('Crown') !== 1) fail(`story hero ${hero}: crown not unlocked`);
+    if (T.get('Power Level') < 3) fail(`story hero ${hero}: power level only ${T.get('Power Level')} after the story (XP ${T.get('Power XP')})`);
     if (T.get('Best') < T.get('Score')) fail('Best not updated after story');
     // Home goes back to the title, and the crown stays
     T.click('Home Button');
     await T.step(10);
     if (T.get('State') !== 'title') fail('Home did not go to the title');
     if (errors.length) fail(`story hero ${hero}: engine errors: ${errors.slice(0, 3).join(' | ')}`);
-    return {minutes, stats: bot.stats, score: T.get('Score')};
+    return {minutes, stats: bot.stats, score: T.get('Score'), powerLevel: T.get('Power Level'), xp: T.get('Power XP')};
 }
 
 async function arcadeRun (hero) {
@@ -484,6 +489,71 @@ async function fireTest () {
     return {tap: tap.damage, full: full.damage};
 }
 
+async function powerTest () {
+    const T = await startArcadeAt(1);
+    if (T.get('Fight On') !== 1) return fail('power: fight did not start');
+    const out = {};
+    // level 1: POWER is locked
+    T.set('Want Power', 1);
+    await T.step(5);
+    if (T.get('Power Ready At') !== 0) fail('power: POWER worked at level 1');
+    for (let level = 2; level <= 5; level++) {
+        T.set('Power Level', level);
+        T.set('Enemy HP', 999);
+        T.set('Enemy Max', 999);
+        T.set('Hero Safe Until', 1e12);
+        T.set('Power Ready At', 0);
+        T.set('Enemy Stun Until', 0);
+        T.sprite('Hero').setXY(T.get('Enemy X') > 0 ? T.get('Enemy X') - 120 : T.get('Enemy X') + 120, -75);
+        await T.step(3);
+        let bolts = 0;
+        T.set('Want Power', 1);
+        for (let i = 0; i < 75; i++) {
+            await T.step();
+            bolts = Math.max(bolts, T.clones('Lightning').length);
+        }
+        const dealt = 999 - T.get('Enemy HP');
+        const aura = T.costume('Power Aura');
+        out[level] = {dealt, bolts, aura};
+        if (dealt < 8) fail(`power: level ${level} POWER move only did ${dealt}`);
+        if (level >= 3 && bolts < 1) fail(`power: level ${level} made no lightning`);
+        if (!aura.startsWith(`lv${level} `)) fail(`power: level ${level} aura is ${aura}`);
+        if (T.get('Hero Lock') !== 0) fail(`power: Hero stuck after level ${level} POWER move`);
+        await T.step(10);
+        T.set('Want Power', 1); // cooling down: nothing happens
+        const before = T.get('Enemy HP');
+        await T.step(20);
+        if (T.get('Enemy HP') < before - 8) fail(`power: level ${level} POWER worked again during the cooldown`);
+    }
+    // a boss bolt: hurts if you stand under it, not if you move away
+    T.set('Enemy Stun Until', 1e12); // hold the Rival still so only the bolt can hurt
+    T.sprite('Hero').setXY(T.get('Enemy X') > 0 ? T.get('Enemy X') - 200 : T.get('Enemy X') + 200, -75);
+    await T.step(3);
+    T.set('Hero Safe Until', 0);
+    T.set('Hero HP', 100);
+    T.set('Bolt X', T.get('Hero X')); T.set('Bolt Y', -75); T.set('Bolt Owner', 'enemy'); T.set('Bolt Power', 10); T.set('Bolt Size', 100);
+    T.send('bolt');
+    await T.step(30);
+    if (T.get('Hero HP') >= 100) fail('power: standing under an enemy bolt did not hurt');
+    T.set('Hero HP', 100);
+    await T.step(25);
+    T.set('Hero Safe Until', 0);
+    T.set('Bolt X', T.get('Hero X') + 120);
+    T.send('bolt');
+    await T.step(30);
+    if (T.get('Hero HP') < 100) fail('power: an enemy bolt far away still hurt');
+    // XP: 3 XP reaches level 2, 18 reaches level 5
+    T.set('Power Level', 1); T.set('Power XP', 0); T.set('XP Gain', 3);
+    T.send('gain xp');
+    await T.step(2);
+    if (T.get('Power Level') !== 2) fail(`power: 3 XP gave level ${T.get('Power Level')}`);
+    T.set('XP Gain', 15);
+    T.send('gain xp');
+    await T.step(2);
+    if (T.get('Power Level') !== 5) fail(`power: 18 XP gave level ${T.get('Power Level')}`);
+    return out;
+}
+
 async function bossTest () {
     const T = await startArcadeAt(5); // wave 5 is the MEGA SPIKE boss
     if (T.get('Enemy Name') !== 'megaspike') return fail(`boss: wave 5 is ${T.get('Enemy Name')}, not MEGA SPIKE`);
@@ -578,6 +648,7 @@ async function brawlTest () {
     T.click('Brawl Button');
     await T.step(3);
     if (T.get('State') !== 'select') return fail('brawl: BRAWL did not open fighter select');
+    T.set('Power Level', 4);
     T.click('Pick Rocko');
     const out = {stages: [], matches: 0, wins: 0, kos: 0, maxDmg: 0, zoom: [9, 0], landed: false, rampOk: false};
     for (let match = 0; match < 3; match++) {
@@ -625,6 +696,8 @@ async function brawlTest () {
                 if (dy < -60 && frames % 30 === 0) T.set('Want Drop', 1);
                 if (Math.abs(dx) < 50 && Math.abs(dy) < 45 && frames % 6 === 0) T.set(frames % 18 ? 'Want Punch' : 'Want Kick', 1);
                 if (T.get('Super') === 100 && Math.abs(dx) < 60) T.set('Want Super', 1);
+                if (Math.abs(dx) < 120 && frames % 60 === 0) T.set('Want Power', 1);
+                out.bolts = Math.max(out.bolts || 0, T.clones('Lightning').length);
             }
             out.maxDmg = Math.max(out.maxDmg, ...dmg);
             const z = T.get('Zoom');
@@ -647,6 +720,7 @@ async function brawlTest () {
         await T.step(3);
     }
     if (out.kos < 3) fail(`brawl: only ${out.kos} K.O.s in three matches`);
+    if (!out.bolts) fail('brawl: POWER lightning never struck');
     if (out.zoom[0] < 0.49 || out.zoom[1] > 1.16 || out.zoom[1] - out.zoom[0] < 0.05) fail(`brawl: camera zoom ${out.zoom}`);
     if (new Set(out.stages).size < 3) fail(`brawl: stages did not change: ${out.stages}`);
     T.click('Quit Button');
@@ -670,6 +744,7 @@ async function brawlTest () {
     if (want('fire')) results.fire = await fireTest();
     if (want('spikes')) results.spikes = await spikeTest();
     if (want('boss')) results.boss = await bossTest();
+    if (want('power')) results.power = await powerTest();
     if (want('brawl')) results.brawl = await brawlTest();
     if (want('mash')) await mashTest();
     if (want('weapons')) await weaponTest();

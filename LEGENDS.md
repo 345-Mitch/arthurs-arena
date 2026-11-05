@@ -15,6 +15,24 @@ The playable file is `projects/arthurs-arena-legends.sb3`. The boss game from be
 
 On the tablet, the file has to be on the Scratch website first. Sign in, load the file, and save it. Then open that project's link in the tablet browser.
 
+## Power levels
+
+Every fight you win gives you **XP**: +1 for a chapter or a wave, +2 for a boss or a BRAWL win. With enough XP your **POWER LEVEL** goes up (you'll see **POWER UP!**). The game remembers it.
+
+| Power level | XP needed | Aura | New POWER move |
+| --- | --- | --- | --- |
+| 1 | start | dim red | (none yet) |
+| 2 | 3 | orange | **FLAME DASH**: burn straight through the enemy |
+| 3 | 7 | gold | **THUNDER STRIKE**: a bolt of lightning from the sky |
+| 4 | 12 | blue, with sparks | **BLUE STORM**: three lightning bolts |
+| 5 | 18 | purple-white, with lots of sparks | **ULTRA STORM**: five bolts, the last one huge |
+
+- **Your aura** shows your level. Each level is brighter, bigger and flickers faster. When your SUPER is full, or during a SUPER or POWER move, it **blazes** at full brightness.
+- **Every level** gives you +10 health and +1 damage on every hit.
+- **Enemies level up with you:** more health, harder hits, faster attacks. From level 3, **bosses call down lightning** too: a yellow mark shows where a bolt will strike, so move away or DODGE. They call more bolts at higher levels.
+- **POWER** (or the G key) does your level's move, then needs about 6 seconds to recharge.
+- **In BRAWL:** FLAME DASH charges into a fighter. From level 3, THUNDER strikes every fighter near you.
+
 ## Level (difficulty)
 
 Tap **LEVEL** on the title screen to change it. The game remembers your choice.
@@ -99,6 +117,7 @@ The buttons are along the bottom of the screen.
 | KICK | X | Steps in and hits harder. |
 | FIRE | F (hold) | **Hold** to charge a fireball, **let go** to shoot it. See below. |
 | (BRAWL) drop down | down arrow | Push the joystick down to drop through a thin platform. |
+| POWER | G | Your POWER move (from power level 2). It recharges in about 6 seconds. |
 | SUPER | V | Your fighter's SUPER move. It works when the button is gold and you are on the ground. |
 | ✕ (top middle) | | Go back to the title. |
 

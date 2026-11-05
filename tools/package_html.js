@@ -22,7 +22,7 @@ const OUT = process.argv[2] || path.join(ROOT, 'dist', 'arthurs-arena.html');
 const SAVE_JS = `
 (function () {
     var KEY = 'arthurs-arena-legends-save';
-    var KEEP = ['Best', 'Crown'];   // keep the highest
+    var KEEP = ['Best', 'Crown', 'Power XP', 'Power Level'];   // keep the highest
     var LAST = ['Difficulty'];      // keep the last choice
     function stageVars () {
         var stage = vm.runtime.getTargetForStage && vm.runtime.getTargetForStage();
@@ -93,6 +93,8 @@ const PAD_JS = `
         '#bP{background:#ea580c}#bK{background:#ca8a04}#bJ{background:#16a34a}#bD{background:#64748b}',
         '#bF{background:#dc2626;width:17vmin;height:17vmin;margin:-8.5vmin 0 0 -8.5vmin;font-size:3.1vmin;text-shadow:0 .3vmin 0 rgba(0,0,0,.4)}',
         '#bF.full{animation:glow .3s infinite alternate}',
+        '#bW{background:#7c3aed;width:15vmin;height:15vmin;margin:-7.5vmin 0 0 -7.5vmin;font-size:2.6vmin}',
+        '#bW.locked{background:#334155;color:#94a3b8}',
         '#bS{background:#475569;width:13vmin;height:13vmin;margin:-6.5vmin 0 0 -6.5vmin;font-size:2.4vmin}',
         '#bS.ready{background:#facc15;color:#7c2d12;animation:glow .5s infinite alternate}',
         '@keyframes glow{from{box-shadow:0 0 1vmin #fde047}to{box-shadow:0 0 4vmin #fde047}}'
@@ -105,7 +107,7 @@ const PAD_JS = `
     pad.innerHTML = '<div id="joy"><div id="base"><div id="knob"></div></div></div>' +
         '<div class="pb" id="bP">PUNCH</div><div class="pb" id="bK">KICK</div>' +
         '<div class="pb" id="bJ">JUMP</div><div class="pb" id="bD">DODGE</div><div class="pb" id="bS">SUPER</div>' +
-        '<div class="pb" id="bF">FIRE</div>';
+        '<div class="pb" id="bF">FIRE</div><div class="pb" id="bW">POWER</div>';
     document.body.appendChild(pad);
 
     // right-hand buttons in a diamond, like a game controller
@@ -115,7 +117,7 @@ const PAD_JS = `
         el.style.left = 'calc(' + cx + ' + ' + dx + ' * ' + r + ')';
         el.style.top = 'calc(' + cy + ' + ' + dy + ' * ' + r + ')';
     }
-    place('bP', 0, 1); place('bK', 1, 0); place('bJ', 0, -1); place('bD', -1, 0); place('bS', -1.15, -1.55); place('bF', -2.15, 0.85);
+    place('bP', 0, 1); place('bK', 1, 0); place('bJ', 0, -1); place('bD', -1, 0); place('bS', -1.15, -1.55); place('bF', -2.15, 0.85); place('bW', -2.3, -0.6);
 
     var vars = null;
     function v (name) {
@@ -133,7 +135,7 @@ const PAD_JS = `
 
     // buttons: press sets the Want variable; holding PUNCH or KICK repeats
     [['bP', 'Want Punch', true], ['bK', 'Want Kick', true], ['bJ', 'Want Jump', false],
-     ['bD', 'Want Dodge', false], ['bS', 'Want Super', false]].forEach(function (b) {
+     ['bD', 'Want Dodge', false], ['bS', 'Want Super', false], ['bW', 'Want Power', false]].forEach(function (b) {
         var el = document.getElementById(b[0]), timer = null;
         el.addEventListener('pointerdown', function (e) {
             e.preventDefault();
@@ -208,6 +210,7 @@ const PAD_JS = `
 
     // show the pad only during a fight; light SUPER when it is ready
     var bS = document.getElementById('bS');
+    var bW = document.getElementById('bW');
     (function tick () {
         if (get('State') !== null) {
             set('Touch Pad', 1);
@@ -218,6 +221,15 @@ const PAD_JS = `
                 home();
             }
             bS.classList.toggle('ready', Number(get('Super')) >= 100);
+            // POWER: locked until power level 2; a ring fills while it recharges
+            var lvl = Number(get('Power Level')) || 1;
+            var colors = ['#ef4444', '#f97316', '#facc15', '#3b82f6', '#a855f7'];
+            bW.classList.toggle('locked', lvl < 2);
+            bW.textContent = lvl < 2 ? 'LOCKED' : 'POWER';
+            var now = vm.runtime.ioDevices.clock.projectTimer();
+            var left = Number(get('Power Ready At')) - now;
+            var pct = Math.max(0, Math.min(1, 1 - left / 6));
+            bW.style.background = lvl < 2 ? '' : (pct < 1 ? 'conic-gradient(' + colors[lvl - 1] + ' ' + (pct * 360) + 'deg, #334155 0)' : colors[lvl - 1]);
             var c = Number(get('Charge')) || 0;   // the FIRE button fills up gold while charging
             bF.style.background = c > 0 ? 'conic-gradient(#facc15 ' + (c * 3.6) + 'deg, #dc2626 0)' : '';
             bF.classList.toggle('full', c >= 100);

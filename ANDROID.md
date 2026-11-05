@@ -9,6 +9,7 @@ During a fight the app shows game-pad controls, and you can use both thumbs at o
 - **Joystick (left thumb):** put your thumb anywhere in the bottom-left corner and the stick appears under it. Push left or right to walk; push further to walk faster. **Flick it up to jump.**
 - **Buttons (right thumb):** **PUNCH** (bottom), **KICK** (right), **JUMP** (top), **DODGE** (left). Hold PUNCH or KICK to keep attacking.
 - **In BRAWL**, push the joystick **down** to drop through a thin platform. You can jump twice: once on the ground and once in the air.
+- **POWER** (purple, left of DODGE): your power level's move. It says LOCKED until power level 2, and a ring fills while it recharges.
 - **FIRE** (big red button, bottom left of the others): hold it to charge a fireball. The button fills up gold, and glows at full power. Let go to shoot.
 - **SUPER** (above the buttons) glows gold when your super move is ready.
 - Each button gives a tiny buzz when you press it.
@@ -36,7 +37,7 @@ To update later, install the new APK the same way. It installs over the old one 
 ## Good to know
 
 - Scratch on its own only follows one finger, so the joystick and buttons are part of the app's page, not Scratch sprites. They set the same variables the Scratch buttons do (`Want Punch` and so on, plus `Joy X` for walking). `Touch Pad` = 1 tells the game to hide its own buttons.
-- Version 1.4 (BRAWL, levels, fire aura, boss weapons) installs over earlier versions and keeps the Best score and level.
+- Version 1.5 (power levels, lightning) installs over earlier versions and keeps the Best score, difficulty and power level.
 - The Android back button closes the game.
 - The app is signed with a debug key (`android/debug.keystore`, password `arthursarena`). That's fine for installing at home. The Play Store would need a private key.
 

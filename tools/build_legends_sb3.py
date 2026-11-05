@@ -115,6 +115,18 @@ DIFFICULTIES = [
     ("hard", "HARD", "#ea580c", 2.8, 1.25, 0.85),
     ("champion", "CHAMPION", "#7c3aed", 3.6, 1.5, 0.72),
 ]
+# Power levels: win fights to earn XP. Each level gives more health and harder hits,
+# a new POWER move, a new aura colour, and tougher enemies.
+#   level, key, aura colour, aura glow, XP needed, POWER move
+POWER_LEVELS = [
+    (1, "red", "#ef4444", "#f97316", 0, "none"),
+    (2, "orange", "#f97316", "#fde047", 3, "FLAME DASH"),
+    (3, "gold", "#facc15", "#fefce8", 7, "THUNDER STRIKE"),
+    (4, "blue", "#3b82f6", "#e0f2fe", 12, "BLUE STORM"),
+    (5, "ultra", "#a855f7", "#ffffff", 18, "ULTRA STORM"),
+]
+POWER_COOLDOWN = 6
+POWER_HP_PER_LEVEL = 10
 BOSS_WEAPONS = {"brute": "club", "megaspike": "mace", "quake": "hammer", "shadow": "dark sword"}
 BOSS_WEAPON_POWER = 3
 RAIN_HURT = 8
@@ -329,8 +341,34 @@ def boss_weapon_svg(kind):
     return svg_doc(60, 76, art)
 
 
-def aura_svg(frame):
-    """Red fire around a powered-up fighter (100 x 180 box, feet at 168)."""
+def aura_svg(frame, level=1):
+    """Fire around a fighter (100 x 180 box, feet at 168). Colour, size and sparks grow with the power level."""
+    _n, _key, c1, c2, _xp, _move = POWER_LEVELS[level - 1]
+    count = 12 + 2 * level
+    reach = 1 + 0.06 * (level - 1)
+    flames = []
+    for k in range(count):
+        a = k * 2 * math.pi / count + (0.22 if frame else 0)
+        cx, cy = 50 + 40 * math.cos(a), 98 + 76 * math.sin(a)
+        tx = 50 + (60 + 8 * (k % 2)) * reach * math.cos(a - 0.25)
+        ty = 98 + (96 + 8 * (k % 2)) * reach * math.sin(a - 0.25)
+        flames.append(f'<path d="M{cx - 9 * math.sin(a):.1f} {cy + 9 * math.cos(a):.1f} Q{tx:.1f} {ty:.1f} '
+                      f'{cx + 9 * math.sin(a):.1f} {cy - 9 * math.cos(a):.1f} Z" fill="{c1 if k % 2 else c2}"/>')
+    sparks = ""
+    if level >= 4:  # little lightning sparks crackle in the aura
+        for k in range(3 if level == 4 else 5):
+            a = k * 2.1 + (0.7 if frame else 0)
+            x0, y0 = 50 + 44 * math.cos(a), 98 + 80 * math.sin(a)
+            sparks += (f'<path d="M{x0:.0f} {y0:.0f} l6 -10 l-5 2 l6 -12" stroke="#ffffff" stroke-width="2.5" '
+                       'fill="none" stroke-linejoin="round"/>')
+    return svg_doc(140, 220, (
+        '<g transform="translate(20,20)">'
+        f'<ellipse cx="50" cy="98" rx="46" ry="84" fill="{c1}" opacity="0.35"/>'
+        + "".join(flames) +
+        f'<ellipse cx="50" cy="98" rx="34" ry="70" fill="{c2}" opacity="0.3"/>' + sparks + '</g>'))
+
+
+def _old_aura_svg(frame):
     flames = []
     for k in range(14):
         a = k * 2 * math.pi / 14 + (0.22 if frame else 0)
@@ -343,6 +381,31 @@ def aura_svg(frame):
         '<ellipse cx="50" cy="98" rx="46" ry="84" fill="#ef4444" opacity="0.35"/>'
         + "".join(flames) +
         '<ellipse cx="50" cy="98" rx="34" ry="70" fill="#fca5a5" opacity="0.25"/></g>'))
+
+
+def bolt_svg(core, glow):
+    """A lightning bolt from the sky; its tip (the bottom) is the rotation centre."""
+    pts = [(30, 0), (22, 70), (38, 120), (18, 200), (36, 250), (20, 330), (34, 370), (30, 420)]
+    path = " ".join(f"{x},{y}" for x, y in pts)
+    return svg_doc(60, 430, (
+        f'<polyline points="{path}" fill="none" stroke="{glow}" stroke-width="18" stroke-linejoin="round" opacity="0.5"/>'
+        f'<polyline points="{path}" fill="none" stroke="{core}" stroke-width="7" stroke-linejoin="round"/>'
+        '<polyline points="38,120 52,150 46,170" fill="none" stroke="#ffffff" stroke-width="3"/>'
+        '<polyline points="36,250 14,280 18,300" fill="none" stroke="#ffffff" stroke-width="3"/>'
+        f'<ellipse cx="30" cy="420" rx="28" ry="9" fill="{glow}" opacity="0.8"/>'))
+
+
+def bolt_warning_svg():
+    return svg_doc(70, 18, '<ellipse cx="35" cy="9" rx="32" ry="8" fill="#fde047" opacity="0.7" stroke="#a16207" stroke-width="2"/>'
+                           '<path d="M35 1 l-5 8 l4 0 l-4 8" stroke="#a16207" stroke-width="2" fill="none"/>')
+
+
+def power_badge_svg(level):
+    _n, _key, c1, c2, _xp, move = POWER_LEVELS[level - 1]
+    stars = "".join(f'<circle cx="{104 + 10 * i}" cy="21" r="3.5" fill="{c1 if i < level else "#334155"}"/>' for i in range(5))
+    return svg_doc(160, 30, f'<rect x="1" y="1" width="158" height="28" rx="10" fill="#0f172a" stroke="{c1}" stroke-width="3"/>'
+                   + text_el(f"POWER LV {level}", 50, 15, 11, c2 if level > 2 else c1)
+                   + text_el(move if move != "none" else "win to level up", 50, 25, 7, "#cbd5e1") + stars)
 
 
 def difficulty_svg(word, fill):
@@ -663,6 +726,9 @@ SOUNDS = {
     "boom": [(0.08, 800, 200, "noise", 1.0), (0.45, 90, 30, "noise", 0.9)],
     "spikes": [(0.05, 2400, 2400, "square", 0.3), (0.05, 3000, 3000, "square", 0.3), (0.1, 1800, 1200, "square", 0.25)],
     "clang": [(0.04, 3200, 3200, "square", 0.5), (0.25, 900, 700, "sine", 0.5)],
+    "thunder": [(0.06, 3000, 800, "noise", 1.0), (0.6, 120, 40, "noise", 0.7)],
+    "power up": [(0.1, 392, 392, "square", 0.3), (0.1, 523, 523, "square", 0.3), (0.1, 659, 659, "square", 0.3),
+                 (0.35, 400, 1600, "sine", 0.4)],
     "alarm": [(0.18, 880, 660, "square", 0.3), (0.18, 880, 660, "square", 0.3), (0.18, 880, 660, "square", 0.3)],
     "spike fall": [(0.25, 2000, 400, "sine", 0.3)],
     "win": [(0.12, 523, 523, "square", 0.3), (0.12, 659, 659, "square", 0.3), (0.3, 784, 784, "square", 0.3)],
@@ -1391,6 +1457,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         s.if_(not_(eq(V("State"), "brawl")), [s.stop()]),
         s.if_(eq(V("Brawl Winner"), 1), [
             s.play("win"), s.change("Score", mul(1000, V("Difficulty"))),
+            s.set("XP Gain", 2), s.broadcast("gain xp"),
             s.if_(gt(V("Score"), V("Best")), [s.set("Best", V("Score"))]),
         ]),
         s.set("Brawl Live", 0), s.set("State", "over"),
@@ -1417,7 +1484,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
                         ("Speed", 3), ("Punch", 4), ("Kick", 7), ("Weight", 1), ("Face", 1), ("Inv Until", 0),
                         ("Tgt", 0), ("Think", 0), ("Dir", 0), ("Want Atk", 0), ("Want Hop", 0), ("J", 0),
                         ("Surf", 0), ("NX", 0), ("NY", 0), ("Reach", 50), ("Power", 4), ("KB", 0), ("Move Dir", 0),
-                        ("Move Until", 0), ("Smash", 0), ("Best D", 0), ("D", 0), ("On Plat", 0), ("Drop", 0)):
+                        ("Move Until", 0), ("Smash", 0), ("Dash", 9), ("Best D", 0), ("D", 0), ("On Plat", 0), ("Drop", 0)):
         B.local(name, value)
 
     stats = []
@@ -1426,7 +1493,8 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
                                                     B.set("Kick", k["kick"]), B.set("Weight", k["weight"])]))
     ai_chance = [B.if_(eq(V("Difficulty"), i), [B.set("Think", ch)]) for i, (ch, _p) in enumerate(BRAWL_AI, start=1)]
     def cpu_power():
-        return [B.if_(eq(V("Difficulty"), i), [B.set("Power", mul(V("Power"), p))]) for i, (_c, p) in enumerate(BRAWL_AI, start=1)]
+        return [B.if_(eq(V("Difficulty"), i), [B.set("Power", mul(mul(V("Power"), p), add(1, mul(0.1, sub(V("Power Level"), 1)))))])
+                for i, (_c, p) in enumerate(BRAWL_AI, start=1)]
 
     def pose(name):
         return B.wear(join(V("Kind"), " " + name))
@@ -1470,6 +1538,15 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         B.if_(eq(V("Want Punch"), 1), [B.set("Want Punch", 0), B.set("Want Atk", 1)]),
         B.if_(eq(V("Want Kick"), 1), [B.set("Want Kick", 0), B.set("Want Atk", 2)]),
         B.if_(eq(V("Want Super"), 1), [B.set("Want Super", 0), B.if_(eq(V("Super"), 100), [B.set("Want Atk", 3)])]),
+        # POWER move: level 2 FLAME DASH, level 3+ lightning on everyone near you
+        B.if_(eq(V("Want Power"), 1), [
+            B.set("Want Power", 0),
+            B.if_(and_(gt(V("Power Level"), 1), gt(TIMER, V("Power Ready At"))), [
+                B.set("Power Ready At", add(TIMER, POWER_COOLDOWN)), B.broadcast("power flash"),
+                B.if_(eq(V("Power Level"), 2), [B.set("Want Atk", 4)],
+                      [B.set("Pop Text", "THUNDER!"), B.broadcast("popup"), B.broadcast("brawl bolt")]),
+            ]),
+        ]),
         B.if_(eq(V("Want Dodge"), 1), [B.set("Want Dodge", 0), B.set("Inv Until", add(TIMER, 0.45)),
                                        B.set("VX", mul(V("Face"), -6))]),
         # fireball: hold FIRE, let go to shoot
@@ -1552,6 +1629,9 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
             B.if_(eq(V("Want Atk"), 3), [pose("special"), B.set("Super", 0), B.set("Smash", 16),
                                          *attack(70, "Smash", smash=True), B.set("Atk CD", 20),
                                          B.set("Pop Text", "SMASH!"), B.broadcast("popup")]),
+            B.if_(eq(V("Want Atk"), 4), [pose("special"), B.set("VX", mul(V("Face"), 15)), B.set("Dash", 9),
+                                         *attack(64, "Dash", smash=True), B.set("Atk CD", 14),
+                                         B.set("Pop Text", "FLAME DASH!"), B.broadcast("popup")]),
             B.set("Pose Until", add(TIMER, 0.18)),
         ]),
         # 4. move and land on platforms and ramps
@@ -1614,7 +1694,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
     B.on_clone(
         B.set("Is Clone", 1), B.set("Kind", item("B Kind", V("My Id"))), *stats, *ai_chance,
         B.set("X", sub(mul(V("My Id"), 110), 275)), B.set("Y", 220), B.set("VX", 0), B.set("VY", 0),
-        B.set("Face", 1), B.if_(gt(V("X"), 0), [B.set("Face", -1)]), B.set("Smash", 16),
+        B.set("Face", 1), B.if_(gt(V("X"), 0), [B.set("Face", -1)]), B.set("Smash", 16), B.set("Dash", 9),
         B.set("Stun", 0), B.set("Jumps", 0), B.if_(eq(V("My Id"), 1), [B.set("Charge", 0)]), B.clear_fx(), pose("jump"), B.show(), B.front(),
         B.until(eq(V("Brawl Live"), 0), [
             B.if_(eq(item("B Alive", V("My Id")), 1), [B.call("fighter frame")]),
@@ -1750,6 +1830,8 @@ def build():
         ("Hit Power", 5), ("Hurt Power", 6), ("Shot Y", GROUND + 18), ("Shot Dir", -1), ("Wave Dir", -1),
         ("Line", ""), ("Line Secs", 2), ("Skip", 0), ("Pop Text", ""), ("Banner", "fight"),
         ("Joy X", 0), ("Touch Pad", 0), ("Spikes", 0), ("Difficulty", 2), ("Enemy Weapon", "none"), ("Enemy Swing Until", 0),
+        ("Power Level", 1), ("Power XP", 0), ("XP Gain", 0), ("Want Power", 0), ("Power Ready At", 0), ("Power Move", "none"),
+        ("Bolt X", 0), ("Bolt Y", GROUND), ("Bolt Owner", "hero"), ("Bolt Power", 0), ("Bolt Size", 100),
         ("Fire Held", 0), ("Charge", 0), ("Fire Power", 0), ("Fireball Out", 0),
         ("Shot X", 999), ("Shot Live", 0), ("Shot Cancel", 0), ("Boom X", 0),
     ]:
@@ -1785,6 +1867,7 @@ def build():
         ]))
     s.on_msg(
         "hero picked", *picks,
+        s.change("Hero Max", mul(POWER_HP_PER_LEVEL, sub(V("Power Level"), 1))),
         s.set("Hero HP", V("Hero Max")), s.set("Score", 0), s.set("Super", 0),
         s.if_(eq(V("Mode"), "story"),
               [s.set("Chapter", 1), s.broadcast("story scene")],
@@ -1822,6 +1905,10 @@ def build():
             s.set("Enemy Power", round_(mul(V("Enemy Power"), pw_))),
             s.set("Pace", mul(V("Pace"), pace)),
         ]) for i, (_k, _w, _c, hp, pw_, pace) in enumerate(DIFFICULTIES, start=1)],
+        # enemies grow with your power level, too
+        s.set("Enemy Max", round_(mul(V("Enemy Max"), add(1, mul(0.2, sub(V("Power Level"), 1)))))),
+        s.change("Enemy Power", sub(V("Power Level"), 1)),
+        s.set("Pace", mul(V("Pace"), sub(1, mul(0.05, sub(V("Power Level"), 1))))),
         s.set("Enemy HP", V("Enemy Max")), s.set("Enemy Phase", 1),
         note="Story: the chapter picks the enemy. Arcade: waves 1-6 cycle (wave 5 is the MEGA SPIKE boss), every 7th wave is the Shadow King, and each wave is tougher and faster.",
     )
@@ -1852,6 +1939,7 @@ def build():
         "hero hits",
         s.if_(and_(eq(V("Fight On"), 1), gt(TIMER, V("Enemy Stun Until"))), [
             s.set("Enemy Stun Until", add(TIMER, 0.15)),
+            s.change("Hit Power", sub(V("Power Level"), 1)),
             s.if_(lt(sub(TIMER, V("Combo Clock")), COMBO_WINDOW), [s.change("Combo", 1)], [s.set("Combo", 1)]),
             s.set("Combo Clock", TIMER),
             s.if_(and_(gt(V("Combo"), 2), eq(mod(V("Combo"), 3), 0)), [
@@ -1901,6 +1989,26 @@ def build():
         note="Hurt Power is set by the attacker. Dodging at the last moment is a PERFECT DODGE: no damage and a big super boost.",
     )
 
+    s.local("New Level", 1)
+    s.on_msg(
+        "gain xp",
+        s.change("Power XP", V("XP Gain")), s.set("New Level", 1),
+        *[s.if_(not_(lt(V("Power XP"), xp)), [s.set("New Level", n)]) for n, _k, _c1, _c2, xp, _m in POWER_LEVELS],
+        s.if_(gt(V("New Level"), V("Power Level")), [s.set("Power Level", V("New Level")), s.broadcast("power up")]),
+        note="Win a fight: +1 XP (a boss or a brawl win: +2). At 3, 7, 12 and 18 XP your POWER LEVEL goes up: "
+             "more health, harder hits, a new POWER move and a new aura colour. Enemies get stronger with you.",
+    )
+    move_names = [s.if_(eq(V("Power Level"), n), [s.set("Power Move", m)]) for n, _k, _c1, _c2, _xp, m in POWER_LEVELS]
+    s.on_msg(
+        "power up",
+        *move_names, s.play("power up"), s.set("Banner", "power up"), s.broadcast("banner"),
+        s.set("Pop Text", join("POWER LEVEL ", join(V("Power Level"), join(": ", V("Power Move"))))), s.broadcast("popup"),
+        s.repeat(4, [s.effect("BRIGHTNESS", 50), s.wait(0.06), s.effect("BRIGHTNESS", 0), s.wait(0.06)]),
+    )
+    s.on_msg("bolt strike", s.play("thunder"), s.effect("BRIGHTNESS", 70), s.wait(0.05), s.effect("BRIGHTNESS", 25),
+             s.wait(0.05), s.effect("BRIGHTNESS", 0))
+    s.on_msg("power flash", s.play("power up"), s.effect("COLOR", 40), s.wait(0.12), s.clear_fx())
+    s.on_key("g", s.set("Want Power", 1), note="G: your POWER move (from power level 2).")
     s.on_msg("enemy hurt", s.play("hit"))
     s.on_msg("charge start", s.play("charge"))
     s.on_msg("charge full", s.play("charged"), s.set("Pop Text", "FULL POWER!"), s.broadcast("popup"))
@@ -1932,15 +2040,20 @@ def build():
             s.if_(eq(V("Chapter"), len(CHAPTERS)), [
                 s.change("Score", add(1000, mul(V("Hero HP"), 5))),
                 s.if_(gt(V("Score"), V("Best")), [s.set("Best", V("Score"))]),
+                s.set("XP Gain", 2), s.broadcast("gain xp"),
                 s.broadcast("ending"),
             ], [
                 s.play("win"), s.set("Banner", "clear"), s.broadcast("banner"),
                 s.change("Score", add(500, mul(V("Hero HP"), 5))),
+                s.set("XP Gain", 1), s.if_(or_(*[eq(V("Enemy Type"), b) for b in BOSSES]), [s.set("XP Gain", 2)]),
+                s.broadcast("gain xp"),
                 s.wait(2), s.change("Chapter", 1), s.broadcast("story scene"),
             ]),
         ], [
             s.play("win"), s.set("Banner", "wave clear"), s.broadcast("banner"),
             s.change("Score", add(200, mul(V("Wave"), 50))),
+            s.set("XP Gain", 1), s.if_(or_(*[eq(V("Enemy Type"), b) for b in BOSSES]), [s.set("XP Gain", 2)]),
+            s.broadcast("gain xp"),
             s.change("Hero HP", ARCADE_HEAL), s.if_(gt(V("Hero HP"), V("Hero Max")), [s.set("Hero HP", V("Hero Max"))]),
             s.set("Pop Text", f"+{ARCADE_HEAL} HEALTH"), s.broadcast("popup"),
             s.if_(gt(V("Score"), V("Best")), [s.set("Best", V("Score"))]),
@@ -2074,12 +2187,49 @@ def build():
         ]),
         H.set_y(GROUND), *H.clamp_x(-215, 215), pose("idle"), H.set("Hero Safe", 0), H.set("Hero Lock", 0),
     ]
+    def bolt_on_enemy(power, spread=0):
+        return [H.set("Bolt X", add(V("Enemy X"), rnd(-spread, spread)) if spread else V("Enemy X")),
+                H.set("Bolt Y", GROUND), H.set("Bolt Owner", "hero"), H.set("Bolt Power", power), H.set("Bolt Size", 100),
+                H.broadcast("bolt")]
+
+    power_move = [
+        H.set("Hero Lock", 1), H.set("Hero Safe", 2), H.set("Power Ready At", add(TIMER, POWER_COOLDOWN)),
+        *[H.if_(eq(V("Power Level"), n), [H.set("Power Move", m)]) for n, _k, _c1, _c2, _xp, m in POWER_LEVELS],
+        H.set("Pop Text", join(V("Power Move"), "!")), H.broadcast("popup"), H.broadcast("power flash"),
+        H.if_(eq(V("Power Level"), 2), [
+            # FLAME DASH: a burning dash straight through the enemy
+            pose("special"), H.glide(0.16, add(V("Enemy X"), mul(45, V("Facing"))), GROUND), *H.clamp_x(-215, 215),
+            H.set("Hit Power", 9), H.broadcast("hero hits"), H.broadcast("shake"), H.wait(0.3),
+        ]),
+        H.if_(eq(V("Power Level"), 3), [
+            # THUNDER STRIKE: one big bolt from the sky
+            pose("win"), H.wait(0.2), *bolt_on_enemy(13), H.wait(0.55),
+        ]),
+        H.if_(eq(V("Power Level"), 4), [
+            # BLUE STORM: three bolts
+            pose("win"), H.wait(0.15),
+            H.repeat(3, [*bolt_on_enemy(7, 18), H.wait(0.25)]), H.wait(0.3),
+        ]),
+        H.if_(eq(V("Power Level"), 5), [
+            # ULTRA STORM: five bolts, the last one huge
+            pose("win"), H.wait(0.15),
+            H.repeat(4, [*bolt_on_enemy(6, 30), H.wait(0.2)]), *bolt_on_enemy(14), H.broadcast("shake"), H.wait(0.4),
+        ]),
+        H.set_y(GROUND), pose("idle"), H.set("Hero Safe", 0), H.set("Hero Lock", 0),
+    ]
+
     H.on_flag(
         H.forever([
             H.if_(eq(V("Fight On"), 1), [
                 H.if_(and_(eq(V("Want Super"), 1), eq(V("Hero Lock"), 0)), [
                     H.set("Want Super", 0),
                     H.if_(and_(eq(V("Super"), 100), eq(V("Hero Air"), 0)), special),
+                ]),
+                H.if_(and_(eq(V("Want Power"), 1), eq(V("Hero Lock"), 0)), [
+                    H.set("Want Power", 0),
+                    H.if_(and_(gt(V("Power Level"), 1), gt(TIMER, V("Power Ready At")), eq(V("Hero Air"), 0)), power_move,
+                          [H.if_(eq(V("Power Level"), 1), [H.set("Pop Text", "Win fights to unlock POWER!"),
+                                                            H.broadcast("popup")])]),
                 ]),
                 H.if_(and_(eq(V("Want Punch"), 1), eq(V("Hero Lock"), 0)), [H.set("Want Punch", 0), *punch]),
                 H.if_(and_(eq(V("Want Kick"), 1), eq(V("Hero Lock"), 0)), [H.set("Want Kick", 0), *kick]),
@@ -2088,7 +2238,8 @@ def build():
                 ]),
             ], [
                 H.if_(not_(eq(V("State"), "brawl")), [
-                    H.set("Want Punch", 0), H.set("Want Kick", 0), H.set("Want Dodge", 0), H.set("Want Super", 0)]),
+                    H.set("Want Punch", 0), H.set("Want Kick", 0), H.set("Want Dodge", 0), H.set("Want Super", 0),
+                    H.set("Want Power", 0)]),
             ]),
         ]),
         note="The action loop. Buttons only set Want Punch, Want Kick and so on; this loop does one move at a time. "
@@ -2275,6 +2426,9 @@ def build():
         ]
 
     def megaspike():
+        return zaps(megaspike_moves())
+
+    def megaspike_moves():
         cool = mul(V("Pace"), 1.4)
         return [
             E.set("Spikes", 1), E.set("Pick", rnd(1, 3)),
@@ -2286,7 +2440,24 @@ def build():
             E.set("Spikes", 0), epose("idle"), E.say("Cooling down...", cool),
         ]
 
+    def lightning():
+        return [
+            epose("windup"), E.say("LIGHTNING!", pw(0.5)), epose("attack"), swing(),
+            E.repeat(V("Power Level"), [
+                E.set("Bolt X", V("Hero X")), E.set("Bolt Y", GROUND), E.set("Bolt Owner", "enemy"),
+                E.set("Bolt Power", V("Enemy Power")), E.set("Bolt Size", 100), E.broadcast("bolt"), E.wait(pw(0.45)),
+            ]),
+            epose("idle"), E.wait(pw(0.7)),
+        ]
+
+    def zaps(normal):
+        """From power level 3, bosses sometimes call lightning instead (more bolts at higher levels)."""
+        return [E.if_(and_(gt(V("Power Level"), 2), eq(rnd(1, 4), 1)), lightning(), normal)]
+
     def king():
+        return zaps(king_moves())
+
+    def king_moves():
         return [
             E.if_(eq(V("Enemy Phase"), 2), [E.set("Pick", rnd(1, 5))], [E.set("Pick", rnd(1, 4))]),
             E.if_(eq(V("Pick"), 5), [
@@ -2602,26 +2773,101 @@ def build():
 
     # ------------------------------------------------------- power aura --
     aura = game.sprite("Power Aura", size=75, rotation="don't rotate")
-    aura.costume("fire 1", aura_svg(0), 70, 188)
-    aura.costume("fire 2", aura_svg(1), 70, 188)
+    for n, *_r in POWER_LEVELS:
+        aura.costume(f"lv{n} 1", aura_svg(0, n), 70, 188)
+        aura.costume(f"lv{n} 2", aura_svg(1, n), 70, 188)
     AU = aura
+    AU.local("Lit", 0)
+    AU.local("Grow", 1)
     powered = or_(eq(V("Super"), 100), eq(V("Hero Safe"), 2), eq(V("Charge"), 100))
+    flicker = AU.if_(eq(mod(round_(mul(TIMER, add(8, mul(3, V("Power Level"))))), 2), 0),
+                     [AU.wear(join("lv", join(V("Power Level"), " 1")))], [AU.wear(join("lv", join(V("Power Level"), " 2")))])
     AU.on_flag(
-        AU.hide(), AU.effect("GHOST", 20),
+        AU.hide(),
         AU.forever([
-            AU.if_(and_(eq(V("State"), "fight"), powered), [
-                AU.goto(V("Hero X"), V("Hero Y")), AU.size_to(75),
-                AU.if_(eq(mod(round_(mul(TIMER, 10)), 2), 0), [AU.wear("fire 1")], [AU.wear("fire 2")]),
-                AU.show(),
+            AU.if_(powered, [AU.set("Lit", 1)], [AU.set("Lit", 0)]),
+            # higher level = brighter (less see-through), bigger, faster flicker; powered up = full blaze
+            AU.effect("GHOST", sub(sub(88, mul(13, V("Power Level"))), mul(30, V("Lit")))),
+            AU.effect("BRIGHTNESS", add(mul(5, V("Power Level")), mul(20, V("Lit")))),
+            AU.set("Grow", add(add(0.92, mul(0.05, V("Power Level"))), mul(0.12, V("Lit")))),
+            AU.if_(eq(V("State"), "fight"), [
+                AU.goto(V("Hero X"), V("Hero Y")), AU.size_to(mul(75, V("Grow"))), flicker, AU.show(),
             ], [
-                AU.if_(and_(eq(V("State"), "brawl"), eq(V("Super"), 100), eq(V("Brawl On"), 1)), [
-                    AU.goto(V("P1 Screen X"), V("P1 Screen Y")), AU.size_to(mul(V("P1 Screen Size"), 1)),
-                    AU.if_(eq(mod(round_(mul(TIMER, 10)), 2), 0), [AU.wear("fire 1")], [AU.wear("fire 2")]),
-                    AU.show(),
-                ], [AU.hide()]),
+                AU.if_(and_(eq(V("State"), "brawl"), eq(V("Brawl Live"), 1), eq(item("B Alive", 1), 1)), [
+                    AU.goto(V("P1 Screen X"), V("P1 Screen Y")), AU.size_to(mul(V("P1 Screen Size"), V("Grow"))),
+                    AU.if_(eq(V("Brawl On"), 1), [AU.show()], [AU.hide()]),
+                ], [
+                    AU.if_(and_(eq(V("State"), "title"), gt(V("Power Level"), 1)), [
+                        AU.goto(-205, GROUND), AU.size_to(mul(90, V("Grow"))), AU.show(),
+                    ], [AU.hide()]),
+                ]),
+            ]),
+            AU.if_(not_(eq(V("State"), "fight")), [
+                AU.if_(eq(mod(round_(mul(TIMER, add(8, mul(3, V("Power Level"))))), 2), 0),
+                       [AU.wear(join("lv", join(V("Power Level"), " 1")))], [AU.wear(join("lv", join(V("Power Level"), " 2")))]),
             ]),
         ]),
-        note="Red fire around your fighter when powered up: SUPER is full, during a SUPER move, or a full-power fireball charge.",
+        note="Your aura shows your POWER LEVEL: red, orange, gold, blue, then purple-white with lightning sparks. "
+             "Each level is brighter and bigger and flickers faster. It blazes when you are powered up "
+             "(SUPER full, during a SUPER or POWER move, or a full fireball charge).",
+    )
+
+    # -------------------------------------------------------- lightning --
+    lt_ = game.sprite("Lightning", size=100, rotation="don't rotate")
+    lt_.costume("bolt hero", bolt_svg("#fefce8", "#facc15"), 30, 420)
+    lt_.costume("bolt enemy", bolt_svg("#fecaca", "#a855f7"), 30, 420)
+    lt_.costume("warn", bolt_warning_svg(), 35, 9)
+    LT = lt_
+    for name, value in (("Is Clone", 0), ("Bx", 0), ("By", 0), ("Who", "hero"), ("Pw", 0), ("Sz", 100)):
+        LT.local(name, value)
+    LT.on_flag(LT.hide(), LT.set("Is Clone", 0))
+    LT.on_msg(
+        "bolt",
+        LT.if_(eq(V("Is Clone"), 0), [
+            LT.set("Bx", V("Bolt X")), LT.set("By", V("Bolt Y")), LT.set("Who", V("Bolt Owner")),
+            LT.set("Pw", V("Bolt Power")), LT.set("Sz", V("Bolt Size")), LT.clone(),
+        ]),
+        note="Lightning from the sky. An enemy's bolt shows a yellow mark first: move away or DODGE. "
+             "Only the original makes clones (clones hear messages too).",
+    )
+    LT.on_clone(
+        LT.set("Is Clone", 1), LT.effect("GHOST", 0),
+        LT.if_(eq(V("Who"), "enemy"), [
+            LT.wear("warn"), LT.size_to(100), LT.goto(V("Bx"), V("By")), LT.show(),
+            LT.repeat(4, [LT.effect("GHOST", 60), LT.wait(0.08), LT.effect("GHOST", 0), LT.wait(0.08)]),
+        ]),
+        LT.if_(eq(V("Who"), "enemy"), [LT.wear("bolt enemy")], [LT.wear("bolt hero")]),
+        LT.size_to(V("Sz")), LT.goto(V("Bx"), V("By")), LT.show(), LT.front(), LT.broadcast("bolt strike"),
+        LT.if_(and_(eq(V("Who"), "hero"), eq(V("Fight On"), 1)), [LT.set("Hit Power", V("Pw")), LT.broadcast("hero hits")]),
+        LT.if_(and_(eq(V("Who"), "enemy"), eq(V("Fight On"), 1), lt(abs_(sub(V("Hero X"), V("Bx"))), 30)), [
+            LT.set("Hurt Power", V("Pw")), LT.broadcast("enemy hits hero"),
+        ]),
+        LT.repeat(3, [LT.effect("GHOST", 0), LT.wait(0.04), LT.effect("GHOST", 55), LT.wait(0.04)]),
+        LT.delete_clone(),
+    )
+    for m in ("show title", "choose hero", "story scene", "brawl clear"):
+        LT.on_msg(m, LT.if_(eq(V("Is Clone"), 1), [LT.delete_clone()], [LT.hide()]))
+    # BRAWL: your THUNDER hits every fighter near you
+    LT.local("J", 0)
+    LT.on_msg(
+        "brawl bolt",
+        LT.if_(eq(V("Is Clone"), 0), [
+            LT.set("J", 1),
+            LT.repeat(3, [
+                LT.change("J", 1),
+                LT.if_(and_(eq(item("B Alive", V("J")), 1),
+                            lt(abs_(sub(item("B X", V("J")), item("B X", 1))), mul(110, sub(V("Power Level"), 1)))), [
+                    LT.list_set("B Hit", V("J"), add(item("B Hit", V("J")), add(6, mul(2, V("Power Level"))))),
+                    LT.if_(gt(item("B X", V("J")), item("B X", 1)), [LT.set("Pw", 1)], [LT.set("Pw", -1)]),
+                    LT.list_set("B KX", V("J"), mul(add(3, div(item("B Dmg", V("J")), 12)), V("Pw"))),
+                    LT.list_set("B KY", V("J"), add(9, div(item("B Dmg", V("J")), 9))),
+                    LT.set("Bx", mul(sub(item("B X", V("J")), V("Cam X")), V("Zoom"))),
+                    LT.set("By", mul(sub(item("B Y", V("J")), V("Cam Y")), V("Zoom"))),
+                    LT.set("Who", "brawl"), LT.set("Pw", 0), LT.set("Sz", mul(div(sub(200, V("By")), 420), 100)),
+                    LT.clone(), LT.wait(0.12),
+                ]),
+            ]),
+        ]),
     )
 
     bw = game.sprite("Boss Weapon", size=80, rotation="all around")
@@ -2753,7 +2999,7 @@ def build():
 
     banner = game.sprite("Banner", x=0, y=40, rotation="don't rotate")
     for key, word, fill in (("ready", "READY...", "#facc15"), ("fight", "FIGHT!", "#ef4444"), ("ko", "K.O.!", "#f97316"),
-                            ("clear", "CHAPTER CLEAR!", "#22c55e"), ("wave clear", "WAVE CLEAR!", "#22d3ee"), ("boss", "BOSS FIGHT!", "#ef4444"), ("game", "GAME!", "#facc15")):
+                            ("clear", "CHAPTER CLEAR!", "#22c55e"), ("wave clear", "WAVE CLEAR!", "#22d3ee"), ("boss", "BOSS FIGHT!", "#ef4444"), ("game", "GAME!", "#facc15"), ("power up", "POWER UP!", "#a855f7")):
         banner.costume(key, banner_svg(word, fill), banner_size(word)[1] / 2, 45)
     BN = banner
     BN.on_flag(BN.hide())
@@ -2843,11 +3089,12 @@ def build():
         ("Punch Button", "PUNCH", "#ea580c", "Want Punch"),
         ("Kick Button", "KICK", "#ca8a04", "Want Kick"),
         ("Fire Button", "FIRE", "#dc2626", "Fire Held"),
+        ("Power Button", "POWER", "#7c3aed", "Want Power"),
         ("Super Button", "SUPER", "#475569", "Want Super"),
     ]
     for i, (name, label, fill, action) in enumerate(controls):
-        x = -206 + 59 * i
-        b = button(name, label, fill, x, -152, width=56, size=11)
+        x = -212 + 53 * i
+        b = button(name, label, fill, x, -152, width=51, size=10)
         if action == "Fire Held":
             b.on_click(b.set("Fire Held", 1), b.wait_until(not_(MOUSE_DOWN)), b.set("Fire Held", 0),
                        note="Hold to charge a fireball, let go to shoot.")
@@ -2862,9 +3109,17 @@ def build():
         for m in FIGHT_HIDE:
             b.on_msg(m, b.hide())
         if name == "Super Button":
-            b.costume("ready", button_svg("SUPER!", "#facc15", "#7c2d12", 56, 44, 11), 28, 22)
+            b.costume("ready", button_svg("SUPER!", "#facc15", "#7c2d12", 51, 44, 10), 25.5, 22)
             b.on_flag(b.forever([b.if_(eq(V("Super"), 100), [b.wear("ready")], [b.wear("button")])]))
 
+    badge = game.sprite("Power Badge", x=-160, y=-140, rotation="don't rotate")
+    for n, *_r in POWER_LEVELS:
+        badge.costume(f"lv{n}", power_badge_svg(n), 80, 15)
+    PB = badge
+    PB.on_flag(PB.hide())
+    PB.on_msg("show title", PB.goto(-160, -140), PB.wear(join("lv", V("Power Level"))), PB.show(), PB.front(),
+              note="Your POWER LEVEL on the title screen.")
+    PB.on_msg("choose hero", PB.hide())
     diff_btn = game.sprite("Level Button", x=18, y=-90, rotation="don't rotate")
     for key, word, fill, *_ in DIFFICULTIES:
         diff_btn.costume(key, difficulty_svg(word, fill), 95, 20)
