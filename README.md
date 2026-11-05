@@ -12,7 +12,7 @@ Arthur's stickman fighting game, built in Scratch, with an Android tablet in min
 - **Levels**: EASY, NORMAL, HARD and CHAMPION. NORMAL makes fights about twice as long as before.
 - **A paper intro**: a pencil draws the fighters and a ninja on notebook paper, then colours them in (with a SKIP button).
 - **Dragon Ball-style power-ups**: yelling, a surging aura, shaking ground, cracks, a shockwave and boulders ripping out of the ground (more every level), and golden (then silver) super-form hair from power level 3.
-- **BRAWL stages**: 14 to pick from, including a Pirate Ship with cannonballs, low-gravity Space, slippery Snowy Peak, bouncy Candy Land, conveyor-belt Robot Factory, a Jungle with a vine swing and coconuts, Dino Valley where you ride an armoured T-Rex, a Highway with trucks, and a Fishing Pond with a floating raft and jumping fish.
+- **BRAWL stages**: 14 to pick from, including a Pirate Ship with cannonballs, low-gravity Space, slippery Snowy Peak, bouncy Candy Land, conveyor-belt Robot Factory, a Jungle with a vine swing and coconuts, Dino Valley where you ride a T-Rex or a Triceratops and dodge raptors, a Highway with trucks, and a Fishing Pond with a floating raft and jumping fish.
 - **Extras from Grok's plan**: healing apples, sound on/off, a how-to-play card, PRACTICE mode and a debug overlay.
 - **Ninjas**: a Bamboo Forest full of ninjas and the boss MASTER KAGE, who teleports in smoke and sends a squad of ninjas at you.
 - **Human-like stick fighters**: bending elbows and knees, walking and breathing, wind-up punches, bodies that fold when hit, and shadows.

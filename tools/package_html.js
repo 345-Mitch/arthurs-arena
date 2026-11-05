@@ -89,7 +89,7 @@ const PAD_JS = `
         ' background:radial-gradient(circle at 35% 30%,#93c5fd,#2563eb);border:.6vmin solid #fff;box-shadow:0 .6vmin 1.5vmin rgba(0,0,0,.45)}',
         '.pb{position:absolute;width:9.6vmin;height:9.6vmin;margin:-4.8vmin 0 0 -4.8vmin;border-radius:50%;pointer-events:auto;touch-action:none;',
         ' display:flex;align-items:center;justify-content:center;font:900 1.9vmin Verdana,Arial,sans-serif;color:#fff;',
-        ' border:.6vmin solid rgba(255,255,255,.85);box-shadow:0 .7vmin 0 rgba(0,0,0,.35);opacity:.88;box-sizing:border-box}',
+        ' border:.6vmin solid rgba(255,255,255,.85);box-shadow:0 .7vmin 0 rgba(0,0,0,.35);opacity:.82;box-sizing:border-box}',
         '.pb.down{transform:translateY(.5vmin) scale(.93);box-shadow:0 .2vmin 0 rgba(0,0,0,.35);opacity:1}',
         '#bP{background:#ea580c}#bK{background:#ca8a04}#bJ{background:#16a34a}#bD{background:#64748b}',
         '#bF{background:#dc2626;width:10.2vmin;height:10.2vmin;margin:-5.1vmin 0 0 -5.1vmin;font-size:2vmin;text-shadow:0 .3vmin 0 rgba(0,0,0,.4)}',
@@ -126,9 +126,9 @@ const PAD_JS = `
     ring('bP', 0, 1); ring('bK', 1, 0); ring('bJ', 0, -1); ring('bD', -1, 0);
     ring('bS', -1.15, -1.55); ring('bF', -2.15, 0.85); ring('bW', -2.3, -0.6);
 
-    // keep the game itself clear of the controls: the joystick needs a column on the left,
-    // the button cluster a wider one on the right
-    var LEFT = 0.21, RIGHT = 0.37;
+    // make room for the controls, but only about half of it: the game is drawn wider and the lower
+    // half of the joystick and the button cluster sits over the bottom of the game (mostly the floor)
+    var LEFT = 0.11, RIGHT = 0.19;
     function reserve () {
         var sc = window.scaffolding;
         if (!sc || typeof sc.relayout !== 'function') return;

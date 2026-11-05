@@ -1238,7 +1238,7 @@ async function brawlTest () {
             }
             if (T.sprite('Cannonball').visible) {
                 out.cannon = true;
-                out.hazards.add(T.costume('Cannonball').replace(' l', ''));
+                out.hazards.add(T.costume('Cannonball').replace(' l', '').replace(' 2', ''));
             }
             // moving platforms really move, and whoever stands on one rides along
             const ids = list('Mv Id');
@@ -1262,7 +1262,7 @@ async function brawlTest () {
         await T.step(3);
     }
     if (!out.cannon) fail('brawl: no cannonball on the Pirate Ship');
-    for (const h of ['ball', 'truck', 'coconut', 'fish']) if (!out.hazards.has(h)) fail(`brawl: hazard ${h} never appeared`);
+    for (const h of ['ball', 'truck', 'raptor', 'coconut', 'fish']) if (!out.hazards.has(h)) fail(`brawl: hazard ${h} never appeared`);
     for (const k of ['jungle', 'dino', 'highway', 'pond']) {
         const m = out.movers[k];
         if (!m || m.max - m.min < 60) fail(`brawl: the moving platform on ${k} did not move (${JSON.stringify(m)})`);

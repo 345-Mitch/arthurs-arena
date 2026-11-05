@@ -6,7 +6,7 @@ Made by `tools/build_legends_sb3.py` from the same blocks that are inside
 ## Stage
 
 Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Bamboo, Dojo, Volcano, Castle, Arcade, Ending, Paper, brawl sky, brawl ramps, brawl pagoda, brawl pirate, brawl castle, brawl space, brawl snow, brawl candy, brawl factory, brawl towers, brawl jungle, brawl dino, brawl highway, brawl pond
-Sounds: honk, hit, big hit, hurt, ki roar, ki flare, transform, scribble, page, jump, whirl, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, poof, shuriken, spike fall, win
+Sounds: screech, honk, hit, big hit, hurt, ki roar, ki flare, transform, scribble, page, jump, whirl, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, poof, shuriken, spike fall, win
 Sprite-only variables: New Level, Frames, Second, Waves, Near, I, K, Pick, MI, Min X, Max X, Min Y, Max Y, Alive, Zoom To
 
 ```
@@ -1706,11 +1706,22 @@ if <(Brawl Stage) = [12]> then
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
     add [0] to [Plat Art]
+    add [150] to [Plat X1]
+    add [-72] to [Plat Y1]
+    add [260] to [Plat X2]
+    add [-72] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [1] to [Plat Art]
     add [2] to [Mv Id]
     add [-250] to [Mv Min]
     add [100] to [Mv Max]
     add [1.3] to [Mv V]
-    set [Plat Count] to [5]
+    add [6] to [Mv Id]
+    add [-300] to [Mv Min]
+    add [190] to [Mv Max]
+    add [-0.9] to [Mv V]
+    set [Plat Count] to [6]
     set [Solid Count] to [1]
     set [Stage Grav] to [1]
     set [Stage Grip] to [0.45]
@@ -2041,6 +2052,11 @@ start sound (big hit)
 ```
 when I receive [honk]
 start sound (honk)
+```
+
+```
+when I receive [screech]
+start sound (screech)
 ```
 
 ```
@@ -8820,7 +8836,7 @@ set [BF Power] to [0]
 
 ## Brawl Platform
 
-Costumes: sky 1, sky 2, sky 3, sky 4, ramps 1, ramps 2, ramps 3, ramps 4, ramps 5, ramps 6, pagoda 1, pagoda 2, pagoda 3, pagoda 4, pagoda 5, pagoda 6, pirate 1, pirate 2, pirate 3, pirate 4, pirate 5, castle 1, castle 2, castle 3, castle 4, castle 5, castle 6, space 1, space 2, space 3, space 4, space 5, space 6, snow 1, snow 2, snow 3, snow 4, snow 5, candy 1, candy 2, candy 3, candy 4, candy 5, candy 6, factory 1, factory 2, factory 3, factory 4, factory 5, factory 6, towers 1, towers 2, towers 3, towers 4, towers 5, towers 6, towers 7, towers 8, jungle 1, jungle 2, jungle 3, jungle 4, jungle 5, jungle 5 s, jungle 5 l, jungle 5 l s, jungle 6, dino 1, dino 2, dino 2 s, dino 2 l, dino 2 l s, dino 3, dino 4, dino 5, highway 1, highway 2, highway 3, highway 4, highway 5, highway 5 s, highway 5 l, highway 5 l s, highway 6, highway 7, pond 1, pond 2, pond 3, pond 3 s, pond 3 l, pond 3 l s, pond 4, pond 5, pond 6, pond 7
+Costumes: sky 1, sky 2, sky 3, sky 4, ramps 1, ramps 2, ramps 3, ramps 4, ramps 5, ramps 6, pagoda 1, pagoda 2, pagoda 3, pagoda 4, pagoda 5, pagoda 6, pirate 1, pirate 2, pirate 3, pirate 4, pirate 5, castle 1, castle 2, castle 3, castle 4, castle 5, castle 6, space 1, space 2, space 3, space 4, space 5, space 6, snow 1, snow 2, snow 3, snow 4, snow 5, candy 1, candy 2, candy 3, candy 4, candy 5, candy 6, factory 1, factory 2, factory 3, factory 4, factory 5, factory 6, towers 1, towers 2, towers 3, towers 4, towers 5, towers 6, towers 7, towers 8, jungle 1, jungle 2, jungle 3, jungle 4, jungle 5, jungle 5 s, jungle 5 l, jungle 5 l s, jungle 6, dino 1, dino 2, dino 2 s, dino 2 l, dino 2 l s, dino 3, dino 4, dino 5, dino 6, dino 6 s, dino 6 l, dino 6 l s, highway 1, highway 2, highway 3, highway 4, highway 5, highway 5 s, highway 5 l, highway 5 l s, highway 6, highway 7, pond 1, pond 2, pond 3, pond 3 s, pond 3 l, pond 3 l s, pond 4, pond 5, pond 6, pond 7
 Sprite-only variables: Is Clone, My Id, Stage Key, Suf
 
 ```
@@ -9059,7 +9075,7 @@ end
 
 ## Cannonball
 
-Costumes: ball, truck, truck l, coconut, fish
+Costumes: ball, truck, truck l, coconut, fish, raptor, raptor 2, raptor l, raptor l 2
 Sprite-only variables: Done, J, KD
 
 ```
@@ -9068,6 +9084,13 @@ change [CB X] by (CB VX)
 change [CB Y] by (CB VY)
 change [CB VY] by ([-1] * (CB G))
 set size to ((CB Size) * (Zoom)) %
+if <(CB Kind) contains [raptor]?> then
+    if <((floor of ((timer) * [8])) mod [2]) = [0]> then
+        switch costume to (CB Kind)
+    else
+        switch costume to (join (CB Kind) [ 2])
+    end
+end
 go to x: (((CB X) - (Cam X)) * (Zoom)) y: (((CB Y) - (Cam Y)) * (Zoom))
 set [J] to [0]
 repeat [4]
@@ -9099,7 +9122,7 @@ end
 when green flag clicked
 hide
 forever
-    if <<(Brawl On) = [1]> and <<<<(Stage Key) = [pirate]> or <(Stage Key) = [jungle]>> or <(Stage Key) = [highway]>> or <(Stage Key) = [pond]>>> then
+    if <<(Brawl On) = [1]> and <<<<<(Stage Key) = [pirate]> or <(Stage Key) = [jungle]>> or <(Stage Key) = [dino]>> or <(Stage Key) = [highway]>> or <(Stage Key) = [pond]>>> then
         if <(Stage Key) = [pirate]> then
             wait (pick random [6] to [10]) seconds
             if <(pick random [1] to [2]) = [1]> then
@@ -9130,6 +9153,28 @@ forever
             set [CB G] to [0.6]
             set [Pop Text] to [COCONUT!]
             broadcast [whirl sfx]
+        end
+        if <(Stage Key) = [dino]> then
+            wait (pick random [5] to [9]) seconds
+            if <(pick random [1] to [2]) = [1]> then
+                set [CB Dir] to [1]
+            else
+                set [CB Dir] to [-1]
+            end
+            set [CB Size] to [100]
+            set [CB W] to [36]
+            if <(CB Dir) = [1]> then
+                set [CB Kind] to [raptor]
+            else
+                set [CB Kind] to [raptor l]
+            end
+            set [CB X] to ((CB Dir) * [-540])
+            set [CB Y] to [-92]
+            set [CB VX] to ([11] * (CB Dir))
+            set [CB VY] to [0]
+            set [CB G] to [0]
+            set [Pop Text] to [RAPTOR! JUMP!]
+            broadcast [screech]
         end
         if <(Stage Key) = [highway]> then
             wait (pick random [5] to [9]) seconds
@@ -9166,7 +9211,7 @@ forever
             set [Pop Text] to [SPLASH!]
             broadcast [boing]
         end
-        if <<(Brawl On) = [1]> and <<<<(Stage Key) = [pirate]> or <(Stage Key) = [jungle]>> or <(Stage Key) = [highway]>> or <(Stage Key) = [pond]>>> then
+        if <<(Brawl On) = [1]> and <<<<<(Stage Key) = [pirate]> or <(Stage Key) = [jungle]>> or <(Stage Key) = [dino]>> or <(Stage Key) = [highway]>> or <(Stage Key) = [pond]>>> then
             set [Done] to [0]
             switch costume to (CB Kind)
             broadcast [popup]
@@ -9183,7 +9228,7 @@ forever
 end
 ```
 
-> Stage hazards: cannonballs on the PIRATE SHIP, trucks on the HIGHWAY, coconuts in the JUNGLE and jumping fish at the FISHING POND. Jump out of the way!
+> Stage hazards: cannonballs on the PIRATE SHIP, trucks on the HIGHWAY, raptors in DINO VALLEY, coconuts in the JUNGLE and jumping fish at the FISHING POND. Jump out of the way!
 
 ```
 when I receive [brawl clear]

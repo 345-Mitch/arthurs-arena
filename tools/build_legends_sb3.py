@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "3.0"
+VERSION = "3.1"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -1207,6 +1207,7 @@ def tone_wav(parts, rate=22050):
 
 
 SOUNDS = {
+    "screech": [(0.12, 1500, 2300, "square", 0.22), (0.2, 2300, 900, "square", 0.22)],
     "honk": [(0.18, 330, 330, "square", 0.3), (0.05, 1, 1, "sine", 0.0), (0.22, 262, 262, "square", 0.3)],
     "hit": [(0.09, 300, 80, "noise", 0.7)],
     "big hit": [(0.05, 500, 200, "noise", 0.9), (0.2, 120, 40, "sine", 0.9)],
@@ -1857,10 +1858,10 @@ BRAWL_STAGES = [
          plats=[(-300, -110, 300, -110), (-260, -15, -150, -15), (150, -15, 260, -15), (-55, 75, 55, 75),
                 (-40, -55, 40, -55, 0, 0, "vine"), (270, -70, 320, -70, 1)],
          movers=[(5, -230, 150, 1.6)]),
-    dict(key="dino", name="DINO VALLEY", sky=("#ea580c", "#fde68a"), solid=1,
+    dict(key="dino", name="DINO VALLEY", sky=("#ea580c", "#fde68a"), solid=1, hazard="raptor",
          plats=[(-320, -120, 320, -120), (-80, -40, 70, -40, 0, 0, "trex"), (-290, 45, -185, 45), (185, 45, 290, 45),
-                (-45, 120, 45, 120)],
-         movers=[(2, -250, 100, 1.3)]),
+                (-45, 120, 45, 120), (150, -72, 260, -72, 0, 0, "trike")],
+         movers=[(2, -250, 100, 1.3), (6, -300, 190, -0.9)]),
     dict(key="highway", name="HIGHWAY", sky=("#0284c7", "#e0f2fe"), solid=1, hazard="truck",
          plats=[(-330, -110, 330, -110), (-290, -35, -130, 40), (-130, 40, 130, 40), (130, 40, 290, -35),
                 (-60, 72, 50, 72, 0, 0, "truck"), (-300, 125, -210, 125), (210, 125, 300, 125)],
@@ -1952,12 +1953,109 @@ def trex_svg(w, m, step=False):
     return body, T
 
 
+def trike_svg(w, m, step=False):
+    """A realistic Triceratops from the side, facing right, with a saddle: a bony frill, three horns, a beak and
+    four stout legs. Its back (the saddle top) is the platform at y=top; its feet stand 52 below."""
+    T = 40
+    X = lambda x: m + x  # noqa: E731
+    R = lambda x: m + w + x  # noqa: E731
+    defs = ('<defs><linearGradient id="tskin" x1="0" y1="0" x2="0" y2="1">'
+            '<stop offset="0" stop-color="#5b4a36"/><stop offset="0.6" stop-color="#8a7356"/>'
+            '<stop offset="1" stop-color="#c8b48f"/></linearGradient>'
+            '<radialGradient id="frill" cx="0.3" cy="0.6" r="0.8"><stop offset="0" stop-color="#d9a066"/>'
+            '<stop offset="1" stop-color="#8c3b1f"/></radialGradient></defs>')
+
+    def leg(x, dx, dark):
+        fill = "#3d3125" if dark else "#6b5842"
+        fy = T + 52
+        # a thick upper leg, a knee, then a column-like lower leg with a broad foot
+        return (f'<path d="M{x - 10} {T + 16} Q{x - 12} {T + 30} {x - 8 + dx * 0.5} {T + 36} L{x - 8 + dx} {fy - 2} '
+                f'Q{x - 10 + dx} {fy} {x - 4 + dx} {fy} L{x + 10 + dx} {fy} Q{x + 13 + dx} {fy} {x + 11 + dx} {fy - 4} '
+                f'L{x + 8 + dx * 0.5} {T + 36} Q{x + 13} {T + 28} {x + 10} {T + 16} Z" fill="{fill}" stroke="#2a2118" stroke-width="2.2"/>'
+                + "".join(f'<path d="M{x - 3 + dx + c} {fy} l3 -3 l2 3 Z" fill="#e7e5e4" stroke="#57534e" stroke-width=".8"/>'
+                          for c in (0, 5, 10)))
+    a, b = (6, -6) if step else (-6, 6)
+    body = (
+        defs
+        + leg(X(28), b, True) + leg(R(-20), a, True)
+        # the bony frill behind the head, with knobs round its edge
+        + f'<g transform="rotate(-22 {R(8)} {T + 2})"><ellipse cx="{R(8)}" cy="{T + 2}" rx="20" ry="30" fill="url(#frill)" '
+          f'stroke="#2a2118" stroke-width="2.5"/>'
+        + "".join(f'<circle cx="{R(8) + 20 * math.cos(t):.1f}" cy="{T + 2 + 30 * math.sin(t):.1f}" r="3.2" fill="#e8d5b0" '
+                  f'stroke="#2a2118" stroke-width="1"/>' for t in [math.pi * (0.55 + 0.15 * k) for k in range(8)])
+        + f'<ellipse cx="{R(8)}" cy="{T - 4}" rx="9" ry="14" fill="none" stroke="#5c2a14" stroke-width="2" opacity="0.6"/></g>'
+        # body and tail
+        + f'<path d="M{X(-36)} {T + 22} Q{X(-12)} {T + 3} {X(8)} {T + 2} L{R(-10)} {T + 2} Q{R(0)} {T + 4} {R(6)} {T + 16} '
+          f'Q{R(6)} {T + 28} {R(-14)} {T + 31} Q{X(w / 2)} {T + 37} {X(14)} {T + 31} Q{X(-8)} {T + 28} {X(-36)} {T + 24} Z" '
+          f'fill="url(#tskin)" stroke="#2a2118" stroke-width="2.5" stroke-linejoin="round"/>'
+        + "".join(f'<path d="M{X(x)} {T + 4} q-3 9 2 16" stroke="#463829" stroke-width="4" fill="none" opacity="0.6" stroke-linecap="round"/>'
+                  for x in range(-20, w - 8, 18))
+        + "".join(f'<circle cx="{X(x)}" cy="{T + y}" r="1" fill="#3b2f22" opacity="0.5"/>'
+                  for x in range(4, w, 8) for y in (12, 22) if (x // 8 + y) % 2)
+        # head: a parrot-like beak, horns over the eyes and a short horn on the nose
+        + f'<path d="M{R(2)} {T + 4} Q{R(22)} {T - 4} {R(38)} {T + 8} Q{R(48)} {T + 13} {R(52)} {T + 22} L{R(44)} {T + 26} '
+          f'Q{R(28)} {T + 32} {R(8)} {T + 28} Z" fill="url(#tskin)" stroke="#2a2118" stroke-width="2.5" stroke-linejoin="round"/>'
+        f'<path d="M{R(44)} {T + 17} Q{R(52)} {T + 18} {R(52)} {T + 22} L{R(44)} {T + 26} Z" fill="#3d3125"/>'
+        f'<path d="M{R(18)} {T + 4} Q{R(32)} {T - 14} {R(54)} {T - 22} Q{R(36)} {T - 6} {R(26)} {T + 6} Z" fill="#a8a29e" stroke="#2a2118" stroke-width="1.5"/>'
+        f'<path d="M{R(22)} {T + 4} Q{R(38)} {T - 10} {R(58)} {T - 14} Q{R(40)} {T - 2} {R(30)} {T + 7} Z" fill="#f5f0e1" stroke="#2a2118" stroke-width="1.5"/>'
+        f'<path d="M{R(38)} {T + 11} L{R(45)} {T - 1} L{R(46)} {T + 13} Z" fill="#f5f0e1" stroke="#2a2118" stroke-width="1.5"/>'
+        f'<circle cx="{R(24)}" cy="{T + 12}" r="2.6" fill="#1c1917"/><circle cx="{R(24.8)}" cy="{T + 11.2}" r=".8" fill="#fff"/>'
+        f'<path d="M{R(12)} {T + 22} Q{R(26)} {T + 26} {R(40)} {T + 22}" stroke="#2a2118" stroke-width="1.2" fill="none"/>'
+        # near legs in front
+        + leg(X(16), a, False) + leg(R(-32), b, False)
+        # saddle and strap
+        + f'<path d="M{X(w * 0.42)} {T + 2} L{X(w * 0.42)} {T + 40}" stroke="#78350f" stroke-width="5"/>'
+        f'<path d="M{X(w * 0.28)} {T + 4} Q{X(w * 0.28)} {T - 1} {X(w * 0.34)} {T} L{X(w * 0.52)} {T} '
+        f'Q{X(w * 0.58)} {T - 3} {X(w * 0.58)} {T + 4} Q{X(w * 0.43)} {T + 12} {X(w * 0.28)} {T + 4} Z" fill="#92400e" stroke="#451a03" stroke-width="2"/>'
+    )
+    return body, T
+
+
+def raptor_svg(step=False):
+    """A feathered raptor sprinting to the right (110 x 72, feet at y=70)."""
+    a = 1 if step else -1
+    def leg(hx, k, f, dark):
+        c = "#5b3a1e" if dark else "#8a6236"
+        return (f'<path d="M{hx} 34 L{k[0]} {k[1]} L{f[0]} {f[1]} L{f[0] + 11} {f[1]}" stroke="#2a1a0c" '
+                f'stroke-width="7.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+                f'<path d="M{hx} 34 L{k[0]} {k[1]} L{f[0]} {f[1]} L{f[0] + 11} {f[1]}" stroke="{c}" '
+                f'stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+                # the big muscular thigh
+                f'<ellipse cx="{(hx + k[0]) / 2:.0f}" cy="{(34 + k[1]) / 2:.0f}" rx="8" ry="11" fill="{c}" stroke="#2a1a0c" '
+                f'stroke-width="1.6" transform="rotate({(k[0] - hx) * 2:.0f} {(hx + k[0]) / 2:.0f} {(34 + k[1]) / 2:.0f})"/>'
+                # the sickle claw, held up off the ground
+                f'<path d="M{f[0] + 1} {f[1] - 2} q-1 -5 3 -6" stroke="#f5f5f4" stroke-width="1.8" fill="none" stroke-linecap="round"/>')
+    back = leg(48, (40 - 8 * a, 50), (46 - 14 * a, 68), True)
+    front = leg(50, (58 + 8 * a, 50), (52 + 14 * a, 68), False)
+    body = (
+        '<defs><linearGradient id="rskin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7c4a1e"/>'
+        '<stop offset="1" stop-color="#d6b98a"/></linearGradient></defs>'
+        + back
+        # long stiff tail with a feather plume, body, neck and head
+        + '<path d="M2 26 Q24 22 40 24 Q56 18 70 22 Q80 14 88 14 Q100 13 106 18 Q104 22 96 23 L104 25 Q98 28 88 27 '
+          'Q80 28 76 34 Q66 42 50 42 Q38 40 32 34 Q18 32 2 30 Z" fill="url(#rskin)" stroke="#2a1a0c" stroke-width="2" stroke-linejoin="round"/>'
+        + "".join(f'<path d="M{x} 27 l-6 {d} l9 -1 Z" fill="#9a3412" opacity="0.85"/>' for x, d in ((8, -6), (13, 6), (18, -5)))
+        + "".join(f'<path d="M{x} 24 q2 6 -1 11" stroke="#4a2a10" stroke-width="2.4" fill="none" opacity="0.7"/>' for x in (36, 44, 52, 60))
+        # teeth, eye
+        + "".join(f'<path d="M{x} 23 l1.5 3 l1.5 -3 Z" fill="#fff"/>' for x in (92, 96, 100))
+        + '<circle cx="92" cy="17" r="2" fill="#facc15" stroke="#1c1917" stroke-width="1"/><circle cx="92.4" cy="17" r=".8" fill="#111"/>'
+        # feathered arm, folded like a wing
+        '<path d="M70 30 Q78 38 74 44 Q66 42 60 36 Z" fill="#9a3412" stroke="#2a1a0c" stroke-width="1.5"/>'
+        '<path d="M74 44 l4 2 M72 44 l2 3" stroke="#e7e5e4" stroke-width="1.5"/>'
+        + front
+    )
+    return svg_doc(110, 72, body)
+
+
 def art_platform_svg(art, w, left=False, step=False):
     """A platform that is a picture: its flat top is where fighters stand. Returns svg, centre x, centre y."""
     m = ART_MARGIN
     if art == "trex":
         body, top = trex_svg(w, m, step)
         width, height = w + 2 * m, top + 84
+    elif art == "trike":
+        body, top = trike_svg(w, m, step)
+        width, height = w + 2 * m, top + 56
     elif art == "truck":
         top = 8
         body = (
@@ -2275,6 +2373,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
     s.on_msg("boing", s.play("jump"))
     s.on_msg("cannon fire", s.play("big hit"))
     s.on_msg("honk", s.play("honk"))
+    s.on_msg("screech", s.play("screech"))
     s.on_msg("brawl smash", s.play("big hit"))
     s.on_msg("brawl ko", s.play("boom"))
     for m in ("show title", "choose hero"):
@@ -2714,6 +2813,13 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
                                        '<path d="M46 20 L58 8 L58 32 Z" fill="#fb923c" stroke="#9a3412" stroke-width="3"/>'
                                        '<circle cx="18" cy="17" r="3" fill="#111827"/>'
                                        '<path d="M26 12 q4 8 0 16" stroke="#fed7aa" stroke-width="2" fill="none"/>'), 30, 20)
+    for left in (False, True):
+        for step in (False, True):
+            svg = raptor_svg(step)
+            if left:
+                inner = svg[svg.index(">") + 1: -len("</svg>")]
+                svg = svg_doc(110, 72, f'<g transform="translate(110 0) scale(-1 1)">{inner}</g>')
+            cb.costume("raptor" + (" l" if left else "") + (" 2" if step else ""), svg, 55, 42)
     CB = cb
     CB.local("Done", 0)
     CB.local("J", 0)
@@ -2722,6 +2828,10 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         "cannon frame",
         CB.change("CB X", V("CB VX")), CB.change("CB Y", V("CB VY")), CB.change("CB VY", mul(-1, V("CB G"))),
         CB.size_to(mul(V("CB Size"), V("Zoom"))),
+        # a raptor runs: swap its legs
+        CB.if_(contains(V("CB Kind"), "raptor"), [
+            CB.if_(eq(mod(floor_(mul(TIMER, 8)), 2), 0), [CB.wear(V("CB Kind"))], [CB.wear(join(V("CB Kind"), " 2"))]),
+        ]),
         CB.goto(mul(sub(V("CB X"), V("Cam X")), V("Zoom")), mul(sub(V("CB Y"), V("Cam Y")), V("Zoom"))),
         CB.set("J", 0),
         CB.repeat(N, [
@@ -2755,6 +2865,11 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
                     CB.set("CB X", mul(V("CB Dir"), -540)), CB.set("CB Y", -78),
                     CB.set("CB VX", mul(9, V("CB Dir"))), CB.set("CB VY", 0), CB.set("CB G", 0),
                     CB.set("Pop Text", "TRUCK! JUMP!"), CB.broadcast("honk")],
+        "dino": [CB.wait(rnd(5, 9)), side(), CB.set("CB Size", 100), CB.set("CB W", 36),
+                 CB.if_(eq(V("CB Dir"), 1), [CB.set("CB Kind", "raptor")], [CB.set("CB Kind", "raptor l")]),
+                 CB.set("CB X", mul(V("CB Dir"), -540)), CB.set("CB Y", -92),
+                 CB.set("CB VX", mul(11, V("CB Dir"))), CB.set("CB VY", 0), CB.set("CB G", 0),
+                 CB.set("Pop Text", "RAPTOR! JUMP!"), CB.broadcast("screech")],
         "jungle": [CB.wait(rnd(3, 6)), CB.set("CB Kind", "coconut"), CB.set("CB Size", 70), CB.set("CB W", 22),
                    CB.set("CB X", rnd(-270, 270)), CB.set("CB Y", 280), CB.set("CB VX", 0), CB.set("CB VY", -2), CB.set("CB G", 0.6),
                    CB.set("Pop Text", "COCONUT!"), CB.broadcast("whirl sfx")],
@@ -2775,7 +2890,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
                 ]),
             ], [CB.wait(0.3)]),
         ]),
-        note="Stage hazards: cannonballs on the PIRATE SHIP, trucks on the HIGHWAY, coconuts in the JUNGLE "
+        note="Stage hazards: cannonballs on the PIRATE SHIP, trucks on the HIGHWAY, raptors in DINO VALLEY, coconuts in the JUNGLE "
              "and jumping fish at the FISHING POND. Jump out of the way!",
     )
     for m in ("brawl clear", "show title"):
