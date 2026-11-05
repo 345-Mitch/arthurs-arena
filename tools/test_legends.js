@@ -1,0 +1,398 @@
+#!/usr/bin/env node
+/*
+ * Plays projects/arthurs-arena-legends.sb3 inside Scratch's own engine
+ * (scratch-vm), with no screen, using a simple bot that taps the buttons.
+ *
+ * Setup once:   npm install --prefix /tmp/scratch-tools scratch-vm
+ * Run:          NODE_PATH=/tmp/scratch-tools/node_modules node tools/test_legends.js
+ *
+ * Time is faked, so a 3-minute story run takes a few seconds.
+ */
+'use strict';
+
+let fakeNow = 1700000000000;
+Date.now = () => fakeNow;
+
+// Scratch's "say for N seconds" uses setTimeout, so timers follow the fake clock too.
+const realSetTimeout = setTimeout;
+let timers = [];
+let fakeTimers = false;
+global.setTimeout = (fn, ms, ...args) => {
+    if (!fakeTimers) return realSetTimeout(fn, ms, ...args);
+    const t = {at: fakeNow + (ms || 0), fn: () => fn(...args), id: Symbol('t')};
+    timers.push(t);
+    return t;
+};
+const realClearTimeout = clearTimeout;
+global.clearTimeout = t => {
+    if (t && t.id) timers = timers.filter(x => x !== t);
+    else realClearTimeout(t);
+};
+const runTimers = () => {
+    const due = timers.filter(t => t.at <= fakeNow);
+    timers = timers.filter(t => t.at > fakeNow);
+    due.forEach(t => t.fn());
+};
+const settle = () => new Promise(r => setImmediate(r));
+
+const fs = require('fs');
+const path = require('path');
+const VirtualMachine = require('scratch-vm');
+try {
+    require('minilog').disable();
+} catch (e) { /* older vm */ }
+
+const SB3 = path.join(__dirname, '..', 'projects', 'arthurs-arena-legends.sb3');
+const FRAME = 1000 / 30;
+
+const problems = [];
+const fail = msg => problems.push(msg);
+
+async function boot () {
+    const vm = new VirtualMachine();
+    const errors = [];
+    const origError = console.error;
+    console.error = (...a) => errors.push(a.join(' '));
+    console.warn = () => {};
+    console.log = (...a) => {
+        const text = a.join(' ');
+        if (!/^(Loading|Done)/.test(text)) process.stdout.write(text + '\n');
+    };
+    await vm.loadProject(fs.readFileSync(SB3));
+    console.error = origError;
+    // One pass over all scripts per frame, like Scratch with a screen.
+    // (With no renderer nothing asks for a redraw, and a frozen fake clock
+    // would otherwise keep the engine looping inside a single frame.)
+    let passes = 0;
+    Object.defineProperty(vm.runtime, 'redrawRequested', {
+        get: () => passes++ > 0,
+        set: v => {
+            if (!v) passes = 0;
+        }
+    });
+    vm.runtime.currentStepTime = FRAME;
+    fakeTimers = true;
+    timers = [];
+    vm.greenFlag();
+    return {vm, errors};
+}
+
+function tools (vm) {
+    const rt = vm.runtime;
+    const stage = rt.getTargetForStage();
+    const byName = {};
+    for (const v of Object.values(stage.variables)) byName[v.name] = v;
+    const sprite = name => rt.getSpriteTargetByName(name);
+    // Scratch keeps "1" and 1 alike; compare like Scratch does.
+    const get = name => {
+        const v = byName[name].value;
+        return typeof v === 'string' && v.trim() !== '' && !isNaN(Number(v)) ? Number(v) : v;
+    };
+    const set = (name, value) => {
+        byName[name].value = value;
+    };
+    const click = name => rt.startHats('event_whenthisspriteclicked', null, sprite(name));
+    const send = msg => rt.startHats('event_whenbroadcastreceived', {BROADCAST_OPTION: msg});
+    const step = async (n = 1) => {
+        for (let i = 0; i < n; i++) {
+            fakeNow += FRAME;
+            runTimers();
+            await settle();
+            rt._step();
+        }
+    };
+    const costume = name => {
+        const t = sprite(name);
+        return t.getCostumes()[t.currentCostume].name;
+    };
+    const clones = name => rt.targets.filter(t => !t.isOriginal && t.sprite.name === name);
+    return {rt, stage, sprite, get, set, click, send, step, costume, clones};
+}
+
+// A bot that plays fair: it only uses what a player could see and the buttons.
+function makeBot (T, hero) {
+    const stats = {punches: 0, kicks: 0, jumps: 0, dodges: 0, supers: 0, weapons: new Set(), perfect: 0,
+        combos: 0, breaks: 0, retries: 0, chapters: new Set(), waves: 0, popups: new Set()};
+    let frame = 0;
+    let lastMove = 0;
+    let picked = false;
+    const tick = () => {
+        frame++;
+        const state = T.get('State');
+        if (state === 'select') {
+            if (!picked) T.click(['Pick Arthur', 'Pick Nova', 'Pick Rocko'][hero - 1]);
+            picked = true;
+            return;
+        }
+        picked = false;
+        if (state !== 'fight' || T.get('Fight On') !== 1) return;
+        const hx = T.get('Hero X');
+        const ex = T.get('Enemy X');
+        const d = Math.abs(ex - hx);
+        const toward = ex > hx ? 'move right' : 'move left';
+        const away = ex > hx ? 'move left' : 'move right';
+        const enemyPose = T.costume('Enemy');
+        const shot = T.sprite('Enemy Shot');
+        const wave = T.sprite('Ground Wave');
+        const drop = T.sprite('Weapon Drop');
+
+        if (T.get('Super') === 100 && T.get('Hero Air') === 0 && T.get('Hero Lock') === 0) {
+            T.set('Want Super', 1);
+            stats.supers++;
+            return;
+        }
+        if (shot.visible) {
+            const sd = Math.abs(shot.x - hx);
+            const low = T.get('Shot Y') < -40;
+            if (low && sd < 75 && sd > 30 && T.get('Hero Air') === 0) {
+                T.set('Want Jump', 1);
+                stats.jumps++;
+                return;
+            }
+        }
+        if (wave.visible) {
+            const wd = Math.abs(wave.x - hx);
+            if (wd < 95 && wd > 40 && T.get('Hero Air') === 0) {
+                T.set('Want Jump', 1);
+                stats.jumps++;
+                return;
+            }
+        }
+        if (/windup$/.test(enemyPose) && T.get('Enemy Type') !== 2 && T.get('Enemy Type') !== 4) {
+            // Brute and the King wind up before a charge: dodge late for a perfect dodge
+            if (frame % 9 === 0 && T.get('Hero Lock') === 0) {
+                T.set('Want Dodge', 1);
+                stats.dodges++;
+            }
+            return;
+        }
+        if (drop.visible && T.get('Weapon') === 'none' && drop.y < -40) {
+            if (Math.abs(drop.x - hx) > 20 && frame - lastMove > 4) {
+                T.send(drop.x > hx ? 'move right' : 'move left');
+                lastMove = frame;
+            }
+            return;
+        }
+        const reach = 70 + T.get('Weapon Reach') + T.get('Enemy Body');
+        if (T.get('Weapon') === 'boomerang' && T.get('Boomerang Out') === 0 && d < 200) {
+            T.set('Want Punch', 1);
+            stats.punches++;
+            return;
+        }
+        if (d > reach - 10) {
+            if (frame - lastMove > 3) {
+                T.send(toward);
+                lastMove = frame;
+            }
+        } else if (frame % 5 === 0) {
+            if (frame % 15 === 0) {
+                T.set('Want Kick', 1);
+                stats.kicks++;
+            } else {
+                T.set('Want Punch', 1);
+                stats.punches++;
+            }
+        }
+        if (T.get('Enemy Type') === 2 && d < 40 && frame % 30 === 0) T.send(away);
+    };
+    return {tick, stats};
+}
+
+function watch (T, stats, label) {
+    // things that must never get stuck
+    let lockFrames = 0;
+    let boomFrames = 0;
+    let lastPop = null;
+    return () => {
+        lockFrames = T.get('Hero Lock') === 1 ? lockFrames + 1 : 0;
+        boomFrames = T.get('Boomerang Out') === 1 ? boomFrames + 1 : 0;
+        if (lockFrames === 120) fail(`${label}: Hero Lock stuck on for 4 seconds`);
+        if (boomFrames === 150) fail(`${label}: boomerang never came back`);
+        const hp = T.get('Hero HP');
+        if (hp < 0 || hp > T.get('Hero Max')) fail(`${label}: Hero HP out of range ${hp}`);
+        if (T.get('Super') > 100) fail(`${label}: Super over 100`);
+        const pop = T.get('Pop Text');
+        if (pop !== lastPop) {
+            lastPop = pop;
+            if (/^COMBO/.test(pop)) stats.combos++;
+            if (/PERFECT/.test(pop)) stats.perfect++;
+            if (/broke/.test(pop)) stats.breaks++;
+            stats.popups.add(pop.replace(/x\d+/, 'xN'));
+        }
+        if (T.get('Weapon') !== 'none') stats.weapons.add(T.get('Weapon'));
+    };
+}
+
+async function storyRun (hero) {
+    const {vm, errors} = await boot();
+    const T = tools(vm);
+    await T.step(10);
+    if (T.get('State') !== 'title') fail('green flag did not reach the title');
+    if (!T.sprite('Story Button').visible) fail('Story button hidden on the title');
+    T.click('Story Button');
+    await T.step(3);
+    if (T.get('State') !== 'select') fail('Story button did not open fighter select');
+    const bot = makeBot(T, hero);
+    const check = watch(T, bot.stats, `story hero ${hero}`);
+    let frames = 0;
+    let lastChapter = 0;
+    while (frames < 30 * 60 * 12) {
+        await T.step();
+        frames++;
+        bot.tick();
+        check();
+        const state = T.get('State');
+        if (T.get('Chapter') !== lastChapter) {
+            lastChapter = T.get('Chapter');
+            bot.stats.chapters.add(lastChapter);
+        }
+        if (state === 'story' && T.sprite('Skip Button').visible && frames % 200 === 0 && hero === 2) {
+            T.click('Skip Button'); // Nova's run also checks the skip button
+        }
+        if (state === 'over' && T.sprite('Retry Button').visible) {
+            bot.stats.retries++;
+            T.click('Retry Button');
+        }
+        if (state === 'ending' && T.sprite('Home Button').visible) break;
+    }
+    const minutes = (frames / 30 / 60).toFixed(1);
+    if (T.get('State') !== 'ending') fail(`story hero ${hero}: did not reach the ending in ${minutes} min (chapter ${T.get('Chapter')})`);
+    if (T.get('Crown') !== 1) fail(`story hero ${hero}: crown not unlocked`);
+    if (T.get('Best') < T.get('Score')) fail('Best not updated after story');
+    // Home goes back to the title, and the crown stays
+    T.click('Home Button');
+    await T.step(10);
+    if (T.get('State') !== 'title') fail('Home did not go to the title');
+    if (errors.length) fail(`story hero ${hero}: engine errors: ${errors.slice(0, 3).join(' | ')}`);
+    return {minutes, stats: bot.stats, score: T.get('Score')};
+}
+
+async function arcadeRun (hero) {
+    const {vm, errors} = await boot();
+    const T = tools(vm);
+    await T.step(10);
+    T.click('Arcade Button');
+    await T.step(3);
+    const bot = makeBot(T, hero);
+    const check = watch(T, bot.stats, `arcade hero ${hero}`);
+    let frames = 0;
+    let bestWave = 0;
+    let deaths = 0;
+    const kinds = new Set();
+    while (frames < 30 * 60 * 6 && deaths < 2) {
+        await T.step();
+        frames++;
+        bot.tick();
+        check();
+        bestWave = Math.max(bestWave, T.get('Wave'));
+        if (T.get('State') === 'fight') kinds.add(T.get('Enemy Type'));
+        if (T.get('State') === 'over' && T.sprite('Retry Button').visible) {
+            deaths++;
+            const before = T.get('Score');
+            T.click('Retry Button');
+            await T.step(2);
+            if (T.get('Wave') !== 1) fail('arcade retry did not restart at wave 1');
+            if (T.get('Best') < before) fail('arcade Best lower than the last score');
+        }
+    }
+    if (bestWave < 3) fail(`arcade hero ${hero}: only reached wave ${bestWave}`);
+    if (errors.length) fail(`arcade: engine errors: ${errors.slice(0, 3).join(' | ')}`);
+    return {bestWave, deaths, kinds: [...kinds].sort(), stats: bot.stats, best: T.get('Best')};
+}
+
+async function mashTest () {
+    // Tap everything every frame, the way a kid on a tablet might.
+    const {vm} = await boot();
+    const T = tools(vm);
+    await T.step(10);
+    T.click('Story Button');
+    await T.step(3);
+    T.click('Pick Rocko');
+    await T.step(5);
+    T.click('Skip Button');
+    let frames = 0;
+    while (T.get('Fight On') !== 1 && frames < 30 * 20) {
+        await T.step();
+        frames++;
+    }
+    if (T.get('Fight On') !== 1) return fail('mash: fight never started after Skip');
+    for (let i = 0; i < 30 * 8; i++) {
+        for (const want of ['Want Punch', 'Want Kick', 'Want Jump', 'Want Dodge', 'Want Super']) T.set(want, 1);
+        if (i % 2) T.send('move right');
+        T.click('Punch Button');
+        await T.step();
+    }
+    T.set('Enemy HP', 999); // keep the fight going
+    for (const want of ['Want Punch', 'Want Kick', 'Want Jump', 'Want Dodge', 'Want Super']) T.set(want, 0);
+    await T.step(60);
+    if (T.get('Hero Lock') !== 0) fail('mash: Hero Lock stuck after button mashing');
+    if (T.get('Hero Air') !== 0) fail('mash: Hero Air stuck after button mashing');
+    if (Math.abs(T.sprite('Hero').y - -75) > 0.5) fail(`mash: Hero is floating at y=${T.sprite('Hero').y}`);
+    const hx = T.sprite('Hero').x;
+    if (hx < -216 || hx > 216) fail(`mash: Hero left the stage x=${hx}`);
+    // Quit goes home in the middle of a fight
+    T.click('Quit Button');
+    await T.step(10);
+    if (T.get('State') !== 'title' || T.get('Fight On') !== 0) fail('mash: Quit did not return to the title');
+    if (T.sprite('Enemy').visible) fail('mash: enemy still visible on the title');
+}
+
+async function weaponTest () {
+    // Force each weapon and check it hits and breaks.
+    const {vm} = await boot();
+    const T = tools(vm);
+    await T.step(10);
+    T.click('Arcade Button');
+    await T.step(3);
+    T.click('Pick Arthur');
+    let frames = 0;
+    while (T.get('Fight On') !== 1 && frames < 300) {
+        await T.step();
+        frames++;
+    }
+    const weapons = {sword: [4, 28, 10], hammer: [9, 12, 5], boomerang: [0, 0, 6]};
+    for (const [name, [bonus, reach, uses]] of Object.entries(weapons)) {
+        T.set('Enemy HP', 999);
+        T.set('Enemy Max', 999);
+        T.set('Weapon', name);
+        T.set('Weapon Bonus', bonus);
+        T.set('Weapon Reach', reach);
+        T.set('Weapon Uses', uses);
+        for (let i = 0; i < uses + 3 && T.get('Fight On') === 1; i++) {
+            // stand next to the enemy (boomerang from range)
+            const gap = name === 'boomerang' ? 150 : 60;
+            const ex = T.get('Enemy X');
+            T.sprite('Hero').setXY(ex > 0 ? ex - gap : ex + gap, -75);
+            T.set('Hero Safe Until', 1e12); // no damage during this test
+            await T.step(2); // let Hero turn to face the enemy
+            const hp = T.get('Enemy HP');
+            T.set('Want Punch', 1);
+            await T.step(name === 'boomerang' ? 40 : 14);
+            if (T.get('Weapon') !== name && i < uses - 1) fail(`weapon ${name}: was swapped for ${T.get('Weapon')}`);
+            if (i < uses && T.get('Enemy HP') >= hp) {
+                fail(`weapon ${name}: swing ${i + 1} did not hit (hero ${T.get('Hero X')}, enemy ${T.get('Enemy X')}, ` +
+                    `out ${T.get('Boomerang Out')}, uses ${T.get('Weapon Uses')}, lock ${T.get('Hero Lock')}, want ${T.get('Want Punch')})`);
+            }
+        }
+        await T.step(10);
+        if (T.get('Weapon') !== 'none') fail(`weapon ${name}: did not break after ${uses} uses`);
+        if (!T.sprite('Held Weapon').visible === false && T.get('Weapon') === 'none') fail('held weapon still shown');
+    }
+}
+
+(async () => {
+    const t0 = Date.now();
+    const results = {};
+    for (const hero of [1, 2, 3]) results[`story ${hero}`] = await storyRun(hero);
+    results.arcade = await arcadeRun(1);
+    await mashTest();
+    await weaponTest();
+    const show = r => JSON.stringify(r, (k, v) => (v instanceof Set ? [...v] : v));
+    for (const [k, v] of Object.entries(results)) process.stdout.write(`${k}: ${show(v)}\n`);
+    if (problems.length) {
+        process.stdout.write(`\nFAILED (${problems.length})\n  ${problems.join('\n  ')}\n`);
+        process.exit(1);
+    }
+    process.stdout.write(`\nall checks passed${t0 ? '' : ''}\n`);
+    process.exit(0);
+})();
