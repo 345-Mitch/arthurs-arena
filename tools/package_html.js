@@ -75,6 +75,81 @@ const SAVE_JS = `
 // follows one finger, and you need to walk and punch at the same time.
 // They write the same variables the Scratch buttons do (Want Punch, ...), plus
 // Joy X for walking. Touch Pad = 1 tells the game to hide its own buttons.
+const EXT_JS = `
+(function () {
+    // fill the black bars round the game with the stage's own backdrop, mirrored outward from each edge,
+    // so the sky, ground and hills carry on to the edges of the screen
+    var TEXT = ['Title', 'Select', 'Arcade', 'Ending'];   // backdrops with words on: soften their mirror images
+    var cv = document.createElement('canvas');
+    cv.id = 'ext';
+    cv.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:-1;pointer-events:none';
+    document.body.insertBefore(cv, document.body.firstChild);
+    var ctx = cv.getContext('2d');
+    var last = '';
+    function picture (costume) {
+        // the renderer keeps each backdrop as a ready-drawn picture (the packager frees the original file)
+        var skin = window.vm && vm.renderer && vm.renderer._allSkins && vm.renderer._allSkins[costume.skinId];
+        if (skin && skin._svgImage && skin._svgImage.naturalWidth) return skin._svgImage;
+        if (skin && skin._canvas && skin._canvas.width) return skin._canvas;
+        return null;
+    }
+    function draw () {
+        var sc = window.scaffolding, vm = window.vm;
+        if (!sc || !vm || !vm.runtime.getTargetForStage || !sc._layers) return;
+        var stage = vm.runtime.getTargetForStage();
+        if (!stage) return;
+        var costume = stage.getCostumes()[stage.currentCostume];
+        var r = sc._layers.getBoundingClientRect();
+        var dpr = window.devicePixelRatio || 1;
+        var key = costume.assetId + '|' + [r.left, r.top, r.width, r.height, innerWidth, innerHeight, dpr].map(Math.round).join(',');
+        var img = picture(costume);
+        if (key === last || !img || r.width < 2) return;
+        last = key;
+        cv.width = Math.round(innerWidth * dpr);
+        cv.height = Math.round(innerHeight * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, innerWidth, innerHeight);
+        if (TEXT.indexOf(costume.name) !== -1) {
+            // a backdrop with words on: stretch its outer edge to the screen edges (a mirror would show backwards words)
+            var iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, e = Math.max(2, Math.round(iw / 80));
+            var W = innerWidth, H = innerHeight;
+            ctx.drawImage(img, 0, 0, e, ih, 0, r.top, r.left, r.height);
+            ctx.drawImage(img, iw - e, 0, e, ih, r.right, r.top, W - r.right, r.height);
+            ctx.drawImage(img, 0, 0, iw, e, r.left, 0, r.width, r.top);
+            ctx.drawImage(img, 0, ih - e, iw, e, r.left, r.bottom, r.width, H - r.bottom);
+            ctx.drawImage(img, 0, 0, e, e, 0, 0, r.left, r.top);
+            ctx.drawImage(img, iw - e, 0, e, e, r.right, 0, W - r.right, r.top);
+            ctx.drawImage(img, 0, ih - e, e, e, 0, r.bottom, r.left, H - r.bottom);
+            ctx.drawImage(img, iw - e, ih - e, e, e, r.right, r.bottom, W - r.right, H - r.bottom);
+        } else {
+        // tiles round the stage: odd steps are mirror images, so every edge meets itself and the scene flows on
+        for (var i = -3; i <= 3; i++) {
+            for (var j = -2; j <= 2; j++) {
+                if (i === 0 && j === 0) continue;
+                var x = r.left + i * r.width, y = r.top + j * r.height;
+                if (x > innerWidth || x + r.width < 0 || y > innerHeight || y + r.height < 0) continue;
+                ctx.save();
+                ctx.translate(x + (i % 2 ? r.width : 0), y + (j % 2 ? r.height : 0));
+                ctx.scale(i % 2 ? -1 : 1, j % 2 ? -1 : 1);
+                ctx.drawImage(img, 0, 0, r.width, r.height);
+                ctx.restore();
+            }
+        }
+        }
+        // a slight shade outside the stage, so the real playing area still stands out
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';
+        ctx.fillRect(0, 0, innerWidth, r.top);
+        ctx.fillRect(0, r.bottom, innerWidth, innerHeight - r.bottom);
+        ctx.fillRect(0, r.top, r.left, r.height);
+        ctx.fillRect(r.right, r.top, innerWidth - r.right, r.height);
+    }
+    (function tick () {
+        try { draw(); } catch (e) {}
+        requestAnimationFrame(tick);
+    })();
+})();
+`;
+
 const PAD_JS = `
 (function () {
     if (!('ontouchstart' in window) && !(navigator.maxTouchPoints > 0)) return; // computers keep the Scratch buttons
@@ -277,7 +352,7 @@ const PAD_JS = `
     o.app.windowTitle = "Arthur's Arena";
     o.app.packageName = 'arthurs-arena';
     o.cloudVariables.mode = 'local';
-    o.custom.js = SAVE_JS + PAD_JS;
+    o.custom.js = SAVE_JS + EXT_JS + PAD_JS;
     const result = await packager.package();
     fs.mkdirSync(path.dirname(OUT), {recursive: true});
     fs.writeFileSync(OUT, result.data);

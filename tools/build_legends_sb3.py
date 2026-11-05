@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "3.2"
+VERSION = "3.3"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
