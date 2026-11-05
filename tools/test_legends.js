@@ -422,6 +422,11 @@ async function weaponTest () {
         await T.step();
         frames++;
     }
+    // no falling weapons or apples in this test: they could be picked up and swap the weapon under test
+    for (const name of ['Weapon Drop', 'Apple']) {
+        vm.runtime.stopForTarget(T.sprite(name));
+        T.sprite(name).setVisible(false);
+    }
     const weapons = {sword: [4, 28, 10], hammer: [9, 12, 5], boomerang: [0, 0, 6]};
     for (const [name, [bonus, reach, uses]] of Object.entries(weapons)) {
         T.set('Enemy HP', 999);
@@ -447,7 +452,10 @@ async function weaponTest () {
             }
         }
         await T.step(10);
-        if (T.get('Weapon') !== 'none') fail(`weapon ${name}: did not break after ${uses} uses`);
+        if (T.get('Weapon') !== 'none') {
+            fail(`weapon ${name}: did not break after ${uses} uses (weapon ${T.get('Weapon')}, uses left ${T.get('Weapon Uses')}, ` +
+                 `lock ${T.get('Hero Lock')}, fight ${T.get('Fight On')}, boom out ${T.get('Boomerang Out')})`);
+        }
         if (!T.sprite('Held Weapon').visible === false && T.get('Weapon') === 'none') fail('held weapon still shown');
     }
 }
@@ -508,6 +516,42 @@ async function fireTest () {
     return {tap: tap.damage, full: full.damage};
 }
 
+async function powerUpTest () {
+    // Dragon Ball style power-up before a fight; golden hair from level 3, silver at 5
+    const out = {};
+    for (const level of [1, 3, 5]) {
+        const {vm} = await boot();
+        const T = tools(vm);
+        await T.step(5);
+        T.set('Power Level', level);
+        T.click('Arcade Button');
+        await T.step(3);
+        T.click('Pick Rocko');
+        let rocks = 0, powering = false, yelled = false, frames = 0;
+        while (T.get('Fight On') !== 1 && frames < 30 * 10) {
+            await T.step();
+            frames++;
+            rocks = Math.max(rocks, T.clones('Debris').length);
+            if (T.get('Powering') === 1) powering = true;
+            if (((T.sprite('Hero').getCustomState('Scratch.looks') || {}).text || '').startsWith('HAAA')) yelled = true;
+        }
+        const look = T.get('Hero Look');
+        if (process.env.DEBUG_PU) process.stdout.write(`name ${T.get('Hero Name')} hero ${T.get('Hero')} look ${look} costume ${T.costume('Hero')} state ${T.get('State')}\n`);
+        out[level] = {look, rocks, powering, yelled, seconds: +(frames / 30).toFixed(1)};
+        if (!powering || !yelled || rocks < 5) fail(`powerup: level ${level} show missing (powering ${powering}, yell ${yelled}, rocks ${rocks})`);
+        const want = level >= 5 ? 'rocko silver' : level >= 3 ? 'rocko gold' : 'rocko';
+        if (look !== want) fail(`powerup: level ${level} look is ${look}, expected ${want}`);
+        if (!T.costume('Hero').startsWith(want + ' ')) fail(`powerup: hero costume ${T.costume('Hero')}`);
+        if (T.get('Hero Lock') !== 0) fail('powerup: hero still locked after powering up');
+        // walking still uses the golden costumes
+        T.set('Joy X', 1);
+        await T.step(8);
+        T.set('Joy X', 0);
+        if (!T.costume('Hero').startsWith(want + ' ')) fail(`powerup: walking lost the look (${T.costume('Hero')})`);
+    }
+    return out;
+}
+
 async function introTest () {
     const {vm} = await boot(false);
     const T = tools(vm);
@@ -522,9 +566,17 @@ async function introTest () {
         if (T.sprite('Pencil').visible) pen.add(`${Math.round(T.sprite('Pencil').x)},${Math.round(T.sprite('Pencil').y)}`);
     }
     if (T.get('State') !== 'title') fail('intro: never reached the title');
-    if (pen.size < 20) fail(`intro: the pencil only visited ${pen.size} spots`);
+    if (pen.size < 40) fail(`intro: the pencil only visited ${pen.size} spots (4 fighters, ninja included)`);
     if (T.sprite('Sketch').visible) fail('intro: the drawing stayed on the title screen');
-    // and skipping works
+    // the SKIP button works
+    const viaButton = await boot(false);
+    const T3 = tools(viaButton.vm);
+    await T3.step(10);
+    if (!T3.sprite('Skip Intro').visible) fail('intro: no SKIP button');
+    T3.click('Skip Intro');
+    await T3.step(5);
+    if (T3.get('State') !== 'title' || T3.sprite('Skip Intro').visible) fail('intro: SKIP did not go to the title');
+    // and tapping anywhere works
     const again = await boot(false);
     const T2 = tools(again.vm);
     await T2.step(15);
@@ -932,6 +984,7 @@ async function brawlTest () {
     if (want('ninja')) results.ninja = await ninjaTest();
     if (want('grok')) results.grok = await grokTest();
     if (want('intro')) results.intro = await introTest();
+    if (want('powerup')) results.powerup = await powerUpTest();
     if (want('brawl')) results.brawl = await brawlTest();
     if (want('mash')) await mashTest();
     if (want('weapons')) await weaponTest();

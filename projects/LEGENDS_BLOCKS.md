@@ -6,7 +6,7 @@ Made by `tools/build_legends_sb3.py` from the same blocks that are inside
 ## Stage
 
 Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Bamboo, Dojo, Volcano, Castle, Arcade, Ending, Paper, brawl sky, brawl ramps, brawl pagoda, brawl pirate, brawl castle, brawl space, brawl snow, brawl candy, brawl factory, brawl towers
-Sounds: hit, big hit, hurt, scribble, page, jump, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, poof, shuriken, spike fall, win
+Sounds: hit, big hit, hurt, ki roar, ki flare, transform, scribble, page, jump, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, poof, shuriken, spike fall, win
 Sprite-only variables: New Level, Frames, Second, K, Pick, Min X, Max X, Min Y, Max Y, Alive, Zoom To
 
 ```
@@ -295,6 +295,7 @@ set [Shot Live] to [0]
 set [Hero Safe Until] to [0]
 set [Enemy Stun Until] to [0]
 broadcast [fighters ready] and wait
+broadcast [power up show] and wait
 if <<<(Enemy Type) = [5]> or <(Enemy Type) = [7]>> or <(Enemy Type) = [9]>> then
     start sound (alarm)
     set [Banner] to [boss]
@@ -456,6 +457,9 @@ end
 start sound (power up)
 set [Banner] to [power up]
 broadcast [banner]
+if <(State) = [fight]> then
+    broadcast [power up show]
+end
 set [Pop Text] to (join [POWER LEVEL ] (join (Power Level) (join [: ] (Power Move))))
 broadcast [popup]
 repeat [4]
@@ -789,6 +793,32 @@ end
 ```
 when I receive [scribble]
 start sound (scribble)
+```
+
+```
+when I receive [ki rise]
+start sound (ki roar)
+repeat [7]
+    broadcast [shake]
+    wait [0.17] seconds
+end
+```
+
+```
+when I receive [ki flare]
+start sound (ki flare)
+```
+
+```
+when I receive [transform]
+start sound (transform)
+broadcast [popup]
+repeat [3]
+    set [brightness] effect to [90]
+    wait [0.05] seconds
+    set [brightness] effect to [0]
+    wait [0.05] seconds
+end
 ```
 
 ```
@@ -1501,9 +1531,98 @@ hide variable [P3 %]
 hide variable [P4 %]
 ```
 
+## Debris
+
+Costumes: rock 1, rock 2
+Sprite-only variables: Is Clone, Rise
+
+```
+when green flag clicked
+hide
+set [Is Clone] to [0]
+```
+
+```
+when I receive [ki rise]
+if <(Is Clone) = [0]> then
+    repeat [14]
+        go to x: ((Hero X) + (pick random [-95] to [95])) y: ([-75] + (pick random [-4] to [4]))
+        create clone of (myself)
+        wait [0.07] seconds
+    end
+end
+```
+
+> Rocks float up off the ground while you power up.
+
+```
+when I receive [ki flare]
+if <(Is Clone) = [0]> then
+    repeat [5]
+        go to x: ((Hero X) + (pick random [-95] to [95])) y: ([-75] + (pick random [-4] to [4]))
+        create clone of (myself)
+        wait [0.07] seconds
+    end
+end
+```
+
+```
+when I start as a clone
+set [Is Clone] to [1]
+if <(pick random [1] to [2]) = [1]> then
+    switch costume to (rock 1)
+else
+    switch costume to (rock 2)
+end
+set size to (pick random [40] to [95]) %
+set [Rise] to (pick random [2] to [5])
+show
+go to [front] layer
+repeat [20]
+    change y by (Rise)
+    change x by (pick random [-1] to [1])
+    turn right [9] degrees
+    wait [0.04] seconds
+end
+repeat [6]
+    change [ghost] effect by [16]
+    change y by (Rise)
+    wait [0.04] seconds
+end
+delete this clone
+```
+
+```
+when I receive [show title]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [choose hero]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [story scene]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [brawl clear]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
 ## Sketch
 
-Costumes: frame 1, frame 2, frame 3, frame 4, frame 5, frame 6, frame 7, frame 8, frame 9, frame 10, frame 11, frame 12, frame 13, frame 14, frame 15, frame 16, frame 17, frame 18, frame 19, frame 20, frame 21, frame 22, frame 23, frame 24, frame 25, frame 26, frame 27, frame 28, frame 29, frame 30, frame 31, frame 32, frame 33, frame 34, frame 35, frame 36, frame 37, frame 38, frame 39
+Costumes: frame 1, frame 2, frame 3, frame 4, frame 5, frame 6, frame 7, frame 8, frame 9, frame 10, frame 11, frame 12, frame 13, frame 14, frame 15, frame 16, frame 17, frame 18, frame 19, frame 20, frame 21, frame 22, frame 23, frame 24, frame 25, frame 26, frame 27, frame 28, frame 29, frame 30, frame 31, frame 32, frame 33, frame 34, frame 35, frame 36, frame 37, frame 38, frame 39, frame 40, frame 41, frame 42, frame 43, frame 44, frame 45, frame 46, frame 47, frame 48, frame 49, frame 50, frame 51, frame 52
 
 ```
 when green flag clicked
@@ -1520,176 +1639,234 @@ show
 go to [front] layer
 wait [0.2] seconds
 switch costume to (frame 1)
-set [Pen X] to [-147.2]
-set [Pen Y] to [24]
+set [Pen X] to [-176.6]
+set [Pen Y] to [12]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 2)
-set [Pen X] to [-108.8]
-set [Pen Y] to [24]
+set [Pen X] to [-141.4]
+set [Pen Y] to [12]
 wait [0.03] seconds
 switch costume to (frame 3)
-set [Pen X] to [-128]
-set [Pen Y] to [-25.2]
+set [Pen X] to [-159]
+set [Pen Y] to [-33.1]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 4)
-set [Pen X] to [-128]
-set [Pen Y] to [-52.8]
+set [Pen X] to [-159]
+set [Pen Y] to [-58.4]
 wait [0.03] seconds
 switch costume to (frame 5)
-set [Pen X] to [-108.4]
-set [Pen Y] to [20.4]
+set [Pen X] to [-141]
+set [Pen Y] to [8.7]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 6)
-set [Pen X] to [-99.2]
-set [Pen Y] to [45.6]
+set [Pen X] to [-132.6]
+set [Pen Y] to [31.8]
 wait [0.03] seconds
 switch costume to (frame 7)
-set [Pen X] to [-147.6]
-set [Pen Y] to [20.4]
+set [Pen X] to [-177]
+set [Pen Y] to [8.7]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 8)
-set [Pen X] to [-156.8]
-set [Pen Y] to [45.6]
+set [Pen X] to [-185.4]
+set [Pen Y] to [31.8]
 wait [0.03] seconds
 switch costume to (frame 9)
-set [Pen X] to [-118.5]
-set [Pen Y] to [-86.1]
+set [Pen X] to [-150.3]
+set [Pen Y] to [-88.9]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 10)
-set [Pen X] to [-111.2]
+set [Pen X] to [-143.6]
 set [Pen Y] to [-120]
 wait [0.03] seconds
 switch costume to (frame 11)
-set [Pen X] to [-137.5]
-set [Pen Y] to [-86.1]
+set [Pen X] to [-167.7]
+set [Pen Y] to [-88.9]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 12)
-set [Pen X] to [-144.8]
+set [Pen X] to [-174.4]
 set [Pen Y] to [-120]
 wait [0.03] seconds
 switch costume to (frame 13)
-set [Pen X] to [-9.6]
-set [Pen Y] to [25.2]
+set [Pen X] to [-55.8]
+set [Pen Y] to [13.1]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 14)
-set [Pen X] to [28.8]
-set [Pen Y] to [25.2]
+set [Pen X] to [-20.6]
+set [Pen Y] to [13.1]
 wait [0.03] seconds
 switch costume to (frame 15)
-set [Pen X] to [4.7]
-set [Pen Y] to [-23.5]
+set [Pen X] to [-42.7]
+set [Pen Y] to [-31.6]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 16)
-set [Pen X] to [0]
-set [Pen Y] to [-50.4]
+set [Pen X] to [-47]
+set [Pen Y] to [-56.2]
 wait [0.03] seconds
 switch costume to (frame 17)
-set [Pen X] to [31.1]
-set [Pen Y] to [-4.8]
+set [Pen X] to [-18.4]
+set [Pen Y] to [-14.4]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 18)
-set [Pen X] to [56.4]
-set [Pen Y] to [-2.4]
+set [Pen X] to [4.7]
+set [Pen Y] to [-12.2]
 wait [0.03] seconds
 switch costume to (frame 19)
-set [Pen X] to [-3.2]
-set [Pen Y] to [-16.1]
+set [Pen X] to [-49.9]
+set [Pen Y] to [-24.8]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 20)
-set [Pen X] to [7.2]
-set [Pen Y] to [-4.8]
+set [Pen X] to [-40.4]
+set [Pen Y] to [-14.4]
 wait [0.03] seconds
 switch costume to (frame 21)
-set [Pen X] to [17.5]
-set [Pen Y] to [-83.9]
+set [Pen X] to [-30.9]
+set [Pen Y] to [-86.9]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 22)
-set [Pen X] to [28.8]
+set [Pen X] to [-20.6]
 set [Pen Y] to [-120]
 wait [0.03] seconds
 switch costume to (frame 23)
-set [Pen X] to [-14.6]
-set [Pen Y] to [-84.7]
+set [Pen X] to [-60.4]
+set [Pen Y] to [-87.6]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 24)
-set [Pen X] to [-26.4]
+set [Pen X] to [-71.2]
 set [Pen Y] to [-120]
 wait [0.03] seconds
 switch costume to (frame 25)
-set [Pen X] to [96.8]
-set [Pen Y] to [21.6]
+set [Pen X] to [36.4]
+set [Pen Y] to [9.8]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 26)
-set [Pen X] to [135.2]
-set [Pen Y] to [21.6]
+set [Pen X] to [71.6]
+set [Pen Y] to [9.8]
 wait [0.03] seconds
 switch costume to (frame 27)
-set [Pen X] to [122.4]
-set [Pen Y] to [-25.9]
+set [Pen X] to [59.9]
+set [Pen Y] to [-33.8]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 28)
-set [Pen X] to [128]
-set [Pen Y] to [-52.8]
+set [Pen X] to [65]
+set [Pen Y] to [-58.4]
 wait [0.03] seconds
 switch costume to (frame 29)
-set [Pen X] to [132.3]
-set [Pen Y] to [-13.7]
+set [Pen X] to [68.9]
+set [Pen Y] to [-22.5]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 30)
-set [Pen X] to [142.4]
-set [Pen Y] to [-2.4]
+set [Pen X] to [78.2]
+set [Pen Y] to [-12.2]
 wait [0.03] seconds
 switch costume to (frame 31)
-set [Pen X] to [104.3]
-set [Pen Y] to [-11.7]
+set [Pen X] to [43.3]
+set [Pen Y] to [-20.8]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 32)
-set [Pen X] to [92]
-set [Pen Y] to [-26.4]
+set [Pen X] to [32]
+set [Pen Y] to [-34.2]
 wait [0.03] seconds
 switch costume to (frame 33)
-set [Pen X] to [157.8]
-set [Pen Y] to [-52.6]
+set [Pen X] to [92.3]
+set [Pen Y] to [-58.2]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 34)
-set [Pen X] to [186.8]
-set [Pen Y] to [-45.6]
+set [Pen X] to [118.9]
+set [Pen Y] to [-51.8]
 wait [0.03] seconds
 switch costume to (frame 35)
-set [Pen X] to [123.2]
-set [Pen Y] to [-86.4]
+set [Pen X] to [60.6]
+set [Pen Y] to [-89.2]
 broadcast [scribble]
 wait [0.03] seconds
 switch costume to (frame 36)
-set [Pen X] to [118.4]
+set [Pen X] to [56.2]
 set [Pen Y] to [-120]
 wait [0.03] seconds
 switch costume to (frame 37)
-set [Pen X] to [999]
-broadcast [color in]
-wait [0.3] seconds
+set [Pen X] to [164.4]
+set [Pen Y] to [9.8]
+broadcast [scribble]
+wait [0.03] seconds
 switch costume to (frame 38)
+set [Pen X] to [199.6]
+set [Pen Y] to [9.8]
+wait [0.03] seconds
+switch costume to (frame 39)
+set [Pen X] to [175.3]
+set [Pen Y] to [-34.4]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 40)
+set [Pen X] to [168.8]
+set [Pen Y] to [-58.4]
+wait [0.03] seconds
+switch costume to (frame 41)
+set [Pen X] to [199.1]
+set [Pen Y] to [-24.7]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 42)
+set [Pen X] to [217.2]
+set [Pen Y] to [-40.8]
+wait [0.03] seconds
+switch costume to (frame 43)
+set [Pen X] to [167.1]
+set [Pen Y] to [-22.7]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 44)
+set [Pen X] to [173.2]
+set [Pen Y] to [-36.4]
+wait [0.03] seconds
+switch costume to (frame 45)
+set [Pen X] to [186.8]
+set [Pen Y] to [-87.9]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 46)
+set [Pen X] to [199.6]
+set [Pen Y] to [-120]
+wait [0.03] seconds
+switch costume to (frame 47)
+set [Pen X] to [155.6]
+set [Pen Y] to [-89.2]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 48)
+set [Pen X] to [142.4]
+set [Pen Y] to [-120]
+wait [0.03] seconds
+switch costume to (frame 49)
 set [Pen X] to [999]
 broadcast [color in]
 wait [0.3] seconds
-switch costume to (frame 39)
+switch costume to (frame 50)
+set [Pen X] to [999]
+broadcast [color in]
+wait [0.3] seconds
+switch costume to (frame 51)
+set [Pen X] to [999]
+broadcast [color in]
+wait [0.3] seconds
+switch costume to (frame 52)
 set [Pen X] to [999]
 broadcast [color in]
 wait [0.3] seconds
@@ -1742,6 +1919,35 @@ end
 
 > The pencil follows the line being drawn.
 
+## Skip Intro
+
+Costumes: skip
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [intro]
+go to x: [196] y: [-156]
+show
+go to [front] layer
+```
+
+```
+when I receive [show title]
+hide
+```
+
+```
+when this sprite clicked
+hide
+broadcast [skip intro]
+```
+
+> Skip the drawing and go straight to the title.
+
 ## Ground Shake
 
 Costumes: shadow
@@ -1785,7 +1991,7 @@ go to x: [0] y: [-80]
 
 ## Hero
 
-Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur win, arthur dodge, arthur special, arthur down, arthur charge, arthur idle b, arthur walk 1, arthur walk 2, arthur walk 3, arthur walk 4, arthur punch 1, arthur kick 1, arthur hurt high, nova idle, nova punch, nova kick, nova jump, nova hurt, nova win, nova dodge, nova special, nova down, nova charge, nova idle b, nova walk 1, nova walk 2, nova walk 3, nova walk 4, nova punch 1, nova kick 1, nova hurt high, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko win, rocko dodge, rocko special, rocko down, rocko charge, rocko idle b, rocko walk 1, rocko walk 2, rocko walk 3, rocko walk 4, rocko punch 1, rocko kick 1, rocko hurt high
+Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur win, arthur dodge, arthur special, arthur down, arthur charge, arthur idle b, arthur walk 1, arthur walk 2, arthur walk 3, arthur walk 4, arthur punch 1, arthur kick 1, arthur hurt high, arthur charge up, arthur gold idle, arthur gold punch, arthur gold kick, arthur gold jump, arthur gold hurt, arthur gold win, arthur gold dodge, arthur gold special, arthur gold down, arthur gold charge, arthur gold idle b, arthur gold walk 1, arthur gold walk 2, arthur gold walk 3, arthur gold walk 4, arthur gold punch 1, arthur gold kick 1, arthur gold hurt high, arthur gold charge up, arthur silver idle, arthur silver punch, arthur silver kick, arthur silver jump, arthur silver hurt, arthur silver win, arthur silver dodge, arthur silver special, arthur silver down, arthur silver charge, arthur silver idle b, arthur silver walk 1, arthur silver walk 2, arthur silver walk 3, arthur silver walk 4, arthur silver punch 1, arthur silver kick 1, arthur silver hurt high, arthur silver charge up, nova idle, nova punch, nova kick, nova jump, nova hurt, nova win, nova dodge, nova special, nova down, nova charge, nova idle b, nova walk 1, nova walk 2, nova walk 3, nova walk 4, nova punch 1, nova kick 1, nova hurt high, nova charge up, nova gold idle, nova gold punch, nova gold kick, nova gold jump, nova gold hurt, nova gold win, nova gold dodge, nova gold special, nova gold down, nova gold charge, nova gold idle b, nova gold walk 1, nova gold walk 2, nova gold walk 3, nova gold walk 4, nova gold punch 1, nova gold kick 1, nova gold hurt high, nova gold charge up, nova silver idle, nova silver punch, nova silver kick, nova silver jump, nova silver hurt, nova silver win, nova silver dodge, nova silver special, nova silver down, nova silver charge, nova silver idle b, nova silver walk 1, nova silver walk 2, nova silver walk 3, nova silver walk 4, nova silver punch 1, nova silver kick 1, nova silver hurt high, nova silver charge up, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko win, rocko dodge, rocko special, rocko down, rocko charge, rocko idle b, rocko walk 1, rocko walk 2, rocko walk 3, rocko walk 4, rocko punch 1, rocko kick 1, rocko hurt high, rocko charge up, rocko gold idle, rocko gold punch, rocko gold kick, rocko gold jump, rocko gold hurt, rocko gold win, rocko gold dodge, rocko gold special, rocko gold down, rocko gold charge, rocko gold idle b, rocko gold walk 1, rocko gold walk 2, rocko gold walk 3, rocko gold walk 4, rocko gold punch 1, rocko gold kick 1, rocko gold hurt high, rocko gold charge up, rocko silver idle, rocko silver punch, rocko silver kick, rocko silver jump, rocko silver hurt, rocko silver win, rocko silver dodge, rocko silver special, rocko silver down, rocko silver charge, rocko silver idle b, rocko silver walk 1, rocko silver walk 2, rocko silver walk 3, rocko silver walk 4, rocko silver punch 1, rocko silver kick 1, rocko silver hurt high, rocko silver charge up
 Sprite-only variables: Last X, Look, Line Until
 
 ```
@@ -1827,12 +2033,12 @@ forever
     set [Look] to (costume name)
     if <<<(State) = [fight]> or <(State) = [story]>> and <<(Look) contains [idle]?> or <(Look) contains [walk]?>>> then
         if <<(Hero Air) = [0]> and <(abs of ((x position) - (Last X))) > [0.6]>> then
-            switch costume to (join (Hero Name) (join [ walk ] ((floor of ((((x position) + [1000]) / [11]) mod [4])) + [1])))
+            switch costume to (join (Hero Look) (join [ walk ] ((floor of ((((x position) + [1000]) / [11]) mod [4])) + [1])))
         else
             if <((round ((timer) * [1.6])) mod [2]) = [0]> then
-                switch costume to (join (Hero Name) [ idle])
+                switch costume to (join (Hero Look) [ idle])
             else
-                switch costume to (join (Hero Name) [ idle b])
+                switch costume to (join (Hero Look) [ idle b])
             end
         end
     end
@@ -1855,7 +2061,7 @@ forever
                 set [Pop Text] to (join (Special Name) [!])
                 broadcast [popup]
                 broadcast [super flash]
-                switch costume to (join (Hero Name) [ special])
+                switch costume to (join (Hero Look) [ special])
                 wait [0.35] seconds
                 if <(Hero) = [1]> then
                     glide [0.18] secs to x: ((Enemy X) - ([45] * (Facing))) y: [-75]
@@ -1874,7 +2080,7 @@ forever
                 if <(Hero) = [2]> then
                     repeat [3]
                         glide [0.1] secs to x: ((Enemy X) - ([40] * (Facing))) y: [-75]
-                        switch costume to (join (Hero Name) [ kick])
+                        switch costume to (join (Hero Look) [ kick])
                         set [Hit Power] to (round ((Special Power) / [3]))
                         broadcast [hero hits]
                         if <(Minions) > [0]> then
@@ -1885,7 +2091,7 @@ forever
                             broadcast [area hit]
                         end
                         wait [0.2] seconds
-                        switch costume to (join (Hero Name) [ special])
+                        switch costume to (join (Hero Look) [ special])
                         move [-40] steps
                         if <(x position) < [-215]> then
                             set x to [-215]
@@ -1896,12 +2102,12 @@ forever
                     end
                 end
                 if <(Hero) = [3]> then
-                    switch costume to (join (Hero Name) [ jump])
+                    switch costume to (join (Hero Look) [ jump])
                     repeat [6]
                         change y by [18]
                     end
                     glide [0.15] secs to x: ((Enemy X) - ([40] * (Facing))) y: [-75]
-                    switch costume to (join (Hero Name) [ special])
+                    switch costume to (join (Hero Look) [ special])
                     set [Hit Power] to (Special Power)
                     broadcast [hero hits]
                     if <(Minions) > [0]> then
@@ -1921,7 +2127,7 @@ forever
                 if <(x position) > [215]> then
                     set x to [215]
                 end
-                switch costume to (join (Hero Name) [ idle])
+                switch costume to (join (Hero Look) [ idle])
                 set [Hero Safe] to [0]
                 set [Hero Lock] to [0]
             end
@@ -1932,6 +2138,11 @@ forever
                 set [Hero Lock] to [1]
                 set [Hero Safe] to [2]
                 set [Power Ready At] to ((timer) + [6])
+                switch costume to (join (Hero Look) [ charge up])
+                set [Powering] to [1]
+                broadcast [ki flare]
+                say [HAA!] for [0.3] seconds
+                set [Powering] to [0]
                 if <(Power Level) = [1]> then
                     set [Power Move] to [none]
                 end
@@ -1951,7 +2162,7 @@ forever
                 broadcast [popup]
                 broadcast [power flash]
                 if <(Power Level) = [2]> then
-                    switch costume to (join (Hero Name) [ special])
+                    switch costume to (join (Hero Look) [ special])
                     glide [0.16] secs to x: ((Enemy X) + ([45] * (Facing))) y: [-75]
                     if <(x position) < [-215]> then
                         set x to [-215]
@@ -1972,7 +2183,7 @@ forever
                     wait [0.3] seconds
                 end
                 if <(Power Level) = [3]> then
-                    switch costume to (join (Hero Name) [ win])
+                    switch costume to (join (Hero Look) [ win])
                     wait [0.2] seconds
                     set [Bolt X] to (Enemy X)
                     set [Bolt Y] to [-75]
@@ -1983,7 +2194,7 @@ forever
                     wait [0.55] seconds
                 end
                 if <(Power Level) = [4]> then
-                    switch costume to (join (Hero Name) [ win])
+                    switch costume to (join (Hero Look) [ win])
                     wait [0.15] seconds
                     repeat [3]
                         set [Bolt X] to ((Enemy X) + (pick random [-18] to [18]))
@@ -1997,7 +2208,7 @@ forever
                     wait [0.3] seconds
                 end
                 if <(Power Level) = [5]> then
-                    switch costume to (join (Hero Name) [ win])
+                    switch costume to (join (Hero Look) [ win])
                     wait [0.15] seconds
                     repeat [4]
                         set [Bolt X] to ((Enemy X) + (pick random [-30] to [30]))
@@ -2018,7 +2229,7 @@ forever
                     wait [0.4] seconds
                 end
                 set y to [-75]
-                switch costume to (join (Hero Name) [ idle])
+                switch costume to (join (Hero Look) [ idle])
                 set [Hero Safe] to [0]
                 set [Hero Lock] to [0]
             else
@@ -2030,9 +2241,9 @@ forever
         end
         if <<(Want Punch) = [1]> and <(Hero Lock) = [0]>> then
             set [Want Punch] to [0]
-            switch costume to (join (Hero Name) [ punch 1])
+            switch costume to (join (Hero Look) [ punch 1])
             wait [0.06] seconds
-            switch costume to (join (Hero Name) [ punch])
+            switch costume to (join (Hero Look) [ punch])
             if <<(Weapon) = [boomerang]> and <(Boomerang Out) = [0]>> then
                 set [Boomerang Out] to [1]
                 change [Weapon Uses] by [-1]
@@ -2069,16 +2280,16 @@ forever
                 broadcast [weapon break]
             end
             if <(Hero Air) = [1]> then
-                switch costume to (join (Hero Name) [ jump])
+                switch costume to (join (Hero Look) [ jump])
             else
-                switch costume to (join (Hero Name) [ idle])
+                switch costume to (join (Hero Look) [ idle])
             end
         end
         if <<(Want Kick) = [1]> and <(Hero Lock) = [0]>> then
             set [Want Kick] to [0]
-            switch costume to (join (Hero Name) [ kick 1])
+            switch costume to (join (Hero Look) [ kick 1])
             wait [0.07] seconds
-            switch costume to (join (Hero Name) [ kick])
+            switch costume to (join (Hero Look) [ kick])
             move [14] steps
             if <(x position) < [-215]> then
                 set x to [-215]
@@ -2122,9 +2333,9 @@ forever
                 broadcast [weapon break]
             end
             if <(Hero Air) = [1]> then
-                switch costume to (join (Hero Name) [ jump])
+                switch costume to (join (Hero Look) [ jump])
             else
-                switch costume to (join (Hero Name) [ idle])
+                switch costume to (join (Hero Look) [ idle])
             end
         end
         if <<(Want Dodge) = [1]> and <(Hero Lock) = [0]>> then
@@ -2132,7 +2343,7 @@ forever
             if <(Hero Air) = [0]> then
                 set [Hero Lock] to [1]
                 set [Hero Safe] to [1]
-                switch costume to (join (Hero Name) [ dodge])
+                switch costume to (join (Hero Look) [ dodge])
                 set [ghost] effect to [45]
                 broadcast [swing sfx]
                 repeat [6]
@@ -2147,7 +2358,7 @@ forever
                 wait [0.14] seconds
                 set [ghost] effect to [0]
                 set [Hero Safe] to [0]
-                switch costume to (join (Hero Name) [ idle])
+                switch costume to (join (Hero Look) [ idle])
                 set [Hero Lock] to [0]
                 wait [0.12] seconds
             end
@@ -2173,7 +2384,7 @@ forever
         set [Want Jump] to [0]
         if <<<(Fight On) = [1]> and <(Hero Air) = [0]>> and <(Hero Lock) = [0]>> then
             set [Hero Air] to [1]
-            switch costume to (join (Hero Name) [ jump])
+            switch costume to (join (Hero Look) [ jump])
             broadcast [jump sfx]
             repeat [8]
                 change y by [11]
@@ -2185,7 +2396,7 @@ forever
             set y to [-75]
             set [Hero Air] to [0]
             if <(Hero Lock) = [0]> then
-                switch costume to (join (Hero Name) [ idle])
+                switch costume to (join (Hero Look) [ idle])
             end
         end
     end
@@ -2200,7 +2411,7 @@ forever
     if <<<<(Fight On) = [1]> and <(Fireball Out) = [0]>> and <(Hero Lock) = [0]>> and <<(Fire Held) = [1]> or <key (f) pressed?>>> then
         set [Charge] to [1]
         broadcast [charge start]
-        switch costume to (join (Hero Name) [ charge])
+        switch costume to (join (Hero Look) [ charge])
         repeat until <<<not <<(Fire Held) = [1]> or <key (f) pressed?>>> or <(Fight On) = [0]>> or <(Hero Lock) = [1]>>
             if <(Charge) < [100]> then
                 change [Charge] by [3.5]
@@ -2216,12 +2427,12 @@ forever
             set [Charge] to [0]
             set [Fireball Out] to [1]
             broadcast [fire]
-            switch costume to (join (Hero Name) [ punch])
+            switch costume to (join (Hero Look) [ punch])
             wait [0.15] seconds
             if <(Hero Air) = [1]> then
-                switch costume to (join (Hero Name) [ jump])
+                switch costume to (join (Hero Look) [ jump])
             else
-                switch costume to (join (Hero Name) [ idle])
+                switch costume to (join (Hero Look) [ idle])
             end
         end
         set [Charge] to [0]
@@ -2284,9 +2495,9 @@ end
 when I receive [hero hurt]
 if <(Hero Lock) = [0]> then
     if <(pick random [1] to [2]) = [1]> then
-        switch costume to (join (Hero Name) [ hurt])
+        switch costume to (join (Hero Look) [ hurt])
     else
-        switch costume to (join (Hero Name) [ hurt high])
+        switch costume to (join (Hero Look) [ hurt high])
     end
     move [-12] steps
     if <(x position) < [-215]> then
@@ -2301,9 +2512,9 @@ wait [0.15] seconds
 set [color] effect to [0]
 if <(Hero Lock) = [0]> then
     if <(Hero Air) = [1]> then
-        switch costume to (join (Hero Name) [ jump])
+        switch costume to (join (Hero Look) [ jump])
     else
-        switch costume to (join (Hero Name) [ idle])
+        switch costume to (join (Hero Look) [ idle])
     end
 end
 ```
@@ -2342,7 +2553,8 @@ show
 clear graphic effects
 point in direction [90]
 set [Facing] to [1]
-switch costume to (join (Hero Name) [ idle])
+set [Hero Look] to (Hero Name)
+switch costume to (join (Hero Look) [ idle])
 set size to [75] %
 go to x: [-150] y: [-75]
 if <(Hero) = [1]> then
@@ -2363,10 +2575,67 @@ when I receive [scene setup]
 show
 clear graphic effects
 point in direction [90]
-switch costume to (join (Hero Name) [ idle])
+set [Hero Look] to (Hero Name)
+switch costume to (join (Hero Look) [ idle])
 set size to [75] %
 go to x: [-150] y: [-75]
 ```
+
+```
+when I receive [power up show]
+set [Hero Lock] to [1]
+switch costume to (join (Hero Look) [ charge up])
+say [Hmmmm...] for [0.45] seconds
+set [Powering] to [1]
+broadcast [ki rise]
+say [HAAAAAA!]
+repeat [14]
+    change x by [2]
+    wait [0.04] seconds
+    change x by [-2]
+    wait [0.04] seconds
+end
+if <(Power Level) > [2]> then
+    if <(Power Level) > [4]> then
+        set [Hero Look] to (join (Hero Name) [ silver])
+    else
+        set [Hero Look] to (join (Hero Name) [ gold])
+    end
+    if <(Power Level) > [4]> then
+        set [Pop Text] to (join [ULTRA ] (join (Hero Title) [!]))
+    else
+        set [Pop Text] to (join [SUPER ] (join (Hero Title) [!]))
+    end
+    switch costume to (join (Hero Look) [ charge up])
+    broadcast [transform]
+end
+repeat [6]
+    change x by [2]
+    wait [0.04] seconds
+    change x by [-2]
+    wait [0.04] seconds
+end
+say []
+set [Powering] to [0]
+switch costume to (join (Hero Look) [ idle])
+set [Hero Lock] to [0]
+```
+
+> Powering up, Dragon Ball style: crouch, yell HAAAAA!, the aura flares, the ground shakes and rocks float up. From power level 3 the hair turns golden (silver at level 5) for the rest of the fight.
+
+```
+when I receive [super ready]
+if <<(Fight On) = [1]> and <(Powering) = [0]>> then
+    set [Powering] to [2]
+    broadcast [ki flare]
+    wait [0.8] seconds
+    if <(Powering) = [2]> then
+        set [Powering] to [0]
+    end
+end
+```
+
+> A quick flare of power when the SUPER bar fills up. You can keep fighting while it flares.
 
 ```
 when I receive [hero line]
@@ -2381,7 +2650,7 @@ when I receive [enemy down]
 wait [1.3] seconds
 set y to [-75]
 clear graphic effects
-switch costume to (join (Hero Name) [ win])
+switch costume to (join (Hero Look) [ win])
 if <(Mode) = [story]> then
     say [Yes!] for [1.2] seconds
 else
@@ -2393,14 +2662,14 @@ end
 when I receive [hero down]
 set y to [-75]
 clear graphic effects
-switch costume to (join (Hero Name) [ down])
+switch costume to (join (Hero Look) [ down])
 ```
 
 ```
 when I receive [ending]
 point in direction [90]
 go to x: [-170] y: [-75]
-switch costume to (join (Hero Name) [ win])
+switch costume to (join (Hero Look) [ win])
 ```
 
 ## Enemy
@@ -4337,9 +4606,15 @@ forever
     else
         set [Lit] to [0]
     end
+    if <(Powering) > [0]> then
+        set [Lit] to [1]
+    end
     set [ghost] effect to (([88] - ([13] * (Power Level))) - ([30] * (Lit)))
     set [brightness] effect to (([5] * (Power Level)) + ([20] * (Lit)))
     set [Grow] to (([0.92] + ([0.05] * (Power Level))) + ([0.12] * (Lit)))
+    if <(Powering) > [0]> then
+        change [Grow] by ([0.35] + ([0.12] * ((round ((timer) * [12])) mod [2])))
+    end
     if <(State) = [fight]> then
         go to x: (Hero X) y: (Hero Y)
         set size to ([75] * (Grow)) %

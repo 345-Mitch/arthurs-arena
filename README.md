@@ -9,7 +9,8 @@ Arthur's stickman fighting game, built in Scratch, with an Android tablet in min
 - **BRAWL mode** (like a platform fighter): four fighters at once on stages with platforms and ramps, a camera that follows and zooms, damage %, knock-outs and lives.
 - **Power levels 1 to 5**: win fights to level up. You get a new aura colour (red, orange, gold, blue, purple-white) and a new POWER move: FLAME DASH, then lightning strikes from the sky. Enemies and bosses get stronger with you, and bosses call down lightning too.
 - **Levels**: EASY, NORMAL, HARD and CHAMPION. NORMAL makes fights about twice as long as before.
-- **A paper intro**: a pencil draws the fighters on notebook paper, then colours them in.
+- **A paper intro**: a pencil draws the fighters and a ninja on notebook paper, then colours them in (with a SKIP button).
+- **Dragon Ball-style power-ups**: yelling, a surging aura, shaking ground and floating rocks, and golden (then silver) super-form hair from power level 3.
 - **BRAWL stages**: 10 to pick from, including a Pirate Ship with cannonballs, low-gravity Space, slippery Snowy Peak, bouncy Candy Land and conveyor-belt Robot Factory.
 - **Extras from Grok's plan**: healing apples, sound on/off, a how-to-play card, PRACTICE mode and a debug overlay.
 - **Ninjas**: a Bamboo Forest full of ninjas and the boss MASTER KAGE, who teleports in smoke and sends a squad of ninjas at you.

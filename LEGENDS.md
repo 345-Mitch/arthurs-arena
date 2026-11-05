@@ -27,6 +27,7 @@ Every fight you win gives you **XP**: +1 for a chapter or a wave, +2 for a boss 
 | 4 | 12 | blue, with sparks | **BLUE STORM**: three lightning bolts |
 | 5 | 18 | purple-white, with lots of sparks | **ULTRA STORM**: five bolts, the last one huge |
 
+- **Powering up (Dragon Ball style):** before every fight your fighter crouches, clenches their fists and yells **HAAAAA!**. The aura surges, the ground shakes and rocks float up off the floor. From **power level 3** they **transform**: a white flash, **SUPER ARTHUR!** (or Nova or Rocko), and **golden spiky hair** for the whole fight. At **level 5** it's **ULTRA**, with **silver hair**. Levelling up after a win plays the transformation too, a quick flare of power goes off when your SUPER bar fills, and every POWER move starts with a short power-up.
 - **Your aura** shows your level. Each level is brighter, bigger and flickers faster. When your SUPER is full, or during a SUPER or POWER move, it **blazes** at full brightness.
 - **Every level** gives you +10 health and +1 damage on every hit.
 - **Enemies level up with you:** more health, harder hits, faster attacks. From level 3, **bosses call down lightning** too: a yellow mark shows where a bolt will strike, so move away or DODGE. They call more bolts at higher levels.
@@ -48,7 +49,7 @@ In BRAWL, higher levels make the CPU fighters attack more often and hit harder.
 
 ## The intro
 
-When the game starts, a pencil draws Arthur, Nova and Rocko on notebook paper, line by line, then colours them in and turns the page to the title. It takes about 3 seconds. Tap anywhere to skip it.
+When the game starts, a pencil draws Arthur, Nova, Rocko and a ninja on notebook paper, line by line, then colours them in and turns the page to the title. It takes about 4 seconds. Tap **SKIP**, or anywhere on the page, to skip it.
 
 ## The story
 
@@ -215,7 +216,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v1.8` in the bottom corner of the title.
+- **Version line:** `v1.9` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).

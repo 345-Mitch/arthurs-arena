@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "1.8"
+VERSION = "1.9"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -293,6 +293,9 @@ SKEL = {
     "down":    dict(h=(20, 150), n=(32, 152), c=(46, 154), p=(64, 156), fe=(38, 140), fh=(48, 132), ne=(40, 162), nh=(52, 166),
                     fk=(78, 144), ff=(92, 152), nk=(80, 160), nf=(95, 166)),
     # ninjas
+    # powering up: wide crouch, fists clenched, head back, yelling
+    "charge up": dict(h=(48, 44), n=(49, 62), c=(50, 86), p=(50, 112), fe=(34, 92), fh=(25, 110), ne=(66, 92), nh=(75, 110),
+                      fk=(33, 138), ff=(20, 168), nk=(67, 138), nf=(80, 168)),
     "slash":   dict(h=(60, 50), n=(58, 68), c=(54, 90), p=(48, 112), fe=(44, 82), fh=(52, 92), ne=(74, 80), nh=(92, 96),
                     fk=(36, 140), ff=(24, 168), nk=(64, 138), nf=(76, 168)),
     "run 1":   dict(h=(66, 52), n=(62, 68), c=(56, 88), p=(48, 110), fe=(40, 94), fh=(30, 106), ne=(70, 86), nh=(78, 100),
@@ -311,7 +314,18 @@ def shade(color, amount=0.35):
     return "#%02x%02x%02x" % tuple(int(v * (1 - amount)) for v in (r, g, b))
 
 
-def fighter_svg(color, pose, gear="none", face="smile", glow=None):
+HAIR = {"gold": ("#facc15", "#a16207"), "silver": ("#f1f5f9", "#64748b")}
+
+
+def hair_svg(kind, hx, hy):
+    """Spiky super-form hair (Dragon Ball style)."""
+    fill, edge = HAIR[kind]
+    pts = [(-17, -2), (-27, -20), (-12, -15), (-10, -40), (1, -19), (9, -44), (12, -17), (28, -30), (18, -4), (0, -12)]
+    path = " ".join(f"{hx + x},{hy + y}" for x, y in pts)
+    return f'<polygon points="{path}" fill="{fill}" stroke="{edge}" stroke-width="2.5" stroke-linejoin="round"/>'
+
+
+def fighter_svg(color, pose, gear="none", face="smile", glow=None, hair=None):
     """A jointed stick figure in a 100 by 180 box, facing right. Feet sit on y=168."""
     j = SKEL[pose]
     hx, hy = j["h"]
@@ -338,6 +352,10 @@ def fighter_svg(color, pose, gear="none", face="smile", glow=None):
     # fists and feet: small rounded ends make the poses read better
     parts.append(f'<circle cx="{j["nh"][0]}" cy="{j["nh"][1]}" r="4.5" fill="{color}"/>')
     parts.append(f'<circle cx="{hx}" cy="{hy}" r="16" fill="{color}"/>')
+    if face == "yell":
+        parts.append(f'<ellipse cx="{hx + 6}" cy="{hy + 7}" rx="4" ry="5" fill="#ffffff"/>')
+    if hair:
+        parts.append(hair_svg(hair, hx, hy))
     parts.append(gear_svg(gear, color, hx, hy))
     ex = hx + 4
     if gear in ("ninja", "ninja boss"):
@@ -759,10 +777,11 @@ def spike_shot_svg():
 
 
 INTRO_FIGURES = [
-    # hero, pose, left edge of the 100x180 box on the page, scale
-    ("arthur", "win", 52, 1.2),
-    ("nova", "punch", 180, 1.2),
-    ("rocko", "kick", 308, 1.2),
+    # who, pose, left edge of the 100x180 box on the page, scale
+    ("arthur", "win", 26, 1.1),
+    ("nova", "punch", 138, 1.1),
+    ("rocko", "kick", 250, 1.1),
+    ("ninja", "slash", 356, 1.1),
 ]
 INTRO_FEET = 300  # page y of the feet
 PENCIL = "#3f3f46"
@@ -845,7 +864,7 @@ def intro_frames():
     # colour in, one fighter at a time
     coloured = []
     for hero, pose, ox, sc in INTRO_FIGURES:
-        h = next(x for x in HEROES if x["key"] == hero)
+        h = next((x for x in HEROES if x["key"] == hero), {"color": "#1f2937", "gear": "ninja"})
         fig = fighter_svg(h["color"], pose, h["gear"])
         inner = fig[fig.index(">") + 1: -len("</svg>")]
         coloured.append(f'<g transform="translate({ox},{INTRO_FEET - 168 * sc}) scale({sc})">{inner}</g>')
@@ -993,6 +1012,9 @@ SOUNDS = {
     "hit": [(0.09, 300, 80, "noise", 0.7)],
     "big hit": [(0.05, 500, 200, "noise", 0.9), (0.2, 120, 40, "sine", 0.9)],
     "hurt": [(0.16, 300, 120, "square", 0.35)],
+    "ki roar": [(1.4, 70, 340, "square", 0.22), (0.2, 340, 340, "noise", 0.2)],
+    "ki flare": [(0.45, 150, 600, "square", 0.2)],
+    "transform": [(0.08, 2400, 2400, "sine", 0.5), (0.5, 900, 80, "noise", 0.7)],
     "scribble": [(0.07, 3000, 2200, "noise", 0.18), (0.05, 2600, 2000, "noise", 0.12)],
     "page": [(0.25, 1800, 300, "noise", 0.3)],
     "jump": [(0.12, 300, 700, "square", 0.25)],
@@ -1198,7 +1220,8 @@ class Target:
                                 sampleCount=count, md5ext=f"{digest}.wav"))
 
     def local(self, name, value=0):
-        self.locals[name] = (f"var_{self.prefix}{name.replace(' ', '_')}", value)
+        # "loc_" keeps sprite-only ids apart from the shared "var_" ids (Hero's "Look" vs the global "Hero Look")
+        self.locals[name] = (f"loc_{self.prefix}{name.replace(' ', '_')}", value)
 
     def lookup_list(self, name):
         lists = getattr(self.game, "lists", {})
@@ -2308,7 +2331,7 @@ def build():
         ("Hit Power", 5), ("Hurt Power", 6), ("Shot Y", GROUND + 18), ("Shot Dir", -1), ("Wave Dir", -1),
         ("Line", ""), ("Line Secs", 2), ("Skip", 0), ("Pop Text", ""), ("Banner", "fight"),
         ("Joy X", 0), ("Touch Pad", 0), ("Spikes", 0), ("Difficulty", 2), ("Enemy Weapon", "none"), ("Enemy Swing Until", 0),
-        ("Turn Until", 0), ("Turn Dir", 1), ("Pen X", 999), ("Pen Y", 0), ("Sound On", 1), ("Debug", 0), ("FPS", 0), ("Minions", 0), ("Summon Count", 1), ("Smoke X", 0), ("Smoke Y", GROUND),
+        ("Turn Until", 0), ("Turn Dir", 1), ("Hero Look", "arthur"), ("Powering", 0), ("Pen X", 999), ("Pen Y", 0), ("Sound On", 1), ("Debug", 0), ("FPS", 0), ("Minions", 0), ("Summon Count", 1), ("Smoke X", 0), ("Smoke Y", GROUND),
         ("Area X", 0), ("Area R", 0), ("Area Power", 0), ("Area Kind", "hit"), ("Fire Stop", 0),
         ("Power Level", 1), ("Power XP", 0), ("XP Gain", 0), ("Want Power", 0), ("Power Ready At", 0), ("Power Move", "none"),
         ("Bolt X", 0), ("Bolt Y", GROUND), ("Bolt Owner", "hero"), ("Bolt Power", 0), ("Bolt Size", 100),
@@ -2405,6 +2428,7 @@ def build():
         s.set("Spikes", 0), s.set("Charge", 0), s.set("Fireball Out", 0), s.set("Shot Live", 0),
         s.set("Hero Safe Until", 0), s.set("Enemy Stun Until", 0),
         s.broadcast("fighters ready", wait=True),
+        s.broadcast("power up show", wait=True),
         s.if_(or_(*[eq(V("Enemy Type"), b) for b in BOSSES]), [
             s.play("alarm"), s.set("Banner", "boss"), s.broadcast("banner"), s.wait(1.5),
         ]),
@@ -2487,6 +2511,7 @@ def build():
     s.on_msg(
         "power up",
         *move_names, s.play("power up"), s.set("Banner", "power up"), s.broadcast("banner"),
+        s.if_(eq(V("State"), "fight"), [s.broadcast("power up show")]),
         s.set("Pop Text", join("POWER LEVEL ", join(V("Power Level"), join(": ", V("Power Move"))))), s.broadcast("popup"),
         s.repeat(4, [s.effect("BRIGHTNESS", 50), s.wait(0.06), s.effect("BRIGHTNESS", 0), s.wait(0.06)]),
     )
@@ -2585,6 +2610,29 @@ def build():
 
 
     # ------------------------------------------------------------ floor --
+    # ----------------------------------------------------------- debris --
+    db = game.sprite("Debris", size=60, rotation="all around")
+    db.costume("rock 1", svg_doc(30, 26, '<polygon points="4,18 9,5 21,2 28,12 22,24 9,24" fill="#78716c" stroke="#44403c" stroke-width="2"/>'), 15, 13)
+    db.costume("rock 2", svg_doc(22, 18, '<polygon points="2,12 7,3 18,4 20,14 10,17" fill="#a8a29e" stroke="#57534e" stroke-width="2"/>'), 11, 9)
+    DR = db
+    DR.local("Is Clone", 0)
+    DR.local("Rise", 3)
+    DR.on_flag(DR.hide(), DR.set("Is Clone", 0))
+
+    def rocks(n):
+        return DR.if_(eq(V("Is Clone"), 0), [DR.repeat(n, [
+            DR.goto(add(V("Hero X"), rnd(-95, 95)), add(GROUND, rnd(-4, 4))), DR.clone(), DR.wait(0.07)])])
+    DR.on_msg("ki rise", rocks(14), note="Rocks float up off the ground while you power up.")
+    DR.on_msg("ki flare", rocks(5))
+    DR.on_clone(
+        DR.set("Is Clone", 1), DR.if_(eq(rnd(1, 2), 1), [DR.wear("rock 1")], [DR.wear("rock 2")]), DR.size_to(rnd(40, 95)),
+        DR.set("Rise", rnd(2, 5)), DR.show(), DR.front(),
+        DR.repeat(20, [DR.dy(V("Rise")), DR.dx(rnd(-1, 1)), DR.turn(9), DR.wait(0.04)]),
+        DR.repeat(6, [DR.effect_by("GHOST", 16), DR.dy(V("Rise")), DR.wait(0.04)]), DR.delete_clone(),
+    )
+    for m in ("show title", "choose hero", "story scene", "brawl clear"):
+        DR.on_msg(m, DR.if_(eq(V("Is Clone"), 1), [DR.delete_clone()]))
+
     # ------------------------------------------------------------ intro --
     stage.costume("Paper", paper_svg(), 240, 180)
     sk = game.sprite("Sketch", x=0, y=0, rotation="don't rotate")
@@ -2615,10 +2663,21 @@ def build():
         note="The intro: a pencil draws Arthur, Nova and Rocko on notebook paper, stroke by stroke, then colours them in "
              "and turns the page to the title. Tap anywhere to skip.",
     )
+    skip_i = game.sprite("Skip Intro", x=196, y=-156, rotation="don't rotate")
+    skip_i.costume("skip", button_svg("SKIP ▶▶", "#334155", "#ffffff", 84, 40, 13), 42, 20)
+    SI = skip_i
+    SI.on_flag(SI.hide())
+    SI.on_msg("intro", SI.goto(196, -156), SI.show(), SI.front())
+    SI.on_msg("show title", SI.hide())
+    SI.on_click(SI.hide(), SI.broadcast("skip intro"), note="Skip the drawing and go straight to the title.")
     KS.on_msg("skip intro", KS.stop("other scripts in sprite"), KS.hide(), KS.set("Pen X", 999), KS.broadcast("show title"))
     KS.on_click(KS.if_(eq(V("State"), "intro"), [KS.broadcast("skip intro")]))
     s.on_stage_click(s.if_(eq(V("State"), "intro"), [s.broadcast("skip intro")]), note="Tap during the intro to skip it.")
     s.on_msg("scribble", s.play("scribble"))
+    s.on_msg("ki rise", s.play("ki roar"), s.repeat(7, [s.broadcast("shake"), s.wait(0.17)]))
+    s.on_msg("ki flare", s.play("ki flare"))
+    s.on_msg("transform", s.play("transform"), s.broadcast("popup"),
+             s.repeat(3, [s.effect("BRIGHTNESS", 90), s.wait(0.05), s.effect("BRIGHTNESS", 0), s.wait(0.05)]))
     s.on_msg("color in", s.play("pickup"))
     s.on_msg("page", s.play("page"))
     PN = pen
@@ -2640,16 +2699,17 @@ def build():
     # ------------------------------------------------------------- hero --
     hero = game.sprite("Hero", x=-150, y=GROUND, size=75, visible=True)
     for h in HEROES:
-        for pose in ("idle", "punch", "kick", "jump", "hurt", "win", "dodge", "special", "down", "charge",
-                     "idle b", "walk 1", "walk 2", "walk 3", "walk 4", "punch 1", "kick 1", "hurt high"):
-            face = "hurt" if pose == "hurt" else ("ko" if pose == "down" else "smile")
-            glow = {"special": "#facc15", "charge": "#fb923c"}.get(pose)
-            hero.costume(f"{h['key']} {pose}", fighter_svg(h["color"], "aim" if pose == "charge" else pose, h["gear"], face,
-                                                          glow=glow), 50, 168)
+        for look, hair in (("", None), (" gold", "gold"), (" silver", "silver")):
+            for pose in ("idle", "punch", "kick", "jump", "hurt", "win", "dodge", "special", "down", "charge",
+                         "idle b", "walk 1", "walk 2", "walk 3", "walk 4", "punch 1", "kick 1", "hurt high", "charge up"):
+                face = "hurt" if pose == "hurt" else ("ko" if pose == "down" else ("yell" if pose == "charge up" else "smile"))
+                glow = {"special": "#facc15", "charge": "#fb923c"}.get(pose)
+                hero.costume(f"{h['key']}{look} {pose}", fighter_svg(h["color"], "aim" if pose == "charge" else pose, h["gear"],
+                                                                    face, glow=glow, hair=hair), 50, 168)
     H = hero
 
     def pose(name):
-        return H.wear(join(V("Hero Name"), " " + name))
+        return H.wear(join(V("Hero Look"), " " + name))
 
     def rest_pose():
         return H.if_(eq(V("Hero Air"), 1), [pose("jump")], [pose("idle")])
@@ -2705,7 +2765,7 @@ def build():
                        or_(contains(V("Look"), "idle"), contains(V("Look"), "walk"))), [
                 H.if_(and_(eq(V("Hero Air"), 0), gt(abs_(sub(XPOS, V("Last X"))), 0.6)), [
                     # walking: the stride follows how far you have moved
-                    H.wear(join(V("Hero Name"), join(" walk ", add(floor_(mod(div(add(XPOS, 1000), 11), 4)), 1)))),
+                    H.wear(join(V("Hero Look"), join(" walk ", add(floor_(mod(div(add(XPOS, 1000), 11), 4)), 1)))),
                 ], [
                     # standing: breathe in and out
                     H.if_(eq(mod(round_(mul(TIMER, 1.6)), 2), 0), [pose("idle")], [pose("idle b")]),
@@ -2773,6 +2833,7 @@ def build():
 
     power_move = [
         H.set("Hero Lock", 1), H.set("Hero Safe", 2), H.set("Power Ready At", add(TIMER, POWER_COOLDOWN)),
+        pose("charge up"), H.set("Powering", 1), H.broadcast("ki flare"), H.say("HAA!", 0.3), H.set("Powering", 0),
         *[H.if_(eq(V("Power Level"), n), [H.set("Power Move", m)]) for n, _k, _c1, _c2, _xp, m in POWER_LEVELS],
         H.set("Pop Text", join(V("Power Move"), "!")), H.broadcast("popup"), H.broadcast("power flash"),
         H.if_(eq(V("Power Level"), 2), [
@@ -2884,12 +2945,38 @@ def build():
     H.on_msg("choose hero", H.hide())
     H.on_msg("intro", H.hide())
     H.on_msg("story scene", H.hide())
-    H.on_msg("fighters ready", H.show(), H.clear_fx(), H.point(90), H.set("Facing", 1), pose("idle"),
+    H.on_msg("fighters ready", H.show(), H.clear_fx(), H.point(90), H.set("Facing", 1), H.set("Hero Look", V("Hero Name")),
+             pose("idle"),
              H.size_to(75), H.goto(-150, GROUND),
              *[H.if_(eq(V("Hero"), i), [H.say(h["line"], 1)]) for i, h in enumerate(HEROES, start=1)],
              note="Each fighter has a catchphrase before READY... FIGHT!")
-    H.on_msg("scene setup", H.show(), H.clear_fx(), H.point(90), pose("idle"), H.size_to(75), H.goto(-150, GROUND))
+    H.on_msg("scene setup", H.show(), H.clear_fx(), H.point(90), H.set("Hero Look", V("Hero Name")), pose("idle"), H.size_to(75), H.goto(-150, GROUND))
     H.local("Line Until", 0)
+    H.on_msg(
+        "power up show",
+        H.set("Hero Lock", 1), pose("charge up"), H.say("Hmmmm...", 0.45),
+        H.set("Powering", 1), H.broadcast("ki rise"), H.say("HAAAAAA!"),
+        H.repeat(14, [H.dx(2), H.wait(0.04), H.dx(-2), H.wait(0.04)]),
+        # level 3 and up: transform! golden hair (silver at level 5)
+        H.if_(gt(V("Power Level"), 2), [
+            H.if_(gt(V("Power Level"), 4), [H.set("Hero Look", join(V("Hero Name"), " silver"))],
+                  [H.set("Hero Look", join(V("Hero Name"), " gold"))]),
+            H.if_(gt(V("Power Level"), 4), [H.set("Pop Text", join("ULTRA ", join(V("Hero Title"), "!")))],
+                  [H.set("Pop Text", join("SUPER ", join(V("Hero Title"), "!")))]),
+            pose("charge up"), H.broadcast("transform"),
+        ]),
+        H.repeat(6, [H.dx(2), H.wait(0.04), H.dx(-2), H.wait(0.04)]),
+        H.say(""), H.set("Powering", 0), pose("idle"), H.set("Hero Lock", 0),
+        note="Powering up, Dragon Ball style: crouch, yell HAAAAA!, the aura flares, the ground shakes and rocks float up. "
+             "From power level 3 the hair turns golden (silver at level 5) for the rest of the fight.",
+    )
+    H.on_msg(
+        "super ready",
+        H.if_(and_(eq(V("Fight On"), 1), eq(V("Powering"), 0)), [
+            H.set("Powering", 2), H.broadcast("ki flare"), H.wait(0.8), H.if_(eq(V("Powering"), 2), [H.set("Powering", 0)]),
+        ]),
+        note="A quick flare of power when the SUPER bar fills up. You can keep fighting while it flares.",
+    )
     H.on_msg("hero line", H.say(V("Line")), H.set("Line Until", add(TIMER, V("Line Secs"))),
              H.wait_until(or_(gt(TIMER, V("Line Until")), eq(V("Skip"), 1))), H.say(""))
     H.on_msg("enemy down", H.wait(1.3), H.set_y(GROUND), H.clear_fx(), pose("win"),
@@ -3598,10 +3685,13 @@ def build():
         AU.hide(),
         AU.forever([
             AU.if_(powered, [AU.set("Lit", 1)], [AU.set("Lit", 0)]),
+            AU.if_(gt(V("Powering"), 0), [AU.set("Lit", 1)]),
             # higher level = brighter (less see-through), bigger, faster flicker; powered up = full blaze
             AU.effect("GHOST", sub(sub(88, mul(13, V("Power Level"))), mul(30, V("Lit")))),
             AU.effect("BRIGHTNESS", add(mul(5, V("Power Level")), mul(20, V("Lit")))),
             AU.set("Grow", add(add(0.92, mul(0.05, V("Power Level"))), mul(0.12, V("Lit")))),
+            # powering up: the aura surges and pulses, Dragon Ball style
+            AU.if_(gt(V("Powering"), 0), [AU.change("Grow", add(0.35, mul(0.12, mod(round_(mul(TIMER, 12)), 2))))]),
             AU.if_(eq(V("State"), "fight"), [
                 AU.goto(V("Hero X"), V("Hero Y")), AU.size_to(mul(75, V("Grow"))), flicker, AU.show(),
             ], [
@@ -4094,6 +4184,13 @@ def validate(game):
         # must check "Is Clone" or each clone makes more clones.
         if any(b["opcode"] == "control_create_clone_of" for b in t.blocks.values()) and "Is Clone" not in t.locals:
             errors.append(f"{t.name}: makes clones but has no Is Clone guard")
+    # no two variables may share an id
+    seen = {}
+    for vid, owner in [(vid, "Stage") for _n, (vid, _v) in game.globals.items()] + \
+            [(vid, t.name) for t in game.targets for _n, (vid, _v) in t.locals.items()]:
+        if vid in seen and seen[vid] != owner or (vid in seen and owner == "Stage"):
+            errors.append(f"variable id {vid} used twice ({seen[vid]} and {owner})")
+        seen[vid] = owner
     # every message that is listened for is also sent, and the other way round
     sent, heard = set(), set()
     for t in [game.stage, *game.targets]:
