@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "3.1"
+VERSION = "3.2"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -1871,180 +1871,241 @@ BRAWL_STAGES = [
                 (-245, 5, -150, 5), (150, 5, 245, 5), (-75, 85, 75, 85), (-15, -150, 15, -150, 1)],
          movers=[(3, -118, 18, 1.3)]),
 ]
-ART_MARGIN = 60   # room either side of a picture platform for a head, a tail or a cab
+ART_MARGIN = 72   # room either side of a picture platform for a head, a tail or a cab
 THICK = 18
 
 
-def trex_svg(w, m, step=False):
-    """A realistic T-Rex seen from the side, facing right, with a riding saddle on its back.
-    Its back (the saddle top) is the flat platform at y=top; its feet stand 80 below. step = the other walking pose."""
-    T = 34
-    X = lambda x: m + x  # noqa: E731  (x from the hips end of the platform)
-    R = lambda x: m + w + x  # noqa: E731  (x past the front of the platform: neck and head)
-    skin = ('<defs><linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">'
-            '<stop offset="0" stop-color="#3f4a24"/><stop offset="0.55" stop-color="#6b7a3a"/>'
-            '<stop offset="1" stop-color="#c9b98a"/></linearGradient>'
-            '<linearGradient id="leg" x1="0" y1="0" x2="0" y2="1">'
-            '<stop offset="0" stop-color="#4b5729"/><stop offset="1" stop-color="#2f3618"/></linearGradient>'
-            '<radialGradient id="eye" cx="0.4" cy="0.4" r="0.6"><stop offset="0" stop-color="#fde047"/>'
-            '<stop offset="1" stop-color="#b45309"/></radialGradient></defs>')
+def _mottle(seed, n, xr, yr, color, rx=(2, 5), op=0.35):
+    """Seeded random blotches for a natural skin pattern."""
+    rnd_ = __import__("random").Random(seed)
+    return "".join(f'<ellipse cx="{rnd_.uniform(*xr):.1f}" cy="{rnd_.uniform(*yr):.1f}" rx="{rnd_.uniform(*rx):.1f}" '
+                   f'ry="{rnd_.uniform(rx[0] * 0.6, rx[1] * 0.7):.1f}" fill="{color}" opacity="{op}"/>' for _ in range(n))
 
-    def leg(hip_x, foot_dx, dark):
-        """A big muscular thigh, a long shin and a three-toed clawed foot on the ground."""
-        hx, fy = X(hip_x), T + 80
-        fx = hx + foot_dx
-        fill = "#2f3618" if dark else "url(#leg)"
-        knee_x = hx + 14 + foot_dx * 0.3
-        return (
-            f'<path d="M{hx - 22} {T + 14} C{hx - 30} {T + 44} {hx - 10} {T + 58} {knee_x} {T + 56} '
-            f'L{fx - 2} {fy - 8} L{fx - 8} {fy} L{fx + 22} {fy} Q{fx + 28} {fy - 2} {fx + 22} {fy - 6} '
-            f'L{fx + 10} {fy - 9} L{knee_x + 14} {T + 50} C{hx + 30} {T + 34} {hx + 22} {T + 12} {hx} {T + 8} Z" '
-            f'fill="{fill}" stroke="#1c2410" stroke-width="2.5" stroke-linejoin="round"/>'
-            # toe claws
-            + "".join(f'<path d="M{fx + c} {fy} l5 -1 l-3 -4 Z" fill="#e7e5e4" stroke="#44403c" stroke-width="1"/>'
-                      for c in (6, 13, 20))
-        )
-    far_dx, near_dx = (16, -14) if step else (-14, 16)
-    teeth_top = "".join(f'<path d="M{R(x)} {T - 13} l2.5 6 l2.5 -6 Z" fill="#fafaf9" stroke="#a8a29e" stroke-width=".6"/>'
-                        for x in range(22, 52, 5))
-    teeth_low = "".join(f'<path d="M{R(x)} {T - 1} l2.5 -5 l2.5 5 Z" fill="#fafaf9" stroke="#a8a29e" stroke-width=".6"/>'
-                        for x in range(24, 48, 5))
-    body = (
-        skin
-        # far leg behind the body, darker
-        + leg(92, far_dx, True)
-        # tail, body, neck and head as one shape
-        + f'<path d="M{X(-58)} {T + 26} Q{X(-20)} {T + 4} {X(10)} {T + 2} L{R(-25)} {T + 2} '
-          f'Q{R(-6)} {T + 1} {R(2)} {T - 14} C{R(8)} {T - 30} {R(30)} {T - 36} {R(52)} {T - 27} '
-          f'Q{R(59)} {T - 23} {R(57)} {T - 14} L{R(30)} {T - 10} '
-          f'L{R(52)} {T - 4} Q{R(50)} {T + 3} {R(24)} {T + 3} Q{R(12)} {T + 5} {R(4)} {T + 18} '
-          f'Q{R(-4)} {T + 40} {R(-30)} {T + 46} Q{X(w / 2)} {T + 56} {X(30)} {T + 46} '
-          f'Q{X(-6)} {T + 40} {X(-58)} {T + 29} Z" fill="url(#skin)" stroke="#1c2410" stroke-width="2.5" stroke-linejoin="round"/>'
-        # open mouth: dark inside, then teeth
-        + f'<path d="M{R(30)} {T - 10} L{R(55)} {T - 13} L{R(52)} {T - 4} Z" fill="#7f1d1d"/>' + teeth_top + teeth_low
-        # dark stripes across the back and tail
-        + "".join(f'<path d="M{X(x)} {T + 3} q-4 10 2 18" stroke="#2c3418" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.7"/>'
-                  for x in range(-34, w - 10, 22))
-        # little bony bumps along the neck and tail
-        + "".join(f'<circle cx="{R(x)}" cy="{y}" r="2.4" fill="#55602f" stroke="#1c2410" stroke-width="1"/>'
-                  for x, y in ((-2, T - 4), (4, T - 16), (12, T - 27)))
-        # scales: rows of tiny dots, and a pale belly sheen
-        + "".join(f'<circle cx="{X(x)}" cy="{T + y}" r="1.1" fill="#283015" opacity="0.5"/>'
-                  for x in range(4, w + 4, 9) for y in (14, 26) if (x + y) % 2)
-        + f'<path d="M{X(34)} {T + 44} Q{X(w / 2)} {T + 52} {R(-30)} {T + 42}" stroke="#e7dcb5" stroke-width="4" fill="none" opacity="0.6"/>'
-        # eye with a bony brow ridge, nostril and cheek line
-        + f'<path d="M{R(22)} {T - 28} Q{R(30)} {T - 33} {R(38)} {T - 28}" stroke="#1c2410" stroke-width="3" fill="none"/>'
-        f'<ellipse cx="{R(30)}" cy="{T - 23}" rx="4.2" ry="3.4" fill="url(#eye)" stroke="#1c2410" stroke-width="1.2"/>'
-        f'<ellipse cx="{R(30.5)}" cy="{T - 23}" rx="1" ry="2.8" fill="#111"/>'
-        f'<ellipse cx="{R(52)}" cy="{T - 24}" rx="2" ry="1.2" fill="#1c2410"/>'
-        f'<path d="M{R(14)} {T - 18} Q{R(18)} {T - 8} {R(28)} {T - 9}" stroke="#2c3418" stroke-width="1.5" fill="none"/>'
-        # tiny two-fingered arm
-        + f'<path d="M{R(-12)} {T + 24} Q{R(-2)} {T + 30} {R(4)} {T + 36} l4 -2 M{R(4)} {T + 36} l3 3" stroke="#3f4a24" '
-          f'stroke-width="4" fill="none" stroke-linecap="round"/>'
+
+def trex_svg(w, m, step=False):
+    """A realistic Tyrannosaurus from the side, facing right, with a riding saddle.
+    Drawn in local units: the flat back runs from x=0 to x=w at y=0 (the platform), the feet stand at y=80."""
+    T = 42
+    B = w
+    ink = "#1b2010"
+    defs = ('<defs>'
+            '<linearGradient id="rx_skin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b4523"/>'
+            '<stop offset="0.45" stop-color="#5f6b37"/><stop offset="0.8" stop-color="#9a9461"/><stop offset="1" stop-color="#d3c79c"/></linearGradient>'
+            '<linearGradient id="rx_leg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4d5830"/>'
+            '<stop offset="1" stop-color="#2c331a"/></linearGradient>'
+            '<linearGradient id="rx_shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.55" stop-color="#000" stop-opacity="0"/>'
+            '<stop offset="1" stop-color="#000" stop-opacity="0.35"/></linearGradient>'
+            '<radialGradient id="rx_eye" cx="0.4" cy="0.4" r="0.6"><stop offset="0" stop-color="#fde68a"/>'
+            '<stop offset="1" stop-color="#c2410c"/></radialGradient>'
+            '<clipPath id="rx_clip"><path id="rx_body_clip" d="BODY"/></clipPath></defs>')
+    body_d = (f'M-62 20 C-42 9 -16 1 4 0 L{B - 20} 0 C{B - 12} -1 {B - 6} -6 {B - 2} -15 '
+              f'C{B + 2} -24 {B + 8} -32 {B + 18} -35 C{B + 32} -40 {B + 50} -37 {B + 60} -30 '
+              f'C{B + 65} -27 {B + 66} -21 {B + 63} -16 L{B + 36} -12 L{B + 60} -8 '
+              f'C{B + 58} -3 {B + 48} 1 {B + 32} 1 C{B + 22} 2 {B + 14} 5 {B + 8} 12 '
+              f'C{B + 2} 20 {B - 2} 28 {B - 12} 34 C{B - 24} 42 {B - 44} 45 {B - 62} 45 '
+              f'C{B - 84} 45 {B - 104} 41 {B - 112} 35 C{B - 126} 30 -14 26 -62 23 Z')
+    defs = defs.replace("BODY", body_d)
+
+    def leg(hx, ang, dark):
+        """Thigh, knee, long shin, ankle, then a three-toed foot flat on the ground."""
+        fill = "#2c331a" if dark else "url(#rx_leg)"
+        return (f'<g transform="rotate({ang} {hx} 10)">'
+                # the huge thigh muscle
+                f'<path d="M{hx - 18} 4 C{hx - 28} 26 {hx - 14} 46 {hx + 6} 46 C{hx + 20} 46 {hx + 26} 36 {hx + 22} 22 '
+                f'C{hx + 18} 8 {hx + 4} 0 {hx - 18} 4 Z" fill="{fill}" stroke="{ink}" stroke-width="2"/>'
+                f'<path d="M{hx - 10} 14 C{hx - 12} 26 {hx - 4} 36 {hx + 8} 40" stroke="{ink}" stroke-width="1" fill="none" opacity="0.5"/>'
+                # shin down and back to the ankle, then the long foot bones forward to the toes
+                f'<path d="M{hx} 40 L{hx + 14} 42 L{hx + 2} 66 L{hx + 12} 78 L{hx - 2} 79 L{hx - 10} 66 Z" fill="{fill}" '
+                f'stroke="{ink}" stroke-width="2" stroke-linejoin="round"/>'
+                f'</g>')
+
+    def foot(hx, ang, dark):
+        # the foot is drawn level so it always stands on the ground, under where the leg ends
+        import math as _m
+        fx = hx + 4 + 70 * _m.sin(_m.radians(-ang))
+        col = "#2c331a" if dark else "#3f4826"
+        return (f'<path d="M{fx - 8} 80 L{fx + 22} 80 Q{fx + 27} 79 {fx + 24} 76 L{fx + 8} 73 L{fx - 4} 74 Z" fill="{col}" stroke="{ink}" stroke-width="1.8"/>'
+                + "".join(f'<path d="M{fx + c} 80 q4 -1 5 -4 l-6 1 Z" fill="#e7e5e4" stroke="#44403c" stroke-width=".7"/>' for c in (8, 15, 22)))
+    # long stride, then a shorter one: both legs always show
+    near, far = (2, -3) if step else (11, -11)
+    teeth = "".join(f'<path d="M{B + x} -12.5 l1.6 4.5 l1.6 -4.5 Z" fill="#f5f5f0" stroke="#a8a29e" stroke-width=".4"/>' for x in range(38, 62, 4))
+    teeth += "".join(f'<path d="M{B + x} -7.5 l1.5 -3.8 l1.5 3.8 Z" fill="#f5f5f0" stroke="#a8a29e" stroke-width=".4"/>' for x in range(40, 58, 4))
+    art = (
+        defs
+        + leg(86, far, True) + foot(86, far, True)
+        + f'<path d="{body_d}" fill="url(#rx_skin)"/>'
+        # skin pattern, shadow underneath and the dark open mouth, all kept inside the body outline
+        + '<g clip-path="url(#rx_clip)">'
+        + _mottle(7, 60, (-50, B + 40), (-30, 22), "#273016", (2, 6), 0.35)
+        + "".join(f'<path d="M{x} 0 q-5 11 1 22" stroke="#2a3317" stroke-width="5" fill="none" opacity="0.45" stroke-linecap="round"/>'
+                  for x in range(-40, B - 10, 16))
+        + f'<path d="{body_d}" fill="url(#rx_shade)"/>'
+        + f'<path d="M{B + 36} -12 L{B + 64} -16 L{B + 61} -8 Z" fill="#5f1414"/>' + teeth
+        + '</g>'
+        + f'<path d="{body_d}" fill="none" stroke="{ink}" stroke-width="2.4" stroke-linejoin="round"/>'
+        # a light edge along the back where the sun catches it
+        + f'<path d="M-40 11 C-20 3 0 1 10 1 L{B - 22} 1" stroke="#a3ad6e" stroke-width="1.6" fill="none" opacity="0.7"/>'
+        # neck wrinkles
+        + "".join(f'<path d="M{B + x} {y} q4 6 2 12" stroke="{ink}" stroke-width="1" fill="none" opacity="0.55"/>'
+                  for x, y in ((0, -6), (5, -10), (10, -12)))
+        # skull: the big opening in front of the eye, the bony bump over the eye, the eye, nostril and lip line
+        + f'<ellipse cx="{B + 44}" cy="-24" rx="8" ry="4" fill="#2f381b" opacity="0.5"/>'
+        f'<path d="M{B + 23} -32 Q{B + 28} -38 {B + 34} -33" fill="#56602f" stroke="{ink}" stroke-width="1.6"/>'
+        f'<ellipse cx="{B + 29}" cy="-27" rx="3.6" ry="3" fill="url(#rx_eye)" stroke="{ink}" stroke-width="1.2"/>'
+        f'<ellipse cx="{B + 29.4}" cy="-27" rx=".9" ry="2.4" fill="#111"/>'
+        f'<ellipse cx="{B + 60}" cy="-27" rx="2.2" ry="1.3" fill="{ink}"/>'
+        f'<path d="M{B + 20} -14 C{B + 30} -13 {B + 46} -14 {B + 62} -17" stroke="{ink}" stroke-width="1.1" fill="none" opacity="0.7"/>'
+        # scutes along the neck and tail
+        + "".join(f'<path d="M{x - 2.5:.1f} {y:.1f} l2.5 -3.5 l2.5 3.5 Z" fill="#4a552b" stroke="{ink}" stroke-width=".8"/>'
+                  for x, y in ((-50, 15), (-40, 10), (-30, 6), (-20, 3), (B + 2, -18), (B + 8, -27)))
+        # the tiny two-fingered arm
+        + f'<path d="M{B - 4} 22 Q{B + 6} 26 {B + 9} 33" stroke="#3b4523" stroke-width="4.5" fill="none" stroke-linecap="round"/>'
+        f'<path d="M{B + 9} 33 l4 -1 M{B + 9} 33 l2 4" stroke="#e7e5e4" stroke-width="1.6" stroke-linecap="round"/>'
         # near leg in front of the body
-        + leg(46, near_dx, False)
-        # riding saddle and its strap under the belly (the saddle top is the platform)
-        + f'<path d="M{X(w * 0.32)} {T + 2} L{X(w * 0.32)} {T + 50}" stroke="#78350f" stroke-width="5"/>'
-        f'<path d="M{X(w * 0.18)} {T + 4} Q{X(w * 0.18)} {T - 1} {X(w * 0.24)} {T} L{X(w * 0.42)} {T} '
-        f'Q{X(w * 0.48)} {T - 3} {X(w * 0.48)} {T + 4} Q{X(w * 0.33)} {T + 12} {X(w * 0.18)} {T + 4} Z" '
-        f'fill="#92400e" stroke="#451a03" stroke-width="2"/>'
-        f'<rect x="{X(w * 0.3)}" y="{T + 8}" width="6" height="8" rx="2" fill="#facc15" stroke="#713f12"/>'
+        + leg(66, near, False) + foot(66, near, False)
+        # riding saddle and girth strap
+        + f'<path d="M{B * 0.5:.0f} 1 L{B * 0.5:.0f} 44" stroke="#5b2d0c" stroke-width="5"/>'
+        f'<path d="M{B * 0.34:.0f} 3 Q{B * 0.34:.0f} -2 {B * 0.4:.0f} -0.5 L{B * 0.6:.0f} -0.5 Q{B * 0.66:.0f} -3 {B * 0.66:.0f} 3 '
+        f'Q{B * 0.5:.0f} 11 {B * 0.34:.0f} 3 Z" fill="#8a3c12" stroke="#3b1a06" stroke-width="1.8"/>'
+        f'<path d="M{B * 0.38:.0f} 3 Q{B * 0.5:.0f} 8 {B * 0.62:.0f} 3" stroke="#c2703a" stroke-width="1.2" fill="none"/>'
+        f'<rect x="{B * 0.5 - 3:.0f}" y="10" width="6" height="7" rx="1.5" fill="#d4a017" stroke="#5b3d07"/>'
     )
-    return body, T
+    return f'<g transform="translate({m} {T})">{art}</g>', T
 
 
 def trike_svg(w, m, step=False):
-    """A realistic Triceratops from the side, facing right, with a saddle: a bony frill, three horns, a beak and
-    four stout legs. Its back (the saddle top) is the platform at y=top; its feet stand 52 below."""
-    T = 40
-    X = lambda x: m + x  # noqa: E731
-    R = lambda x: m + w + x  # noqa: E731
-    defs = ('<defs><linearGradient id="tskin" x1="0" y1="0" x2="0" y2="1">'
-            '<stop offset="0" stop-color="#5b4a36"/><stop offset="0.6" stop-color="#8a7356"/>'
-            '<stop offset="1" stop-color="#c8b48f"/></linearGradient>'
-            '<radialGradient id="frill" cx="0.3" cy="0.6" r="0.8"><stop offset="0" stop-color="#d9a066"/>'
-            '<stop offset="1" stop-color="#8c3b1f"/></radialGradient></defs>')
+    """A realistic Triceratops from the side, facing right, with a saddle. Local units: the flat back runs
+    from x=0 to x=w at y=0, the feet stand at y=52."""
+    T = 46
+    B = w
+    ink = "#231b12"
+    body_d = (f'M-40 22 C-26 9 -10 1 6 0 L{B - 8} 0 C{B + 2} 1 {B + 9} 6 {B + 12} 13 C{B + 15} 22 {B + 12} 30 {B + 4} 33 '
+              f'C{B - 14} 42 {B - 50} 44 22 40 C8 38 -14 32 -40 26 Z')
+    defs = ('<defs><linearGradient id="tc_skin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4f4232"/>'
+            '<stop offset="0.5" stop-color="#7a6a52"/><stop offset="1" stop-color="#c2b08c"/></linearGradient>'
+            '<linearGradient id="tc_shade" x1="0" y1="0" x2="0" y2="1"><stop offset="0.5" stop-color="#000" stop-opacity="0"/>'
+            '<stop offset="1" stop-color="#000" stop-opacity="0.35"/></linearGradient>'
+            '<radialGradient id="tc_frill" cx="0.35" cy="0.65" r="0.85"><stop offset="0" stop-color="#e2b07a"/>'
+            '<stop offset="0.7" stop-color="#a5502a"/><stop offset="1" stop-color="#5e2a14"/></radialGradient>'
+            '<linearGradient id="tc_horn" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#8a7d68"/>'
+            f'<stop offset="1" stop-color="#f3ecdc"/></linearGradient><clipPath id="tc_clip"><path d="{body_d}"/></clipPath></defs>')
 
-    def leg(x, dx, dark):
-        fill = "#3d3125" if dark else "#6b5842"
-        fy = T + 52
-        # a thick upper leg, a knee, then a column-like lower leg with a broad foot
-        return (f'<path d="M{x - 10} {T + 16} Q{x - 12} {T + 30} {x - 8 + dx * 0.5} {T + 36} L{x - 8 + dx} {fy - 2} '
-                f'Q{x - 10 + dx} {fy} {x - 4 + dx} {fy} L{x + 10 + dx} {fy} Q{x + 13 + dx} {fy} {x + 11 + dx} {fy - 4} '
-                f'L{x + 8 + dx * 0.5} {T + 36} Q{x + 13} {T + 28} {x + 10} {T + 16} Z" fill="{fill}" stroke="#2a2118" stroke-width="2.2"/>'
-                + "".join(f'<path d="M{x - 3 + dx + c} {fy} l3 -3 l2 3 Z" fill="#e7e5e4" stroke="#57534e" stroke-width=".8"/>'
-                          for c in (0, 5, 10)))
+    def leg(x, ang, front, dark):
+        fill = "#3a3024" if dark else "#6b5a44"
+        top = 8 if front else 4
+        w2 = 9 if front else 11
+        return (f'<g transform="rotate({ang} {x} {top + 6})">'
+                # a heavy muscled upper leg that narrows at the knee, then a stout lower leg and a broad round foot
+                f'<path d="M{x - w2 - 3} {top} C{x - w2 - 8} {top + 16} {x - w2 - 1} 31 {x - w2 + 2} 37 '
+                f'C{x - w2 + 1} 42 {x - w2 - 1} 48 {x - w2 - 1} 50 Q{x - w2 - 1} 52.5 {x - w2 + 3} 52.5 L{x + w2 + 1} 52.5 '
+                f'Q{x + w2 + 4} 52.5 {x + w2 + 3} 49 C{x + w2 + 1} 45 {x + w2 - 1} 41 {x + w2 - 1} 37 '
+                f'C{x + w2 + 4} 29 {x + w2 + 6} {top + 8} {x + w2 + 1} {top - 3} Z" fill="{fill}" stroke="{ink}" stroke-width="2"/>'
+                f'<path d="M{x - w2} {top + 6} C{x - w2 - 2} {top + 18} {x - 2} 30 {x + 2} 33" stroke="{ink}" stroke-width=".9" fill="none" opacity="0.5"/>'
+                f'<path d="M{x - w2 + 2} 38 q{w2} 3 {2 * w2 - 4} 0 M{x - w2 + 1} 43 q{w2} 2 {2 * w2 - 2} 0" stroke="{ink}" stroke-width=".8" fill="none" opacity="0.5"/>'
+                + "".join(f'<path d="M{x - w2 + c:.1f} 52.5 q2 -3.5 4 0 Z" fill="#ece6da" stroke="#57534e" stroke-width=".6"/>'
+                          for c in (0.5, w2 - 1.5, 2 * w2 - 3.5))
+                + '</g>')
     a, b = (6, -6) if step else (-6, 6)
-    body = (
+    rim = [(B + 18 + 24 * math.cos(t), -6 + 32 * math.sin(t)) for t in [math.pi * (0.62 + 0.1 * k) for k in range(10)]]
+    art = (
         defs
-        + leg(X(28), b, True) + leg(R(-20), a, True)
-        # the bony frill behind the head, with knobs round its edge
-        + f'<g transform="rotate(-22 {R(8)} {T + 2})"><ellipse cx="{R(8)}" cy="{T + 2}" rx="20" ry="30" fill="url(#frill)" '
-          f'stroke="#2a2118" stroke-width="2.5"/>'
-        + "".join(f'<circle cx="{R(8) + 20 * math.cos(t):.1f}" cy="{T + 2 + 30 * math.sin(t):.1f}" r="3.2" fill="#e8d5b0" '
-                  f'stroke="#2a2118" stroke-width="1"/>' for t in [math.pi * (0.55 + 0.15 * k) for k in range(8)])
-        + f'<ellipse cx="{R(8)}" cy="{T - 4}" rx="9" ry="14" fill="none" stroke="#5c2a14" stroke-width="2" opacity="0.6"/></g>'
-        # body and tail
-        + f'<path d="M{X(-36)} {T + 22} Q{X(-12)} {T + 3} {X(8)} {T + 2} L{R(-10)} {T + 2} Q{R(0)} {T + 4} {R(6)} {T + 16} '
-          f'Q{R(6)} {T + 28} {R(-14)} {T + 31} Q{X(w / 2)} {T + 37} {X(14)} {T + 31} Q{X(-8)} {T + 28} {X(-36)} {T + 24} Z" '
-          f'fill="url(#tskin)" stroke="#2a2118" stroke-width="2.5" stroke-linejoin="round"/>'
-        + "".join(f'<path d="M{X(x)} {T + 4} q-3 9 2 16" stroke="#463829" stroke-width="4" fill="none" opacity="0.6" stroke-linecap="round"/>'
-                  for x in range(-20, w - 8, 18))
-        + "".join(f'<circle cx="{X(x)}" cy="{T + y}" r="1" fill="#3b2f22" opacity="0.5"/>'
-                  for x in range(4, w, 8) for y in (12, 22) if (x // 8 + y) % 2)
-        # head: a parrot-like beak, horns over the eyes and a short horn on the nose
-        + f'<path d="M{R(2)} {T + 4} Q{R(22)} {T - 4} {R(38)} {T + 8} Q{R(48)} {T + 13} {R(52)} {T + 22} L{R(44)} {T + 26} '
-          f'Q{R(28)} {T + 32} {R(8)} {T + 28} Z" fill="url(#tskin)" stroke="#2a2118" stroke-width="2.5" stroke-linejoin="round"/>'
-        f'<path d="M{R(44)} {T + 17} Q{R(52)} {T + 18} {R(52)} {T + 22} L{R(44)} {T + 26} Z" fill="#3d3125"/>'
-        f'<path d="M{R(18)} {T + 4} Q{R(32)} {T - 14} {R(54)} {T - 22} Q{R(36)} {T - 6} {R(26)} {T + 6} Z" fill="#a8a29e" stroke="#2a2118" stroke-width="1.5"/>'
-        f'<path d="M{R(22)} {T + 4} Q{R(38)} {T - 10} {R(58)} {T - 14} Q{R(40)} {T - 2} {R(30)} {T + 7} Z" fill="#f5f0e1" stroke="#2a2118" stroke-width="1.5"/>'
-        f'<path d="M{R(38)} {T + 11} L{R(45)} {T - 1} L{R(46)} {T + 13} Z" fill="#f5f0e1" stroke="#2a2118" stroke-width="1.5"/>'
-        f'<circle cx="{R(24)}" cy="{T + 12}" r="2.6" fill="#1c1917"/><circle cx="{R(24.8)}" cy="{T + 11.2}" r=".8" fill="#fff"/>'
-        f'<path d="M{R(12)} {T + 22} Q{R(26)} {T + 26} {R(40)} {T + 22}" stroke="#2a2118" stroke-width="1.2" fill="none"/>'
+        + leg(22, b, False, True) + leg(B - 14, a, True, True)
+        # the great bony frill, its scalloped edge and the knobs round the rim
+        + f'<g transform="rotate(-24 {B + 18} -6)">'
+          f'<ellipse cx="{B + 18}" cy="-6" rx="24" ry="32" fill="url(#tc_frill)" stroke="{ink}" stroke-width="2.4"/>'
+        + "".join(f'<path d="M{x - 3.5:.1f} {y:.1f} l3.5 -5 l3.5 5 Z" fill="#efe3c7" stroke="{ink}" stroke-width=".9" '
+                  f'transform="rotate({math.degrees(t) + 90:.0f} {x:.1f} {y:.1f})"/>'
+                  for (x, y), t in zip(rim, [math.pi * (0.62 + 0.1 * k) for k in range(10)]))
+        + f'<ellipse cx="{B + 16}" cy="-10" rx="11" ry="17" fill="none" stroke="#3b1a0b" stroke-width="2" opacity="0.5"/>'
+          f'<path d="M{B + 6} -30 Q{B + 18} -10 {B + 8} 14" stroke="#3b1a0b" stroke-width="1.2" fill="none" opacity="0.5"/></g>'
+        # body, with its pattern and shadow kept inside the outline
+        + f'<path d="{body_d}" fill="url(#tc_skin)"/>'
+        + '<g clip-path="url(#tc_clip)">'
+        + _mottle(11, 40, (-30, B), (-2, 24), "#3a2f22", (2, 5), 0.35)
+        # big round scales on the flank
+        + "".join(f'<circle cx="{x}" cy="{y}" r="2.3" fill="none" stroke="#3a2f22" stroke-width=".8" opacity="0.55"/>'
+                  for x in range(0, B, 9) for y in (10, 19, 27) if (x // 9 + y) % 2)
+        + "".join(f'<path d="M{x} 0 q-4 9 1 18" stroke="#3a2f22" stroke-width="4" fill="none" opacity="0.4" stroke-linecap="round"/>'
+                  for x in range(-24, B - 6, 15))
+        + f'<path d="{body_d}" fill="url(#tc_shade)"/></g>'
+        + f'<path d="{body_d}" fill="none" stroke="{ink}" stroke-width="2.4" stroke-linejoin="round"/>'
+        + f'<path d="M-24 13 C-12 4 0 1 8 1 L{B - 8} 1" stroke="#a8977a" stroke-width="1.4" fill="none" opacity="0.7"/>'
+        # skin folds at the shoulder
+        + "".join(f'<path d="M{B + x} {y} q-3 7 0 14" stroke="{ink}" stroke-width="1" fill="none" opacity="0.5"/>'
+                  for x, y in ((-6, 4), (-1, 6), (4, 8)))
+        # head: long face, a hooked beak, the eye, a cheek horn
+        + f'<path d="M{B + 4} 8 C{B + 12} -1 {B + 30} -4 {B + 42} 4 C{B + 50} 10 {B + 56} 18 {B + 58} 27 '
+          f'C{B + 56} 31 {B + 50} 32 {B + 46} 30 C{B + 36} 33 {B + 22} 35 {B + 10} 30 Z" fill="url(#tc_skin)" '
+          f'stroke="{ink}" stroke-width="2.4" stroke-linejoin="round"/>'
+        f'<path d="M{B + 46} 16 C{B + 52} 18 {B + 57} 22 {B + 58} 27 C{B + 56} 31 {B + 50} 32 {B + 46} 30 Z" fill="#3f342a"/>'
+        f'<path d="M{B + 14} 26 L{B + 9} 32 L{B + 18} 29 Z" fill="url(#tc_horn)" stroke="{ink}" stroke-width="1"/>'
+        f'<circle cx="{B + 28}" cy="12" r="4" fill="#3b3024"/><circle cx="{B + 28}" cy="12" r="2.4" fill="#1c1410"/>'
+        f'<circle cx="{B + 28.8}" cy="11.2" r=".8" fill="#fff"/>'
+        f'<path d="M{B + 18} 22 Q{B + 32} 27 {B + 46} 24" stroke="{ink}" stroke-width="1" fill="none" opacity="0.7"/>'
+        # the two long brow horns (the far one darker) and the short nose horn
+        + f'<path d="M{B + 20} 6 C{B + 30} -8 {B + 44} -20 {B + 62} -30 C{B + 50} -16 {B + 38} -4 {B + 30} 8 Z" fill="#9c907a" stroke="{ink}" stroke-width="1.4"/>'
+        f'<path d="M{B + 25} 7 C{B + 36} -6 {B + 50} -16 {B + 68} -24 C{B + 54} -12 {B + 42} 0 {B + 34} 9 Z" fill="url(#tc_horn)" stroke="{ink}" stroke-width="1.4"/>'
+        f'<path d="M{B + 44} 15 L{B + 50} 2 L{B + 52} 17 Z" fill="url(#tc_horn)" stroke="{ink}" stroke-width="1.2"/>'
         # near legs in front
-        + leg(X(16), a, False) + leg(R(-32), b, False)
+        + leg(10, a, False, False) + leg(B - 24, b, True, False)
         # saddle and strap
-        + f'<path d="M{X(w * 0.42)} {T + 2} L{X(w * 0.42)} {T + 40}" stroke="#78350f" stroke-width="5"/>'
-        f'<path d="M{X(w * 0.28)} {T + 4} Q{X(w * 0.28)} {T - 1} {X(w * 0.34)} {T} L{X(w * 0.52)} {T} '
-        f'Q{X(w * 0.58)} {T - 3} {X(w * 0.58)} {T + 4} Q{X(w * 0.43)} {T + 12} {X(w * 0.28)} {T + 4} Z" fill="#92400e" stroke="#451a03" stroke-width="2"/>'
+        + f'<path d="M{B * 0.45:.0f} 1 L{B * 0.45:.0f} 38" stroke="#5b2d0c" stroke-width="5"/>'
+        f'<path d="M{B * 0.28:.0f} 3 Q{B * 0.28:.0f} -2 {B * 0.35:.0f} -0.5 L{B * 0.55:.0f} -0.5 Q{B * 0.62:.0f} -3 {B * 0.62:.0f} 3 '
+        f'Q{B * 0.45:.0f} 11 {B * 0.28:.0f} 3 Z" fill="#8a3c12" stroke="#3b1a06" stroke-width="1.8"/>'
+        f'<rect x="{B * 0.45 - 3:.0f}" y="10" width="6" height="7" rx="1.5" fill="#d4a017" stroke="#5b3d07"/>'
     )
-    return body, T
+    return f'<g transform="translate({m} {T})">{art}</g>', T
 
 
 def raptor_svg(step=False):
-    """A feathered raptor sprinting to the right (110 x 72, feet at y=70)."""
-    a = 1 if step else -1
-    def leg(hx, k, f, dark):
-        c = "#5b3a1e" if dark else "#8a6236"
-        return (f'<path d="M{hx} 34 L{k[0]} {k[1]} L{f[0]} {f[1]} L{f[0] + 11} {f[1]}" stroke="#2a1a0c" '
-                f'stroke-width="7.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
-                f'<path d="M{hx} 34 L{k[0]} {k[1]} L{f[0]} {f[1]} L{f[0] + 11} {f[1]}" stroke="{c}" '
-                f'stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
-                # the big muscular thigh
-                f'<ellipse cx="{(hx + k[0]) / 2:.0f}" cy="{(34 + k[1]) / 2:.0f}" rx="8" ry="11" fill="{c}" stroke="#2a1a0c" '
-                f'stroke-width="1.6" transform="rotate({(k[0] - hx) * 2:.0f} {(hx + k[0]) / 2:.0f} {(34 + k[1]) / 2:.0f})"/>'
-                # the sickle claw, held up off the ground
-                f'<path d="M{f[0] + 1} {f[1] - 2} q-1 -5 3 -6" stroke="#f5f5f4" stroke-width="1.8" fill="none" stroke-linecap="round"/>')
-    back = leg(48, (40 - 8 * a, 50), (46 - 14 * a, 68), True)
-    front = leg(50, (58 + 8 * a, 50), (52 + 14 * a, 68), False)
-    body = (
-        '<defs><linearGradient id="rskin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7c4a1e"/>'
-        '<stop offset="1" stop-color="#d6b98a"/></linearGradient></defs>'
-        + back
-        # long stiff tail with a feather plume, body, neck and head
-        + '<path d="M2 26 Q24 22 40 24 Q56 18 70 22 Q80 14 88 14 Q100 13 106 18 Q104 22 96 23 L104 25 Q98 28 88 27 '
-          'Q80 28 76 34 Q66 42 50 42 Q38 40 32 34 Q18 32 2 30 Z" fill="url(#rskin)" stroke="#2a1a0c" stroke-width="2" stroke-linejoin="round"/>'
-        + "".join(f'<path d="M{x} 27 l-6 {d} l9 -1 Z" fill="#9a3412" opacity="0.85"/>' for x, d in ((8, -6), (13, 6), (18, -5)))
-        + "".join(f'<path d="M{x} 24 q2 6 -1 11" stroke="#4a2a10" stroke-width="2.4" fill="none" opacity="0.7"/>' for x in (36, 44, 52, 60))
-        # teeth, eye
-        + "".join(f'<path d="M{x} 23 l1.5 3 l1.5 -3 Z" fill="#fff"/>' for x in (92, 96, 100))
-        + '<circle cx="92" cy="17" r="2" fill="#facc15" stroke="#1c1917" stroke-width="1"/><circle cx="92.4" cy="17" r=".8" fill="#111"/>'
-        # feathered arm, folded like a wing
-        '<path d="M70 30 Q78 38 74 44 Q66 42 60 36 Z" fill="#9a3412" stroke="#2a1a0c" stroke-width="1.5"/>'
-        '<path d="M74 44 l4 2 M72 44 l2 3" stroke="#e7e5e4" stroke-width="1.5"/>'
-        + front
+    """A feathered dromaeosaur sprinting to the right (110 x 72, feet at y=70)."""
+    ink = "#24160a"
+    body_d = ('M3 24 C18 22 32 20 44 20 C56 15 66 15 72 19 C77 14 81 9 87 8 C95 6 103 8 107 12 '
+              'C109 14 107 16 104 17 L92 17.5 L103 19.5 C100 22.5 92 22.5 86 22 C82 24 80 28 76 32 '
+              'C70 40 58 42 48 40 C40 38 34 33 26 31 C18 29.5 10 28.5 3 27.5 Z')
+
+    def leg(ang, dark, lift):
+        fill = "#5b3a1e" if dark else "#8a6236"
+        return (f'<g transform="rotate({ang} 46 30)">'
+                # feathered thigh, then shin, then the long foot bones and toes with the sickle claw held up
+                f'<path d="M37 27 C33 40 42 48 53 46 C60 41 59 31 51 26 Z" fill="{fill}" stroke="{ink}" stroke-width="1.5"/>'
+                + "".join(f'<path d="M{x} {y} q2 4 0 7" stroke="{ink}" stroke-width=".8" fill="none" opacity="0.5"/>' for x, y in ((41, 32), (46, 34), (51, 33)))
+                + f'<path d="M51 44 L46 {57 - lift} L{52} {68 - lift} L{64} {69 - lift}" stroke="{ink}" stroke-width="6" fill="none" stroke-linejoin="round" stroke-linecap="round"/>'
+                f'<path d="M51 44 L46 {57 - lift} L{52} {68 - lift} L{64} {69 - lift}" stroke="{fill}" stroke-width="3.6" fill="none" stroke-linejoin="round" stroke-linecap="round"/>'
+                f'<path d="M53 {67 - lift} q-2 -6 3 -8" stroke="#f5f5f4" stroke-width="1.8" fill="none" stroke-linecap="round"/>'
+                '</g>')
+    near, far = (-24, 22) if step else (22, -24)
+    art = (
+        '<defs><linearGradient id="rp_skin" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b3f1b"/>'
+        '<stop offset="0.6" stop-color="#a77744"/><stop offset="1" stop-color="#e3cfa6"/></linearGradient>'
+        f'<clipPath id="rp_clip"><path d="{body_d}"/></clipPath></defs>'
+        + leg(far, True, 6 if not step else 0)
+        # tail feather fan
+        + "".join(f'<path d="M10 26 L{-2 + d} {26 + e} L{6 + d} {27 + e * 0.6:.0f} Z" fill="#8a2f12" stroke="{ink}" stroke-width=".7"/>'
+                  for d, e in ((0, -6), (1, -2), (0, 2), (2, 6)))
+        + f'<path d="{body_d}" fill="url(#rp_skin)"/>'
+        + '<g clip-path="url(#rp_clip)">'
+        # dark stripes and layered feathers along the back and neck
+        + "".join(f'<path d="M{x} 18 q-3 7 1 14" stroke="#3e220c" stroke-width="3" fill="none" opacity="0.6" stroke-linecap="round"/>'
+                  for x in (22, 30, 38, 46, 54, 62))
+        + "".join(f'<path d="M{x} {y} q4 -3 8 0" stroke="#4a2a10" stroke-width="1" fill="none" opacity="0.6"/>'
+                  for x in range(24, 80, 6) for y in (21, 25) if (x + y) % 4)
+        + '</g>'
+        + f'<path d="{body_d}" fill="none" stroke="{ink}" stroke-width="1.8" stroke-linejoin="round"/>'
+        # neck ruff of feathers
+        + "".join(f'<path d="M{x} {y} l-4 3 l5 1 Z" fill="#9a3412" stroke="{ink}" stroke-width=".5"/>' for x, y in ((76, 16), (80, 12), (84, 9)))
+        # head: eye with a dark stripe through it, nostril, teeth
+        + '<path d="M86 12 L100 13" stroke="#3e220c" stroke-width="2" opacity="0.6"/>'
+          '<circle cx="93" cy="12.5" r="2.2" fill="#facc15" stroke="#1c1917" stroke-width=".9"/><circle cx="93.3" cy="12.5" r=".8" fill="#111"/>'
+          '<ellipse cx="104" cy="12" rx="1.2" ry=".8" fill="#24160a"/>'
+        + "".join(f'<path d="M{x} 17.5 l1.2 2.6 l1.2 -2.6 Z" fill="#fff"/>' for x in (93, 96, 99, 102))
+        # folded feathered arm (like a wing) with claws
+        + '<path d="M70 28 Q80 34 79 41 Q70 43 61 37 Q64 31 70 28 Z" fill="#9a3412" stroke="#24160a" stroke-width="1.3"/>'
+          + "".join(f'<path d="M{x} {y} l-6 4" stroke="#5c1d08" stroke-width="1" opacity="0.8"/>' for x, y in ((76, 34), (74, 37), (71, 39)))
+          + '<path d="M79 41 l4 1 M78 42 l2 3" stroke="#f5f5f4" stroke-width="1.4" stroke-linecap="round"/>'
+        + leg(near, False, 0 if not step else 6)
     )
-    return svg_doc(110, 72, body)
+    return svg_doc(110, 72, art)
 
 
 def art_platform_svg(art, w, left=False, step=False):
