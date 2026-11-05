@@ -695,6 +695,23 @@ end
 > The jump loop runs beside the action loop, so you can punch and kick in the air.
 
 ```
+when green flag clicked
+forever
+    if <<<(Fight On) = [1]> and <(Hero Lock) = [0]>> and <(abs of (Joy X)) > [0.2]>> then
+        change x by (((Joy X) * (Step)) * [0.28])
+        if <(x position) < [-215]> then
+            set x to [-215]
+        end
+        if <(x position) > [215]> then
+            set x to [215]
+        end
+    end
+end
+```
+
+> Joystick walking. The Android app's joystick sets Joy X from -1 (left) to 1 (right) and Hero walks every frame. Faster fighters walk faster.
+
+```
 when I receive [move left]
 if <<(Fight On) = [1]> and <(Hero Lock) = [0]>> then
     change x by ([-1] * (Step))
@@ -2090,9 +2107,13 @@ end
 ```
 when I receive [fight on]
 go to x: [-207] y: [-152]
-show
-go to [front] layer
+if <(Touch Pad) = [0]> then
+    show
+    go to [front] layer
+end
 ```
+
+> Hidden in the Android app, which has its own joystick and buttons (Touch Pad is 1 there).
 
 ```
 when I receive [show title]
@@ -2148,9 +2169,13 @@ end
 ```
 when I receive [fight on]
 go to x: [-138] y: [-152]
-show
-go to [front] layer
+if <(Touch Pad) = [0]> then
+    show
+    go to [front] layer
+end
 ```
+
+> Hidden in the Android app, which has its own joystick and buttons (Touch Pad is 1 there).
 
 ```
 when I receive [show title]
@@ -2201,9 +2226,13 @@ set [Want Jump] to [1]
 ```
 when I receive [fight on]
 go to x: [-69] y: [-152]
-show
-go to [front] layer
+if <(Touch Pad) = [0]> then
+    show
+    go to [front] layer
+end
 ```
+
+> Hidden in the Android app, which has its own joystick and buttons (Touch Pad is 1 there).
 
 ```
 when I receive [show title]
@@ -2254,9 +2283,13 @@ set [Want Dodge] to [1]
 ```
 when I receive [fight on]
 go to x: [0] y: [-152]
-show
-go to [front] layer
+if <(Touch Pad) = [0]> then
+    show
+    go to [front] layer
+end
 ```
+
+> Hidden in the Android app, which has its own joystick and buttons (Touch Pad is 1 there).
 
 ```
 when I receive [show title]
@@ -2307,9 +2340,13 @@ set [Want Punch] to [1]
 ```
 when I receive [fight on]
 go to x: [69] y: [-152]
-show
-go to [front] layer
+if <(Touch Pad) = [0]> then
+    show
+    go to [front] layer
+end
 ```
+
+> Hidden in the Android app, which has its own joystick and buttons (Touch Pad is 1 there).
 
 ```
 when I receive [show title]
@@ -2360,9 +2397,13 @@ set [Want Kick] to [1]
 ```
 when I receive [fight on]
 go to x: [138] y: [-152]
-show
-go to [front] layer
+if <(Touch Pad) = [0]> then
+    show
+    go to [front] layer
+end
 ```
+
+> Hidden in the Android app, which has its own joystick and buttons (Touch Pad is 1 there).
 
 ```
 when I receive [show title]
@@ -2413,9 +2454,13 @@ set [Want Super] to [1]
 ```
 when I receive [fight on]
 go to x: [207] y: [-152]
-show
-go to [front] layer
+if <(Touch Pad) = [0]> then
+    show
+    go to [front] layer
+end
 ```
+
+> Hidden in the Android app, which has its own joystick and buttons (Touch Pad is 1 there).
 
 ```
 when I receive [show title]

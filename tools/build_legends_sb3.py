@@ -91,6 +91,8 @@ SUPER_PER_HIT = 6
 SUPER_PER_HURT = 8
 SUPER_PER_PERFECT = 25
 COMBO_WINDOW = 1.2
+JOY_DEADZONE = 0.2
+JOY_SPEED = 0.28  # pixels per frame = Joy X * Step * this
 COMBO_BONUS = 3
 ARCADE_HEAL = 30
 
@@ -946,6 +948,7 @@ def build():
         ("Chapter", 1), ("Wave", 1), ("Score", 0), ("Best", 0), ("Crown", 0), ("Fight On", 0),
         ("Hit Power", 5), ("Hurt Power", 6), ("Shot Y", GROUND + 18), ("Shot Dir", -1), ("Wave Dir", -1),
         ("Line", ""), ("Line Secs", 2), ("Skip", 0), ("Pop Text", ""), ("Banner", "fight"),
+        ("Joy X", 0), ("Touch Pad", 0),
     ]:
         G(name, value)
 
@@ -1265,6 +1268,16 @@ def build():
             ]),
         ]),
         note="The jump loop runs beside the action loop, so you can punch and kick in the air.",
+    )
+    H.on_flag(
+        H.forever([
+            H.if_(and_(eq(V("Fight On"), 1), eq(V("Hero Lock"), 0),
+                       gt(abs_(V("Joy X")), JOY_DEADZONE)), [
+                H.dx(mul(mul(V("Joy X"), V("Step")), JOY_SPEED)), *H.clamp_x(-215, 215),
+            ]),
+        ]),
+        note="Joystick walking. The Android app's joystick sets Joy X from -1 (left) to 1 (right) "
+             "and Hero walks every frame. Faster fighters walk faster.",
     )
     for direction, sign in (("left", -1), ("right", 1)):
         H.on_msg(f"move {direction}", H.if_(and_(eq(V("Fight On"), 1), eq(V("Hero Lock"), 0)), [
@@ -1744,7 +1757,8 @@ def build():
                        note="Tap to step. Hold to keep walking.")
         else:
             b.on_click(b.set(action, 1), note=f"Sets {action}. Hero's loop does the move.")
-        b.on_msg("fight on", b.goto(x, -152), b.show(), b.front())
+        b.on_msg("fight on", b.goto(x, -152), b.if_(eq(V("Touch Pad"), 0), [b.show(), b.front()]),
+                 note="Hidden in the Android app, which has its own joystick and buttons (Touch Pad is 1 there).")
         for m in FIGHT_HIDE:
             b.on_msg(m, b.hide())
         if name == "Super Button":

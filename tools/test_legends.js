@@ -316,6 +316,16 @@ async function mashTest () {
         frames++;
     }
     if (T.get('Fight On') !== 1) return fail('mash: fight never started after Skip');
+    // The Android joystick sets Joy X; Hero walks while it is held
+    T.set('Hero Safe Until', 1e12);
+    T.sprite('Hero').setXY(-100, -75);
+    T.set('Joy X', 1);
+    await T.step(15);
+    const walked = T.sprite('Hero').x;
+    T.set('Joy X', 0);
+    await T.step(5);
+    if (walked < -60) fail(`joystick: Hero did not walk right (x=${walked})`);
+    if (Math.abs(T.sprite('Hero').x - walked) > 1) fail('joystick: Hero kept walking after release');
     for (let i = 0; i < 30 * 8; i++) {
         for (const want of ['Want Punch', 'Want Kick', 'Want Jump', 'Want Dodge', 'Want Super']) T.set(want, 1);
         if (i % 2) T.send('move right');

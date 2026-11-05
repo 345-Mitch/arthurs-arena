@@ -60,6 +60,142 @@ const SAVE_JS = `
 })();
 `;
 
+// Touch controls for phones and tablets: a thumb joystick on the left and
+// action buttons on the right. They live outside Scratch because Scratch only
+// follows one finger, and you need to walk and punch at the same time.
+// They write the same variables the Scratch buttons do (Want Punch, ...), plus
+// Joy X for walking. Touch Pad = 1 tells the game to hide its own buttons.
+const PAD_JS = `
+(function () {
+    if (!('ontouchstart' in window) && !(navigator.maxTouchPoints > 0)) return; // computers keep the Scratch buttons
+    var css = [
+        '#pad{position:fixed;inset:0;pointer-events:none;z-index:50;display:none;-webkit-user-select:none;user-select:none}',
+        '#pad.on{display:block}',
+        '#joy{position:absolute;left:0;bottom:0;width:42vw;height:70vh;pointer-events:auto;touch-action:none}',
+        '#base{position:absolute;width:30vmin;height:30vmin;margin:-15vmin 0 0 -15vmin;border-radius:50%;',
+        ' background:radial-gradient(circle,rgba(255,255,255,.10),rgba(255,255,255,.22));border:.8vmin solid rgba(255,255,255,.55);box-sizing:border-box}',
+        '#knob{position:absolute;left:50%;top:50%;width:13vmin;height:13vmin;margin:-6.5vmin 0 0 -6.5vmin;border-radius:50%;',
+        ' background:radial-gradient(circle at 35% 30%,#93c5fd,#2563eb);border:.6vmin solid #fff;box-shadow:0 .6vmin 1.5vmin rgba(0,0,0,.45)}',
+        '.pb{position:absolute;width:16vmin;height:16vmin;margin:-8vmin 0 0 -8vmin;border-radius:50%;pointer-events:auto;touch-action:none;',
+        ' display:flex;align-items:center;justify-content:center;font:900 2.9vmin Verdana,Arial,sans-serif;color:#fff;',
+        ' border:.6vmin solid rgba(255,255,255,.85);box-shadow:0 .7vmin 0 rgba(0,0,0,.35);opacity:.88;box-sizing:border-box}',
+        '.pb.down{transform:translateY(.5vmin) scale(.93);box-shadow:0 .2vmin 0 rgba(0,0,0,.35);opacity:1}',
+        '#bP{background:#ea580c}#bK{background:#ca8a04}#bJ{background:#16a34a}#bD{background:#64748b}',
+        '#bS{background:#475569;width:13vmin;height:13vmin;margin:-6.5vmin 0 0 -6.5vmin;font-size:2.4vmin}',
+        '#bS.ready{background:#facc15;color:#7c2d12;animation:glow .5s infinite alternate}',
+        '@keyframes glow{from{box-shadow:0 0 1vmin #fde047}to{box-shadow:0 0 4vmin #fde047}}'
+    ].join('');
+    var style = document.createElement('style');
+    style.textContent = css;
+    document.head.appendChild(style);
+    var pad = document.createElement('div');
+    pad.id = 'pad';
+    pad.innerHTML = '<div id="joy"><div id="base"><div id="knob"></div></div></div>' +
+        '<div class="pb" id="bP">PUNCH</div><div class="pb" id="bK">KICK</div>' +
+        '<div class="pb" id="bJ">JUMP</div><div class="pb" id="bD">DODGE</div><div class="pb" id="bS">SUPER</div>';
+    document.body.appendChild(pad);
+
+    // right-hand buttons in a diamond, like a game controller
+    var cx = 'calc(100vw - 21vmin)', cy = 'calc(100vh - 21vmin)', r = '13vmin';
+    function place (id, dx, dy) {
+        var el = document.getElementById(id);
+        el.style.left = 'calc(' + cx + ' + ' + dx + ' * ' + r + ')';
+        el.style.top = 'calc(' + cy + ' + ' + dy + ' * ' + r + ')';
+    }
+    place('bP', 0, 1); place('bK', 1, 0); place('bJ', 0, -1); place('bD', -1, 0); place('bS', -1.15, -1.55);
+
+    var vars = null;
+    function v (name) {
+        if (!vars) {
+            var stage = window.vm && vm.runtime.getTargetForStage && vm.runtime.getTargetForStage();
+            if (!stage) return null;
+            vars = {};
+            Object.keys(stage.variables).forEach(function (id) { vars[stage.variables[id].name] = stage.variables[id]; });
+        }
+        return vars[name] || null;
+    }
+    function set (name, value) { var x = v(name); if (x) x.value = value; }
+    function get (name) { var x = v(name); return x ? x.value : null; }
+    function buzz () { if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} } }
+
+    // buttons: press sets the Want variable; holding PUNCH or KICK repeats
+    [['bP', 'Want Punch', true], ['bK', 'Want Kick', true], ['bJ', 'Want Jump', false],
+     ['bD', 'Want Dodge', false], ['bS', 'Want Super', false]].forEach(function (b) {
+        var el = document.getElementById(b[0]), timer = null;
+        el.addEventListener('pointerdown', function (e) {
+            e.preventDefault();
+            el.setPointerCapture(e.pointerId);
+            el.classList.add('down');
+            set(b[1], 1);
+            buzz();
+            if (b[2]) timer = setInterval(function () { set(b[1], 1); }, 230);
+        });
+        function up () { el.classList.remove('down'); if (timer) { clearInterval(timer); timer = null; } }
+        el.addEventListener('pointerup', up);
+        el.addEventListener('pointercancel', up);
+    });
+
+    // floating joystick: put your thumb anywhere in the bottom-left area
+    var joy = document.getElementById('joy'), base = document.getElementById('base'), knob = document.getElementById('knob');
+    var held = null, ox = 0, oy = 0, jumpArmed = true;
+    function home () {
+        var b = joy.getBoundingClientRect(), m = Math.min(innerWidth, innerHeight);
+        base.style.left = (0.2 * m) + 'px';
+        base.style.top = (b.height - 0.2 * m) + 'px';
+        knob.style.transform = '';
+    }
+    function move (e) {
+        var R = Math.min(innerWidth, innerHeight) * 0.13;
+        var dx = e.clientX - ox, dy = e.clientY - oy, d = Math.sqrt(dx * dx + dy * dy), up = dy;
+        if (d > R) { dx = dx * R / d; dy = dy * R / d; }
+        knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+        set('Joy X', Math.round(dx / R * 100) / 100);
+        // flick the stick up to jump (measured before the knob is held to its ring,
+        // so walking sideways and flicking up still jumps)
+        if (up < -0.6 * R && jumpArmed) { set('Want Jump', 1); jumpArmed = false; buzz(); }
+        if (up > -0.3 * R) jumpArmed = true;
+    }
+    joy.addEventListener('pointerdown', function (e) {
+        if (held !== null) return;
+        e.preventDefault();
+        held = e.pointerId;
+        joy.setPointerCapture(e.pointerId);
+        var b = joy.getBoundingClientRect();
+        ox = e.clientX; oy = e.clientY;
+        base.style.left = (e.clientX - b.left) + 'px';
+        base.style.top = (e.clientY - b.top) + 'px';
+        move(e);
+    });
+    joy.addEventListener('pointermove', function (e) { if (e.pointerId === held) move(e); });
+    function release (e) {
+        if (e.pointerId !== held) return;
+        held = null;
+        set('Joy X', 0);
+        jumpArmed = true;
+        home();
+    }
+    joy.addEventListener('pointerup', release);
+    joy.addEventListener('pointercancel', release);
+    addEventListener('resize', home);
+
+    // show the pad only during a fight; light SUPER when it is ready
+    var bS = document.getElementById('bS');
+    (function tick () {
+        if (get('State') !== null) {
+            set('Touch Pad', 1);
+            var fighting = get('State') === 'fight';
+            if (fighting !== pad.classList.contains('on')) {
+                pad.classList.toggle('on', fighting);
+                if (!fighting) { set('Joy X', 0); held = null; }
+                home();
+            }
+            bS.classList.toggle('ready', Number(get('Super')) >= 100);
+        }
+        requestAnimationFrame(tick);
+    })();
+})();
+`;
+
 (async () => {
     const loaded = await Packager.loadProject(fs.readFileSync(SB3));
     const packager = new Packager.Packager();
@@ -74,7 +210,7 @@ const SAVE_JS = `
     o.app.windowTitle = "Arthur's Arena";
     o.app.packageName = 'arthurs-arena';
     o.cloudVariables.mode = 'local';
-    o.custom.js = SAVE_JS;
+    o.custom.js = SAVE_JS + PAD_JS;
     const result = await packager.package();
     fs.mkdirSync(path.dirname(OUT), {recursive: true});
     fs.writeFileSync(OUT, result.data);

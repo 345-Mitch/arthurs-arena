@@ -68,6 +68,8 @@ The buttons are along the bottom of the screen.
 
 You always turn to face the enemy, so you can fight from either side.
 
+In the Android app these buttons are replaced by a thumb joystick and game-pad buttons, so you can walk and punch at the same time (see `ANDROID.md`).
+
 ## Cool moves
 
 - **Combos.** Hit again within about a second to keep a combo going. Every 3rd hit in a row shows **COMBO x3!** (then x6, x9 ...) and does 3 extra damage.

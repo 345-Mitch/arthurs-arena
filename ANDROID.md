@@ -1,6 +1,17 @@
 # Arthur's Arena on Android
 
-`dist/arthurs-arena.apk` is the Legends game as an Android app. It plays full screen and sideways, needs no internet, and remembers the **Best** score and the **Golden Crown**. It works on Android 7.0 or newer, on phones and tablets.
+`dist/arthurs-arena.apk` is the Legends game as an Android app, with a thumb joystick. It plays full screen and sideways, needs no internet, and remembers the **Best** score and the **Golden Crown**. It works on Android 7.0 or newer, on phones and tablets.
+
+## Controls on a phone or tablet
+
+During a fight the app shows game-pad controls, and you can use both thumbs at once:
+
+- **Joystick (left thumb):** put your thumb anywhere in the bottom-left corner and the stick appears under it. Push left or right to walk; push further to walk faster. **Flick it up to jump.**
+- **Buttons (right thumb):** **PUNCH** (bottom), **KICK** (right), **JUMP** (top), **DODGE** (left). Hold PUNCH or KICK to keep attacking.
+- **SUPER** (above the buttons) glows gold when your super move is ready.
+- Each button gives a tiny buzz when you press it.
+
+Menus (STORY, ARCADE, picking a fighter, SKIP, RETRY, HOME, ✕) are still tapped on the game screen. On a computer, the game keeps its own buttons and the keyboard works too.
 
 ## Install it (do this on each phone or tablet)
 
@@ -22,7 +33,8 @@ To update later, install the new APK the same way. It installs over the old one 
 
 ## Good to know
 
-- Scratch only follows one finger at a time, so you can't hold LEFT and tap PUNCH at the same moment. Tap them one after the other.
+- Scratch on its own only follows one finger, so the joystick and buttons are part of the app's page, not Scratch sprites. They set the same variables the Scratch buttons do (`Want Punch` and so on, plus `Joy X` for walking). `Touch Pad` = 1 tells the game to hide its own buttons.
+- Version 1.1 (joystick) installs over 1.0 and keeps the Best score.
 - The Android back button closes the game.
 - The app is signed with a debug key (`android/debug.keystore`, password `arthursarena`). That's fine for installing at home. The Play Store would need a private key.
 
