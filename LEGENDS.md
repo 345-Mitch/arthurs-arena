@@ -191,6 +191,10 @@ Hold **FIRE** and a glowing ball grows in your hand, with a rising sound. Let go
 
 On the Android app, the FIRE button fills up gold as it charges.
 
+## Weapons in hand
+
+Swords, hammers, boomerangs and the bosses' weapons sit in the fighter's **front hand** and line up with the **forearm** in every pose: held up in the guard stance, thrust forward in a punch, hanging down while walking, and turning with the body in a flip. The build script works out the hand position for every picture from the jointed poses (the `Hand X / Hand Y / Hand Dir` lists for Hero, `EHand ...` for enemies).
+
 ## Boss weapons
 
 The big fighters carry weapons and hit 3 harder with them. Watch for the swing!
@@ -233,7 +237,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v2.1` in the bottom corner of the title.
+- **Version line:** `v2.2` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).

@@ -4018,7 +4018,7 @@ hide
 ## Held Weapon
 
 Costumes: sword, hammer, boomerang
-Sprite-only variables: Swing Until
+Sprite-only variables: Swing Until, C, D
 
 ```
 when green flag clicked
@@ -4026,11 +4026,16 @@ hide
 forever
     if <<<(State) = [fight]> and <not <(Weapon) = [none]>>> and <(Boomerang Out) = [0]>> then
         switch costume to (Weapon)
-        go to x: ((Hero X) + ([18] * (Facing))) y: ((Hero Y) + [48])
+        set [C] to ([costume #] of (Hero))
+        go to x: ((Hero X) + (((item (C) of [Hand X]) * [0.75]) * (Facing))) y: ((Hero Y) + ((item (C) of [Hand Y]) * [0.75]))
+        set [D] to (item (C) of [Hand Dir])
         if <(timer) < (Swing Until)> then
-            point in direction ([90] + ([100] * (Facing)))
+            change [D] by [35]
+        end
+        if <(Facing) = [1]> then
+            point in direction ((D) + [90])
         else
-            point in direction ([90] + ([-25] * (Facing)))
+            point in direction ([90] - (D))
         end
         show
         go to [front] layer
@@ -4040,7 +4045,7 @@ forever
 end
 ```
 
-> Follows Hero's hand while a weapon is held.
+> The weapon sits in Hero's front hand and lines up with the forearm, for every picture Hero can show (Hand X, Hand Y and Hand Dir are worked out from the poses when the game is built).
 
 ```
 when I receive [swing]
@@ -5094,6 +5099,7 @@ end
 ## Boss Weapon
 
 Costumes: club, mace, hammer, dark sword, katana
+Sprite-only variables: C, D
 
 ```
 when green flag clicked
@@ -5102,11 +5108,16 @@ forever
     if <<<<<(State) = [fight]> and <not <(Enemy Weapon) = [none]>>> and <(Enemy HP) > [0]>> and <(Wave Phase) = [0]>> and <<(Fight On) = [1]> or <(Enemy X) > [-300]>>> then
         switch costume to (Enemy Weapon)
         set size to ((Enemy Size) * [0.8]) %
-        go to x: ((Enemy X) + (((Enemy Facing) * [0.24]) * (Enemy Size))) y: ([-75] + ((Enemy Size) * [0.62]))
+        set [C] to ([costume #] of (Enemy))
+        go to x: ((Enemy X) + (((item (C) of [EHand X]) * ((Enemy Size) / [100])) * (Enemy Facing))) y: (([y position] of (Enemy)) + ((item (C) of [EHand Y]) * ((Enemy Size) / [100])))
+        set [D] to (item (C) of [EHand Dir])
         if <(timer) < (Enemy Swing Until)> then
-            point in direction ([90] + ([110] * (Enemy Facing)))
+            change [D] by [40]
+        end
+        if <(Enemy Facing) = [1]> then
+            point in direction ((D) + [90])
         else
-            point in direction ([90] + ([-20] * (Enemy Facing)))
+            point in direction ([90] - (D))
         end
         show
     else

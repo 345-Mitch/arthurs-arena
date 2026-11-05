@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "2.1"
+VERSION = "2.2"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -321,6 +321,58 @@ SKEL = {
     "flip":    dict(h=(50, 112), n=(52, 96), c=(54, 86), p=(50, 70), fe=(38, 90), fh=(34, 104), ne=(62, 90), nh=(66, 104),
                     fk=(40, 54), ff=(34, 40), nk=(60, 54), nf=(66, 40)),
 }
+
+
+ROBOT_HANDS = {  # x, y of the arm end and the compass direction it points (robots have no elbow)
+    "idle": (76, 124, 180), "windup": (76, 124, 180), "attack": (95, 105, 100), "hurt": (74, 122, 170), "down": (84, 152, 90),
+}
+
+
+def hand_of(pose, rot=0):
+    """Where the front hand is in a 100x180 costume (feet at 50,168), and which way the forearm points
+    (Scratch compass: 0 up, 90 right)."""
+    if pose.startswith("robot:"):
+        x, y, d = ROBOT_HANDS[pose[6:]]
+        return x - 50, 168 - y, d
+    j = SKEL[pose]
+    (ex, ey), (hx, hy) = j["ne"], j["nh"]
+    if rot:
+        a = math.radians(rot)
+
+        def turn(px, py):
+            px, py = px - 54, py - 108
+            return 54 + px * math.cos(a) - py * math.sin(a), 108 + px * math.sin(a) + py * math.cos(a)
+        ex, ey = turn(ex, ey)
+        hx, hy = turn(hx, hy)
+    direction = math.degrees(math.atan2(hx - ex, -(hy - ey)))
+    return round(hx - 50, 1), round(168 - hy, 1), round(direction, 1)
+
+
+HERO_POSE_SRC = {"charge": "aim"}
+ENEMY_POSE_SRC = {
+    "attack": {"rival": "punch", "ivy": "aim", "brute": "charge", "quake": "slam", "shadow": "special", "ninja": "slash", "kage": "slash"},
+    "windup": {"quake": "raise", "shadow": "raise"},
+}
+
+
+def costume_hand(name, kind):
+    """The hand for one costume name of the Hero or the Enemy sprite."""
+    if kind == "hero":
+        if " flip " in name:
+            return hand_of("tuck", 90 * (int(name.rsplit(" ", 1)[1]) - 1))
+        for p_ in sorted(SKEL, key=len, reverse=True) + ["charge"]:
+            if name.endswith(" " + p_):
+                return hand_of(HERO_POSE_SRC.get(p_, p_))
+        raise ValueError(name)
+    key, pose = name.split(" ", 1)
+    if name in ("shadow angry", "shadow spikes"):
+        return hand_of("raise")
+    if key in ("spikebot", "megaspike"):
+        rp = {"idle b": "idle", "hurt high": "hurt"}.get(pose, "idle" if pose.startswith("walk") else pose)
+        return hand_of("robot:" + rp)
+    if pose in ENEMY_POSE_SRC:
+        return hand_of(ENEMY_POSE_SRC[pose].get(key, "windup" if pose == "windup" else pose))
+    return hand_of(pose)
 
 
 def shade(color, amount=0.35):
@@ -1193,10 +1245,13 @@ class Game:
     def var(self, name, value=0):
         self.globals[name] = ("var_" + name.replace(" ", "_"), value)
 
-    def list(self, name):
+    def list(self, name, values=None):
         if not hasattr(self, "lists"):
             self.lists = {}
+            self.list_values = {}
         self.lists[name] = "list_" + name.replace(" ", "_")
+        if values is not None:
+            self.list_values[name] = values
 
     def msg(self, name):
         if name not in self.broadcasts:
@@ -1341,6 +1396,10 @@ class Target:
         elif op == "mathop":
             bid = self.blk("operator_mathop", fields={"OPERATOR": [e[1], None]})
             self.set_input(bid, "NUM", ("num", e[2]))
+        elif op == "of":
+            bid = self.blk("sensing_of", fields={"PROPERTY": [e[1], None]})
+            menu = self.blk("sensing_of_object_menu", fields={"OBJECT": [e[2], None]}, shadow=True)
+            self.set_input(bid, "OBJECT", [1, menu])
         elif op == "costume_name":
             bid = self.blk("looks_costumenumbername", fields={"NUMBER_NAME": ["name", None]})
         elif op == "item":
@@ -1585,7 +1644,8 @@ class Target:
             variables.update({vid: [name, value] for name, (vid, value) in self.game.globals.items()})
             return {
                 "isStage": True, "name": "Stage", "variables": variables,
-                "lists": {lid: [name, []] for name, lid in getattr(self.game, "lists", {}).items()},
+                "lists": {lid: [name, list(getattr(self.game, "list_values", {}).get(name, []))]
+                          for name, lid in getattr(self.game, "lists", {}).items()},
                 "broadcasts": {bid: name for name, bid in self.game.broadcasts.items()},
                 "blocks": self.blocks, "comments": self.comments, "currentCostume": 0,
                 "costumes": self.costumes, "sounds": self.sounds, "volume": 100, "layerOrder": 0,
@@ -2374,6 +2434,9 @@ def build():
 
     declare_brawl(game)
     game.list("M X")
+    for prefix in ("Hand", "EHand"):
+        for n in ("X", "Y", "Dir"):
+            game.list(f"{prefix} {n}")
     stage = Target(game, "Stage", is_stage=True)
     game.stage = stage
     for kind in ("Title", "Select", "Yard", "Woods", "Pass", "Factory", "Fortress", "Bamboo", "Dojo", "Volcano", "Castle", "Arcade", "Ending"):
@@ -3482,18 +3545,26 @@ def build():
         held.costume(w["key"], weapon_svg(w["key"]), 30, 66)
     HW = held
     HW.local("Swing Until", 0)
+    HW.local("C", 1)
+    HW.local("D", 0)
     HW.on_flag(
         HW.hide(),
         HW.forever([
             HW.if_(and_(eq(V("State"), "fight"), not_(eq(V("Weapon"), "none")), eq(V("Boomerang Out"), 0)), [
                 HW.wear(V("Weapon")),
-                HW.goto(add(V("Hero X"), mul(18, V("Facing"))), add(V("Hero Y"), 48)),
-                HW.if_(lt(TIMER, V("Swing Until")), [HW.point(add(90, mul(100, V("Facing"))))],
-                       [HW.point(add(90, mul(-25, V("Facing"))))]),
+                # the hand of whatever picture Hero shows right now (lists made by the build script)
+                HW.set("C", ("of", "costume #", "Hero")),
+                HW.goto(add(V("Hero X"), mul(mul(item("Hand X", V("C")), 0.75), V("Facing"))),
+                        add(V("Hero Y"), mul(item("Hand Y", V("C")), 0.75))),
+                HW.set("D", item("Hand Dir", V("C"))),
+                HW.if_(lt(TIMER, V("Swing Until")), [HW.change("D", 35)]),
+                # the weapon is drawn pointing up, so it lines up with the forearm at "forearm + 90"; mirror when facing left
+                HW.if_(eq(V("Facing"), 1), [HW.point(add(V("D"), 90))], [HW.point(sub(90, V("D")))]),
                 HW.show(), HW.front(),
             ], [HW.hide()]),
         ]),
-        note="Follows Hero's hand while a weapon is held.",
+        note="The weapon sits in Hero's front hand and lines up with the forearm, for every picture Hero can show "
+             "(Hand X, Hand Y and Hand Dir are worked out from the poses when the game is built).",
     )
     HW.on_msg("swing", HW.set("Swing Until", add(TIMER, 0.15)), HW.broadcast("swing sfx"))
     HW.on_msg("weapon break",
@@ -3953,6 +4024,8 @@ def build():
     )
 
     bw = game.sprite("Boss Weapon", size=80, rotation="all around")
+    bw.local("C", 1)
+    bw.local("D", 0)
     for kind in ("club", "mace", "hammer", "dark sword", "katana"):
         bw.costume(kind, boss_weapon_svg(kind), 30, 66)
     BW = bw
@@ -3963,10 +4036,12 @@ def build():
                         or_(eq(V("Fight On"), 1), gt(V("Enemy X"), -300))), [
                 BW.wear(V("Enemy Weapon")),
                 BW.size_to(mul(V("Enemy Size"), 0.8)),
-                BW.goto(add(V("Enemy X"), mul(mul(V("Enemy Facing"), 0.24), V("Enemy Size"))),
-                        add(GROUND, mul(V("Enemy Size"), 0.62))),
-                BW.if_(lt(TIMER, V("Enemy Swing Until")), [BW.point(add(90, mul(110, V("Enemy Facing"))))],
-                       [BW.point(add(90, mul(-20, V("Enemy Facing"))))]),
+                BW.set("C", ("of", "costume #", "Enemy")),
+                BW.goto(add(V("Enemy X"), mul(mul(item("EHand X", V("C")), div(V("Enemy Size"), 100)), V("Enemy Facing"))),
+                        add(("of", "y position", "Enemy"), mul(item("EHand Y", V("C")), div(V("Enemy Size"), 100)))),
+                BW.set("D", item("EHand Dir", V("C"))),
+                BW.if_(lt(TIMER, V("Enemy Swing Until")), [BW.change("D", 40)]),
+                BW.if_(eq(V("Enemy Facing"), 1), [BW.point(add(V("D"), 90))], [BW.point(sub(90, V("D")))]),
                 BW.show(),
             ], [BW.hide()]),
         ]),
@@ -4315,6 +4390,12 @@ def build():
                       note="Back to the title at any time.")
 
     game.brawl_slots = build_brawl(game, s, button, FIGHT_HIDE)
+    hands = [costume_hand(c["name"], "hero") for c in game.get("Hero").costumes]
+    ehands = [costume_hand(c["name"], "enemy") for c in game.get("Enemy").costumes]
+    for prefix, rows in (("Hand", hands), ("EHand", ehands)):
+        game.list(f"{prefix} X", [r[0] for r in rows])
+        game.list(f"{prefix} Y", [r[1] for r in rows])
+        game.list(f"{prefix} Dir", [r[2] for r in rows])
     return game
 
 
@@ -4470,6 +4551,8 @@ def listing(game):
             return f"(round {f('NUM')})"
         if op == "operator_mathop":
             return f"({b['fields']['OPERATOR'][0]} of {f('NUM')})"
+        if op == "sensing_of":
+            return f"([{b['fields']['PROPERTY'][0]}] of {f('OBJECT')})"
         if op == "looks_costumenumbername":
             return "(costume name)"
         if op == "operator_contains":
@@ -4480,7 +4563,8 @@ def listing(game):
             return f"(length of [{b['fields']['LIST'][0]}])"
         if op == "sensing_keypressed":
             return f"<key {f('KEY_OPTION')} pressed?>"
-        if op in ("looks_costume", "looks_backdrops", "sound_sounds_menu", "control_create_clone_of_menu", "sensing_keyoptions"):
+        if op in ("looks_costume", "looks_backdrops", "sound_sounds_menu", "control_create_clone_of_menu", "sensing_keyoptions",
+                  "sensing_of_object_menu"):
             return f"({list(b['fields'].values())[0][0]})"
         names = {"motion_xposition": "(x position)", "motion_yposition": "(y position)", "sensing_timer": "(timer)",
                  "sensing_mousedown": "<mouse down?>", "looks_size": "(size)"}
