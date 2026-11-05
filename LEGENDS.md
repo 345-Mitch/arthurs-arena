@@ -88,6 +88,10 @@ Tap **BRAWL**, pick your fighter, and fight three CPU fighters at once (ninjas c
   - **Candy Land:** green **bounce pads** throw you into the air
   - **Robot Factory:** **conveyor belts** carry you along
   - **Tower Steps:** ramps, steps and high towers
+  - **Jungle:** tree branches and a **vine swing** that sways from side to side. Watch out for falling **coconuts**!
+  - **Dino Valley:** ride on the back of an **armoured T-Rex** as it stomps back and forth under a volcano
+  - **Highway:** a bridge with ramps and a **flatbed truck** you can ride. **Trucks** speed along the road, so jump!
+  - **Fishing Pond:** two docks and a **raft** that floats between them. Fall in the water and you're out! **Fish** leap up out of the pond
 - **Damage %:** the number at the top shows each fighter's damage. The higher it is, the further they fly when hit.
 - **Lives:** the dots show lives (3 each). Get knocked off the screen and you lose one, then drop back in from the sky.
 - **Win:** be the last fighter standing. The match ends if you lose all three lives.
@@ -233,6 +237,9 @@ Every few seconds a glowing weapon falls from the sky. Walk over it to pick it u
 | Sword | +4 | Long | 10 swings | Hits from further away |
 | Hammer | +9 | A bit longer | 5 swings | Every hit shakes the ground |
 | Boomerang | hits for 7 | Across the arena | 6 throws | PUNCH throws it. It flies out, hits, and comes back to your hand |
+| Spear | +5 | The longest | 8 jabs | Hit enemies from far away before they can reach you |
+| Nunchucks | +2 | Short | 12 swings | Every punch hits **twice** |
+| Shield | +2 (shield bash) | Short | 6 | **Blocks**: you take only a third of the damage (**BLOCKED!**). Each block or bash wears it down |
 
 ## Easy remixes
 
@@ -254,7 +261,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v2.4` in the bottom corner of the title.
+- **Version line:** `v2.5` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).

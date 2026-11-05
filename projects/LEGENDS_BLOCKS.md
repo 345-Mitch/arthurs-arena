@@ -5,9 +5,9 @@ Made by `tools/build_legends_sb3.py` from the same blocks that are inside
 
 ## Stage
 
-Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Bamboo, Dojo, Volcano, Castle, Arcade, Ending, Paper, brawl sky, brawl ramps, brawl pagoda, brawl pirate, brawl castle, brawl space, brawl snow, brawl candy, brawl factory, brawl towers
-Sounds: hit, big hit, hurt, ki roar, ki flare, transform, scribble, page, jump, whirl, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, poof, shuriken, spike fall, win
-Sprite-only variables: New Level, Frames, Second, Waves, Near, I, K, Pick, Min X, Max X, Min Y, Max Y, Alive, Zoom To
+Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Bamboo, Dojo, Volcano, Castle, Arcade, Ending, Paper, brawl sky, brawl ramps, brawl pagoda, brawl pirate, brawl castle, brawl space, brawl snow, brawl candy, brawl factory, brawl towers, brawl jungle, brawl dino, brawl highway, brawl pond
+Sounds: honk, hit, big hit, hurt, ki roar, ki flare, transform, scribble, page, jump, whirl, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, poof, shuriken, spike fall, win
+Sprite-only variables: New Level, Frames, Second, Waves, Near, I, K, Pick, MI, Min X, Max X, Min Y, Max Y, Alive, Zoom To
 
 ```
 when green flag clicked
@@ -429,6 +429,16 @@ if <(Fight On) = [1]> then
     else
         if <<(Hero Safe) = [0]> and <(timer) > (Hero Safe Until)>> then
             set [Hero Safe Until] to ((timer) + [0.6])
+            if <<(Weapon) = [shield]> and <(Weapon Uses) > [0]>> then
+                set [Hurt Power] to (round ((Hurt Power) / [3]))
+                change [Weapon Uses] by [-1]
+                set [Pop Text] to [BLOCKED!]
+                broadcast [popup]
+                broadcast [swing sfx]
+                if <(Weapon Uses) < [1]> then
+                    broadcast [weapon break]
+                end
+            end
             change [Hero HP] by ([0] - (Hurt Power))
             set [Combo] to [0]
             if <(Super) < [100]> then
@@ -1037,6 +1047,34 @@ start sound (page)
 ```
 
 ```
+define (move platforms)   [run without screen refresh]
+set [K] to [0]
+repeat (length of [Mv Id])
+    change [K] by [1]
+    set [MI] to (item (K) of [Mv Id])
+    replace item (MI) of [Plat X1] with ((item (MI) of [Plat X1]) + (item (K) of [Mv V]))
+    replace item (MI) of [Plat X2] with ((item (MI) of [Plat X2]) + (item (K) of [Mv V]))
+    if <<(item (MI) of [Plat X1]) < (item (K) of [Mv Min])> or <(item (MI) of [Plat X1]) > (item (K) of [Mv Max])>> then
+        replace item (K) of [Mv V] with ([-1] * (item (K) of [Mv V]))
+    end
+    replace item (MI) of [Plat Push] with (item (K) of [Mv V])
+end
+```
+
+> Moving platforms (the T-Rex, the truck, the raft, the vine swing) drive back and forth.
+
+```
+when green flag clicked
+forever
+    if <<(Brawl Live) = [1]> and <(length of [Mv Id]) > [0]>> then
+        (move platforms)
+    end
+end
+```
+
+> Moves the moving platforms once a frame during a BRAWL.
+
+```
 when I receive [brawl start]
 set [State] to [brawl]
 set [Brawl On] to [0]
@@ -1044,7 +1082,7 @@ set [Brawl Live] to [0]
 set [Fight On] to [0]
 broadcast [brawl clear] and wait
 if <(Stage Pick) = [0]> then
-    set [Brawl Stage] to (pick random [1] to [10])
+    set [Brawl Stage] to (pick random [1] to [14])
 else
     set [Brawl Stage] to (Stage Pick)
 end
@@ -1054,6 +1092,11 @@ delete all of [Plat X2]
 delete all of [Plat Y2]
 delete all of [Plat Bounce]
 delete all of [Plat Push]
+delete all of [Plat Art]
+delete all of [Mv Id]
+delete all of [Mv Min]
+delete all of [Mv Max]
+delete all of [Mv V]
 delete all of [B X]
 delete all of [B Y]
 delete all of [B Dmg]
@@ -1072,24 +1115,28 @@ if <(Brawl Stage) = [1]> then
     add [-100] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-235] to [Plat X1]
     add [-10] to [Plat Y1]
     add [-105] to [Plat X2]
     add [-10] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [105] to [Plat X1]
     add [-10] to [Plat Y1]
     add [235] to [Plat X2]
     add [-10] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-65] to [Plat X1]
     add [78] to [Plat Y1]
     add [65] to [Plat X2]
     add [78] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     set [Plat Count] to [4]
     set [Solid Count] to [1]
     set [Stage Grav] to [1]
@@ -1106,36 +1153,42 @@ if <(Brawl Stage) = [2]> then
     add [-65] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-135] to [Plat X1]
     add [-65] to [Plat Y1]
     add [135] to [Plat X2]
     add [-65] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [135] to [Plat X1]
     add [-65] to [Plat Y1]
     add [340] to [Plat X2]
     add [-150] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-215] to [Plat X1]
     add [35] to [Plat Y1]
     add [-95] to [Plat X2]
     add [35] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [95] to [Plat X1]
     add [35] to [Plat Y1]
     add [215] to [Plat X2]
     add [35] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-45] to [Plat X1]
     add [115] to [Plat Y1]
     add [45] to [Plat X2]
     add [115] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     set [Plat Count] to [6]
     set [Solid Count] to [3]
     set [Stage Grav] to [1]
@@ -1152,36 +1205,42 @@ if <(Brawl Stage) = [3]> then
     add [-130] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-265] to [Plat X1]
     add [-40] to [Plat Y1]
     add [-175] to [Plat X2]
     add [5] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-175] to [Plat X1]
     add [5] to [Plat Y1]
     add [-85] to [Plat X2]
     add [-40] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [85] to [Plat X1]
     add [-40] to [Plat Y1]
     add [175] to [Plat X2]
     add [5] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [175] to [Plat X1]
     add [5] to [Plat Y1]
     add [265] to [Plat X2]
     add [-40] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-45] to [Plat X1]
     add [85] to [Plat Y1]
     add [45] to [Plat X2]
     add [85] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     set [Plat Count] to [6]
     set [Solid Count] to [1]
     set [Stage Grav] to [1]
@@ -1198,30 +1257,35 @@ if <(Brawl Stage) = [4]> then
     add [-110] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-205] to [Plat X1]
     add [15] to [Plat Y1]
     add [-125] to [Plat X2]
     add [15] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [125] to [Plat X1]
     add [15] to [Plat Y1]
     add [205] to [Plat X2]
     add [15] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-50] to [Plat X1]
     add [105] to [Plat Y1]
     add [50] to [Plat X2]
     add [105] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [190] to [Plat X1]
     add [-55] to [Plat Y1]
     add [300] to [Plat X2]
     add [-55] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     set [Plat Count] to [5]
     set [Solid Count] to [1]
     set [Stage Grav] to [1]
@@ -1238,36 +1302,42 @@ if <(Brawl Stage) = [5]> then
     add [-130] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-290] to [Plat X1]
     add [-25] to [Plat Y1]
     add [-180] to [Plat X2]
     add [-25] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [180] to [Plat X1]
     add [-25] to [Plat Y1]
     add [290] to [Plat X2]
     add [-25] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-180] to [Plat X1]
     add [-130] to [Plat Y1]
     add [-110] to [Plat X2]
     add [-70] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-110] to [Plat X1]
     add [45] to [Plat Y1]
     add [110] to [Plat X2]
     add [45] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [110] to [Plat X1]
     add [-70] to [Plat Y1]
     add [180] to [Plat X2]
     add [-130] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     set [Plat Count] to [6]
     set [Solid Count] to [1]
     set [Stage Grav] to [1]
@@ -1284,36 +1354,42 @@ if <(Brawl Stage) = [6]> then
     add [-110] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [30] to [Plat X1]
     add [-110] to [Plat Y1]
     add [280] to [Plat X2]
     add [-110] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-25] to [Plat X1]
     add [-30] to [Plat Y1]
     add [25] to [Plat X2]
     add [-30] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-200] to [Plat X1]
     add [40] to [Plat Y1]
     add [-110] to [Plat X2]
     add [40] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [110] to [Plat X1]
     add [40] to [Plat Y1]
     add [200] to [Plat X2]
     add [40] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-40] to [Plat X1]
     add [130] to [Plat Y1]
     add [40] to [Plat X2]
     add [130] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     set [Plat Count] to [6]
     set [Solid Count] to [2]
     set [Stage Grav] to [0.55]
@@ -1330,30 +1406,35 @@ if <(Brawl Stage) = [7]> then
     add [-60] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-60] to [Plat X1]
     add [-60] to [Plat Y1]
     add [60] to [Plat X2]
     add [-60] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [60] to [Plat X1]
     add [-60] to [Plat Y1]
     add [320] to [Plat X2]
     add [-140] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-230] to [Plat X1]
     add [30] to [Plat Y1]
     add [-120] to [Plat X2]
     add [30] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [120] to [Plat X1]
     add [30] to [Plat Y1]
     add [230] to [Plat X2]
     add [30] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     set [Plat Count] to [5]
     set [Solid Count] to [3]
     set [Stage Grav] to [1]
@@ -1370,36 +1451,42 @@ if <(Brawl Stage) = [8]> then
     add [-110] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-255] to [Plat X1]
     add [-45] to [Plat Y1]
     add [-195] to [Plat X2]
     add [-45] to [Plat Y2]
     add [1] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [195] to [Plat X1]
     add [-45] to [Plat Y1]
     add [255] to [Plat X2]
     add [-45] to [Plat Y2]
     add [1] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-120] to [Plat X1]
     add [40] to [Plat Y1]
     add [-40] to [Plat X2]
     add [40] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [40] to [Plat X1]
     add [40] to [Plat Y1]
     add [120] to [Plat X2]
     add [40] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-30] to [Plat X1]
     add [140] to [Plat Y1]
     add [30] to [Plat X2]
     add [140] to [Plat Y2]
     add [1] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     set [Plat Count] to [6]
     set [Solid Count] to [1]
     set [Stage Grav] to [1]
@@ -1416,36 +1503,42 @@ if <(Brawl Stage) = [9]> then
     add [-110] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-320] to [Plat X1]
     add [-110] to [Plat Y1]
     add [-120] to [Plat X2]
     add [-110] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [1.8] to [Plat Push]
+    add [0] to [Plat Art]
     add [120] to [Plat X1]
     add [-110] to [Plat Y1]
     add [320] to [Plat X2]
     add [-110] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [-1.8] to [Plat Push]
+    add [0] to [Plat Art]
     add [-220] to [Plat X1]
     add [10] to [Plat Y1]
     add [-80] to [Plat X2]
     add [10] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [1.5] to [Plat Push]
+    add [0] to [Plat Art]
     add [80] to [Plat X1]
     add [10] to [Plat Y1]
     add [220] to [Plat X2]
     add [10] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [-1.5] to [Plat Push]
+    add [0] to [Plat Art]
     add [-40] to [Plat X1]
     add [100] to [Plat Y1]
     add [40] to [Plat X2]
     add [100] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     set [Plat Count] to [6]
     set [Solid Count] to [3]
     set [Stage Grav] to [1]
@@ -1462,54 +1555,293 @@ if <(Brawl Stage) = [10]> then
     add [-130] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-185] to [Plat X1]
     add [-130] to [Plat Y1]
     add [-95] to [Plat X2]
     add [-60] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-95] to [Plat X1]
     add [-60] to [Plat Y1]
     add [95] to [Plat X2]
     add [-60] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [95] to [Plat X1]
     add [-60] to [Plat Y1]
     add [185] to [Plat X2]
     add [-130] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [185] to [Plat X1]
     add [-130] to [Plat Y1]
     add [330] to [Plat X2]
     add [-130] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-300] to [Plat X1]
     add [5] to [Plat Y1]
     add [-200] to [Plat X2]
     add [5] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [200] to [Plat X1]
     add [5] to [Plat Y1]
     add [300] to [Plat X2]
     add [5] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     add [-60] to [Plat X1]
     add [60] to [Plat Y1]
     add [60] to [Plat X2]
     add [60] to [Plat Y2]
     add [0] to [Plat Bounce]
     add [0] to [Plat Push]
+    add [0] to [Plat Art]
     set [Plat Count] to [8]
     set [Solid Count] to [5]
     set [Stage Grav] to [1]
     set [Stage Grip] to [0.45]
     set [Stage Key] to [towers]
     set [Pop Text] to [TOWER STEPS]
+    broadcast [popup]
+end
+if <(Brawl Stage) = [11]> then
+    switch backdrop to (brawl jungle)
+    add [-300] to [Plat X1]
+    add [-110] to [Plat Y1]
+    add [300] to [Plat X2]
+    add [-110] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [-260] to [Plat X1]
+    add [-15] to [Plat Y1]
+    add [-150] to [Plat X2]
+    add [-15] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [150] to [Plat X1]
+    add [-15] to [Plat Y1]
+    add [260] to [Plat X2]
+    add [-15] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [-55] to [Plat X1]
+    add [75] to [Plat Y1]
+    add [55] to [Plat X2]
+    add [75] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [-40] to [Plat X1]
+    add [-55] to [Plat Y1]
+    add [40] to [Plat X2]
+    add [-55] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [1] to [Plat Art]
+    add [270] to [Plat X1]
+    add [-70] to [Plat Y1]
+    add [320] to [Plat X2]
+    add [-70] to [Plat Y2]
+    add [1] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [5] to [Mv Id]
+    add [-230] to [Mv Min]
+    add [150] to [Mv Max]
+    add [1.6] to [Mv V]
+    set [Plat Count] to [6]
+    set [Solid Count] to [1]
+    set [Stage Grav] to [1]
+    set [Stage Grip] to [0.45]
+    set [Stage Key] to [jungle]
+    set [Pop Text] to [JUNGLE]
+    broadcast [popup]
+end
+if <(Brawl Stage) = [12]> then
+    switch backdrop to (brawl dino)
+    add [-320] to [Plat X1]
+    add [-120] to [Plat Y1]
+    add [320] to [Plat X2]
+    add [-120] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [-80] to [Plat X1]
+    add [-40] to [Plat Y1]
+    add [70] to [Plat X2]
+    add [-40] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [1] to [Plat Art]
+    add [-290] to [Plat X1]
+    add [45] to [Plat Y1]
+    add [-185] to [Plat X2]
+    add [45] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [185] to [Plat X1]
+    add [45] to [Plat Y1]
+    add [290] to [Plat X2]
+    add [45] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [-45] to [Plat X1]
+    add [120] to [Plat Y1]
+    add [45] to [Plat X2]
+    add [120] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [2] to [Mv Id]
+    add [-250] to [Mv Min]
+    add [100] to [Mv Max]
+    add [1.3] to [Mv V]
+    set [Plat Count] to [5]
+    set [Solid Count] to [1]
+    set [Stage Grav] to [1]
+    set [Stage Grip] to [0.45]
+    set [Stage Key] to [dino]
+    set [Pop Text] to [DINO VALLEY]
+    broadcast [popup]
+end
+if <(Brawl Stage) = [13]> then
+    switch backdrop to (brawl highway)
+    add [-330] to [Plat X1]
+    add [-110] to [Plat Y1]
+    add [330] to [Plat X2]
+    add [-110] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [-290] to [Plat X1]
+    add [-35] to [Plat Y1]
+    add [-130] to [Plat X2]
+    add [40] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [-130] to [Plat X1]
+    add [40] to [Plat Y1]
+    add [130] to [Plat X2]
+    add [40] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [130] to [Plat X1]
+    add [40] to [Plat Y1]
+    add [290] to [Plat X2]
+    add [-35] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [-60] to [Plat X1]
+    add [72] to [Plat Y1]
+    add [50] to [Plat X2]
+    add [72] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [1] to [Plat Art]
+    add [-300] to [Plat X1]
+    add [125] to [Plat Y1]
+    add [-210] to [Plat X2]
+    add [125] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [210] to [Plat X1]
+    add [125] to [Plat Y1]
+    add [300] to [Plat X2]
+    add [125] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [5] to [Mv Id]
+    add [-125] to [Mv Min]
+    add [15] to [Mv Max]
+    add [1.2] to [Mv V]
+    set [Plat Count] to [7]
+    set [Solid Count] to [1]
+    set [Stage Grav] to [1]
+    set [Stage Grip] to [0.45]
+    set [Stage Key] to [highway]
+    set [Pop Text] to [HIGHWAY]
+    broadcast [popup]
+end
+if <(Brawl Stage) = [14]> then
+    switch backdrop to (brawl pond)
+    add [-330] to [Plat X1]
+    add [-100] to [Plat Y1]
+    add [-120] to [Plat X2]
+    add [-100] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [120] to [Plat X1]
+    add [-100] to [Plat Y1]
+    add [330] to [Plat X2]
+    add [-100] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [-50] to [Plat X1]
+    add [-118] to [Plat Y1]
+    add [50] to [Plat X2]
+    add [-118] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [1] to [Plat Art]
+    add [-245] to [Plat X1]
+    add [5] to [Plat Y1]
+    add [-150] to [Plat X2]
+    add [5] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [150] to [Plat X1]
+    add [5] to [Plat Y1]
+    add [245] to [Plat X2]
+    add [5] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [-75] to [Plat X1]
+    add [85] to [Plat Y1]
+    add [75] to [Plat X2]
+    add [85] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [-15] to [Plat X1]
+    add [-150] to [Plat Y1]
+    add [15] to [Plat X2]
+    add [-150] to [Plat Y2]
+    add [1] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [0] to [Plat Art]
+    add [3] to [Mv Id]
+    add [-118] to [Mv Min]
+    add [18] to [Mv Max]
+    add [1.3] to [Mv V]
+    set [Plat Count] to [7]
+    set [Solid Count] to [2]
+    set [Stage Grav] to [1]
+    set [Stage Grip] to [0.45]
+    set [Stage Key] to [pond]
+    set [Pop Text] to [FISHING POND]
     broadcast [popup]
 end
 add [rival] to [B Pool]
@@ -1704,6 +2036,11 @@ start sound (jump)
 ```
 when I receive [cannon fire]
 start sound (big hit)
+```
+
+```
+when I receive [honk]
+start sound (honk)
 ```
 
 ```
@@ -2745,6 +3082,30 @@ forever
                         set [Area Power] to (Hit Power)
                         set [Area Kind] to [hit]
                         broadcast [area hit]
+                    end
+                    if <(Weapon) = [nunchucks]> then
+                        wait [0.17] seconds
+                        switch costume to (join (Hero Look) [ punch 1])
+                        wait [0.04] seconds
+                        switch costume to (join (Hero Look) [ punch])
+                        broadcast [swing]
+                        if <(abs of ((Enemy X) - (Hero X))) < (([70] + (Weapon Reach)) + (Enemy Body))> then
+                            if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
+                                broadcast [spike ouch]
+                            else
+                                broadcast [hero hits]
+                                if <(Weapon) = [hammer]> then
+                                    broadcast [shake]
+                                end
+                            end
+                        end
+                        if <(Minions) > [0]> then
+                            set [Area X] to ((Hero X) + ((Facing) * [38.5]))
+                            set [Area R] to [38.5]
+                            set [Area Power] to (Hit Power)
+                            set [Area Kind] to [hit]
+                            broadcast [area hit]
+                        end
                     end
                 end
                 wait [0.16] seconds
@@ -4522,7 +4883,7 @@ hide
 
 ## Held Weapon
 
-Costumes: sword, hammer, boomerang
+Costumes: sword, hammer, boomerang, spear, nunchucks, shield
 Sprite-only variables: Swing Until, C, D
 
 ```
@@ -4570,7 +4931,7 @@ set [Weapon Uses] to [0]
 
 ## Weapon Drop
 
-Costumes: sword, hammer, boomerang
+Costumes: sword, hammer, boomerang, spear, nunchucks, shield
 Sprite-only variables: Kind, Life, Got
 
 ```
@@ -4580,7 +4941,7 @@ forever
     if <<(Fight On) = [1]> and <(Weapon) = [none]>> then
         wait (pick random [3] to [7]) seconds
         if <<(Fight On) = [1]> and <(Weapon) = [none]>> then
-            set [Kind] to (pick random [1] to [3])
+            set [Kind] to (pick random [1] to [6])
             if <(Kind) = [1]> then
                 set [Kind] to [sword]
             end
@@ -4589,6 +4950,15 @@ forever
             end
             if <(Kind) = [3]> then
                 set [Kind] to [boomerang]
+            end
+            if <(Kind) = [4]> then
+                set [Kind] to [spear]
+            end
+            if <(Kind) = [5]> then
+                set [Kind] to [nunchucks]
+            end
+            if <(Kind) = [6]> then
+                set [Kind] to [shield]
             end
             switch costume to (Kind)
             go to x: (pick random [-170] to [60]) y: [170]
@@ -4630,6 +5000,24 @@ forever
                     set [Weapon Uses] to [6]
                     set [Pop Text] to [BOOMERANG!]
                 end
+                if <(Kind) = [spear]> then
+                    set [Weapon Bonus] to [5]
+                    set [Weapon Reach] to [48]
+                    set [Weapon Uses] to [8]
+                    set [Pop Text] to [SPEAR!]
+                end
+                if <(Kind) = [nunchucks]> then
+                    set [Weapon Bonus] to [2]
+                    set [Weapon Reach] to [6]
+                    set [Weapon Uses] to [12]
+                    set [Pop Text] to [NUNCHUCKS!]
+                end
+                if <(Kind) = [shield]> then
+                    set [Weapon Bonus] to [2]
+                    set [Weapon Reach] to [0]
+                    set [Weapon Uses] to [6]
+                    set [Pop Text] to [SHIELD!]
+                end
                 set [Weapon] to (Kind)
                 broadcast [popup]
                 broadcast [weapon get]
@@ -4641,7 +5029,7 @@ forever
 end
 ```
 
-> Every 3 to 7 seconds a weapon falls from the sky. Walk over it to pick it up. Sword: +4 power, longer reach, 10 swings. Hammer: +9 power and a shake, 5 swings. Boomerang: PUNCH throws it, 6 throws.
+> Every 3 to 7 seconds a weapon falls from the sky. Walk over it to pick it up. Sword: +4 power, longer reach, 10 swings. Hammer: +9 power and a shake, 5 swings. Boomerang: PUNCH throws it, 6 throws. Spear: +5 power and the longest reach, 8 jabs. Nunchucks: every punch hits twice, 12 swings. Shield: blocks most of the damage you take (each block uses it up a bit) and you can bash with it.
 
 ```
 when I receive [show title]
@@ -8305,7 +8693,7 @@ set [BF Power] to [0]
 
 ## Brawl Platform
 
-Costumes: sky 1, sky 2, sky 3, sky 4, ramps 1, ramps 2, ramps 3, ramps 4, ramps 5, ramps 6, pagoda 1, pagoda 2, pagoda 3, pagoda 4, pagoda 5, pagoda 6, pirate 1, pirate 2, pirate 3, pirate 4, pirate 5, castle 1, castle 2, castle 3, castle 4, castle 5, castle 6, space 1, space 2, space 3, space 4, space 5, space 6, snow 1, snow 2, snow 3, snow 4, snow 5, candy 1, candy 2, candy 3, candy 4, candy 5, candy 6, factory 1, factory 2, factory 3, factory 4, factory 5, factory 6, towers 1, towers 2, towers 3, towers 4, towers 5, towers 6, towers 7, towers 8
+Costumes: sky 1, sky 2, sky 3, sky 4, ramps 1, ramps 2, ramps 3, ramps 4, ramps 5, ramps 6, pagoda 1, pagoda 2, pagoda 3, pagoda 4, pagoda 5, pagoda 6, pirate 1, pirate 2, pirate 3, pirate 4, pirate 5, castle 1, castle 2, castle 3, castle 4, castle 5, castle 6, space 1, space 2, space 3, space 4, space 5, space 6, snow 1, snow 2, snow 3, snow 4, snow 5, candy 1, candy 2, candy 3, candy 4, candy 5, candy 6, factory 1, factory 2, factory 3, factory 4, factory 5, factory 6, towers 1, towers 2, towers 3, towers 4, towers 5, towers 6, towers 7, towers 8, jungle 1, jungle 2, jungle 3, jungle 4, jungle 5, jungle 5 l, jungle 6, dino 1, dino 2, dino 2 l, dino 3, dino 4, dino 5, highway 1, highway 2, highway 3, highway 4, highway 5, highway 5 l, highway 6, highway 7, pond 1, pond 2, pond 3, pond 3 l, pond 4, pond 5, pond 6, pond 7
 Sprite-only variables: Is Clone, My Id, Stage Key
 
 ```
@@ -8347,6 +8735,18 @@ if <(Is Clone) = [0]> then
     if <(Brawl Stage) = [10]> then
         set [Stage Key] to [towers]
     end
+    if <(Brawl Stage) = [11]> then
+        set [Stage Key] to [jungle]
+    end
+    if <(Brawl Stage) = [12]> then
+        set [Stage Key] to [dino]
+    end
+    if <(Brawl Stage) = [13]> then
+        set [Stage Key] to [highway]
+    end
+    if <(Brawl Stage) = [14]> then
+        set [Stage Key] to [pond]
+    end
     set [My Id] to [0]
     repeat (Plat Count)
         change [My Id] by [1]
@@ -8362,6 +8762,13 @@ switch costume to (join (Stage Key) (join [ ] (My Id)))
 show
 repeat until <(Brawl Live) = [0]>
     set size to ([100] * (Zoom)) %
+    if <(item (My Id) of [Plat Art]) = [1]> then
+        if <(item (My Id) of [Plat Push]) < [0]> then
+            switch costume to (join (Stage Key) (join [ ] (join (My Id) [ l])))
+        else
+            switch costume to (join (Stage Key) (join [ ] (My Id)))
+        end
+    end
     go to x: (((item (My Id) of [Plat X1]) - (Cam X)) * (Zoom)) y: (((item (My Id) of [Plat Y1]) - (Cam Y)) * (Zoom))
 end
 delete this clone
@@ -8522,21 +8929,36 @@ end
 
 ## Cannonball
 
-Costumes: ball
-Sprite-only variables: Done, J
+Costumes: ball, truck, truck l, coconut, fish
+Sprite-only variables: Done, J, KD
 
 ```
 define (cannon frame)   [run without screen refresh]
-change [CB X] by ([10] * (CB Dir))
-set size to ([60] * (Zoom)) %
+change [CB X] by (CB VX)
+change [CB Y] by (CB VY)
+change [CB VY] by ([-1] * (CB G))
+set size to ((CB Size) * (Zoom)) %
 go to x: (((CB X) - (Cam X)) * (Zoom)) y: (((CB Y) - (Cam Y)) * (Zoom))
 set [J] to [0]
 repeat [4]
     change [J] by [1]
-    if <<<<(Done) = [0]> and <(item (J) of [B Alive]) = [1]>> and <(abs of ((item (J) of [B X]) - (CB X))) < [24]>> and <(abs of (((item (J) of [B Y]) + [35]) - (CB Y))) < [40]>> then
+    if <<<<(Done) = [0]> and <(item (J) of [B Alive]) = [1]>> and <(abs of ((item (J) of [B X]) - (CB X))) < (CB W)>> and <(abs of (((item (J) of [B Y]) + [35]) - (CB Y))) < [40]>> then
         set [Done] to [1]
+        if <(CB VX) = [0]> then
+            if <(item (J) of [B X]) > (CB X)> then
+                set [KD] to [1]
+            else
+                set [KD] to [-1]
+            end
+        else
+            if <(CB VX) > [0]> then
+                set [KD] to [1]
+            else
+                set [KD] to [-1]
+            end
+        end
         replace item (J) of [B Hit] with ((item (J) of [B Hit]) + [12])
-        replace item (J) of [B KX] with ((CB Dir) * ([7] + ((item (J) of [B Dmg]) / [9])))
+        replace item (J) of [B KX] with ((KD) * ([7] + ((item (J) of [B Dmg]) / [9])))
         replace item (J) of [B KY] with ([7] + ((item (J) of [B Dmg]) / [11]))
         broadcast [brawl ko]
     end
@@ -8547,23 +8969,80 @@ end
 when green flag clicked
 hide
 forever
-    if <<(Brawl On) = [1]> and <(Stage Key) = [pirate]>> then
-        wait (pick random [6] to [10]) seconds
-        if <<(Brawl On) = [1]> and <(Stage Key) = [pirate]>> then
+    if <<(Brawl On) = [1]> and <<<<(Stage Key) = [pirate]> or <(Stage Key) = [jungle]>> or <(Stage Key) = [highway]>> or <(Stage Key) = [pond]>>> then
+        if <(Stage Key) = [pirate]> then
+            wait (pick random [6] to [10]) seconds
             if <(pick random [1] to [2]) = [1]> then
                 set [CB Dir] to [1]
             else
                 set [CB Dir] to [-1]
             end
+            set [CB Kind] to [ball]
+            set [CB Size] to [60]
+            set [CB W] to [24]
             set [CB X] to ((CB Dir) * [-520])
             set [CB Y] to (pick random [-85] to [40])
-            set [Done] to [0]
+            set [CB VX] to ([10] * (CB Dir))
+            set [CB VY] to [0]
+            set [CB G] to [0]
             set [Pop Text] to [CANNON!]
-            broadcast [popup]
             broadcast [cannon fire]
+        end
+        if <(Stage Key) = [jungle]> then
+            wait (pick random [3] to [6]) seconds
+            set [CB Kind] to [coconut]
+            set [CB Size] to [70]
+            set [CB W] to [22]
+            set [CB X] to (pick random [-270] to [270])
+            set [CB Y] to [280]
+            set [CB VX] to [0]
+            set [CB VY] to [-2]
+            set [CB G] to [0.6]
+            set [Pop Text] to [COCONUT!]
+            broadcast [whirl sfx]
+        end
+        if <(Stage Key) = [highway]> then
+            wait (pick random [5] to [9]) seconds
+            if <(pick random [1] to [2]) = [1]> then
+                set [CB Dir] to [1]
+            else
+                set [CB Dir] to [-1]
+            end
+            set [CB Size] to [100]
+            set [CB W] to [62]
+            if <(CB Dir) = [1]> then
+                set [CB Kind] to [truck]
+            else
+                set [CB Kind] to [truck l]
+            end
+            set [CB X] to ((CB Dir) * [-540])
+            set [CB Y] to [-78]
+            set [CB VX] to ([9] * (CB Dir))
+            set [CB VY] to [0]
+            set [CB G] to [0]
+            set [Pop Text] to [TRUCK! JUMP!]
+            broadcast [honk]
+        end
+        if <(Stage Key) = [pond]> then
+            wait (pick random [4] to [7]) seconds
+            set [CB Kind] to [fish]
+            set [CB Size] to [80]
+            set [CB W] to [24]
+            set [CB X] to (pick random [-100] to [100])
+            set [CB Y] to [-210]
+            set [CB VX] to [0]
+            set [CB VY] to [16]
+            set [CB G] to [0.55]
+            set [Pop Text] to [SPLASH!]
+            broadcast [boing]
+        end
+        if <<(Brawl On) = [1]> and <<<<(Stage Key) = [pirate]> or <(Stage Key) = [jungle]>> or <(Stage Key) = [highway]>> or <(Stage Key) = [pond]>>> then
+            set [Done] to [0]
+            switch costume to (CB Kind)
+            broadcast [popup]
             show
             go to [front] layer
-            repeat until <<<(Done) = [1]> or <(abs of (CB X)) > [560]>> or <(Brawl Live) = [0]>>
+            repeat until <<<<(Done) = [1]> or <(abs of (CB X)) > [560]>> or <(CB Y) < [-320]>> or <(Brawl Live) = [0]>>
                 (cannon frame)
             end
             hide
@@ -8574,7 +9053,7 @@ forever
 end
 ```
 
-> PIRATE SHIP: every few seconds a cannonball flies across the deck. Jump over it!
+> Stage hazards: cannonballs on the PIRATE SHIP, trucks on the HIGHWAY, coconuts in the JUNGLE and jumping fish at the FISHING POND. Jump out of the way!
 
 ```
 when I receive [brawl clear]
@@ -8588,7 +9067,7 @@ hide
 
 ## Stage Button
 
-Costumes: stage 0, stage 1, stage 2, stage 3, stage 4, stage 5, stage 6, stage 7, stage 8, stage 9, stage 10
+Costumes: stage 0, stage 1, stage 2, stage 3, stage 4, stage 5, stage 6, stage 7, stage 8, stage 9, stage 10, stage 11, stage 12, stage 13, stage 14
 
 ```
 when green flag clicked
@@ -8620,7 +9099,7 @@ hide
 ```
 when this sprite clicked
 change [Stage Pick] by [1]
-if <(Stage Pick) > [10]> then
+if <(Stage Pick) > [14]> then
     set [Stage Pick] to [0]
 end
 switch costume to (join [stage ] (Stage Pick))

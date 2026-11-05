@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "2.4"
+VERSION = "2.5"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -104,7 +104,12 @@ WEAPONS = [
     dict(n=1, key="sword", bonus=4, reach=28, uses=10, shout="SWORD!"),
     dict(n=2, key="hammer", bonus=9, reach=12, uses=5, shout="HAMMER!"),
     dict(n=3, key="boomerang", bonus=0, reach=0, uses=6, shout="BOOMERANG!"),
+    dict(n=4, key="spear", bonus=5, reach=48, uses=8, shout="SPEAR!"),
+    dict(n=5, key="nunchucks", bonus=2, reach=6, uses=12, shout="NUNCHUCKS!"),
+    dict(n=6, key="shield", bonus=2, reach=0, uses=6, shout="SHIELD!"),
 ]
+WEAPON_GRIP = {"spear": (30, 100)}   # hand position in the picture (others: 30, 66)
+SHIELD_BLOCK = 3                      # a shield divides the damage you take by this
 BOOMERANG_HIT = 7
 
 PUNCH_REACH = 70
@@ -657,6 +662,27 @@ def weapon_svg(kind, sparkle=False):
             '<rect x="27" y="22" width="6" height="50" rx="2" fill="#92400e" stroke="#451a03" stroke-width="1.5"/>'
             '<rect x="10" y="6" width="40" height="22" rx="4" fill="#94a3b8" stroke="#334155" stroke-width="2"/>'
         )
+    elif kind == "spear":
+        # a long spear, held near the bottom (110 tall)
+        glow = '<ellipse cx="30" cy="55" rx="28" ry="52" fill="#fde68a" opacity="0.7"/>' if sparkle else ""
+        art = (
+            '<rect x="27" y="22" width="6" height="86" rx="2" fill="#a16207" stroke="#713f12" stroke-width="1.5"/>'
+            '<path d="M30 2 L38 24 L30 30 L22 24 Z" fill="#cbd5e1" stroke="#334155" stroke-width="2"/>'
+            '<path d="M24 30 L36 30 L33 36 L27 36 Z" fill="#dc2626"/>'
+        )
+        return svg_doc(60, 110, glow + art)
+    elif kind == "nunchucks":
+        art = (
+            '<rect x="25" y="40" width="9" height="32" rx="4" fill="#1f2937" stroke="#facc15" stroke-width="1.5"/>'
+            '<path d="M30 40 Q36 34 30 28" stroke="#94a3b8" stroke-width="2.5" fill="none" stroke-dasharray="3 2"/>'
+            '<rect x="22" y="2" width="9" height="30" rx="4" fill="#1f2937" stroke="#facc15" stroke-width="1.5" transform="rotate(-20 26 28)"/>'
+        )
+    elif kind == "shield":
+        art = (
+            '<path d="M8 12 Q30 2 52 12 L50 40 Q46 62 30 72 Q14 62 10 40 Z" fill="#1d4ed8" stroke="#1e3a8a" stroke-width="3"/>'
+            '<path d="M14 16 Q30 8 46 16 L44 40 Q40 56 30 64 Q20 56 16 40 Z" fill="#3b82f6"/>'
+            '<path d="M30 18 L34 32 L48 32 L37 40 L41 54 L30 46 L19 54 L23 40 L12 32 L26 32 Z" fill="#facc15"/>'
+        )
     else:
         art = (
             '<path d="M12 64 Q14 24 46 10 Q40 20 24 40 Q18 52 22 66 Z" fill="#f97316" stroke="#7c2d12" stroke-width="2"/>'
@@ -1180,6 +1206,7 @@ def tone_wav(parts, rate=22050):
 
 
 SOUNDS = {
+    "honk": [(0.18, 330, 330, "square", 0.3), (0.05, 1, 1, "sine", 0.0), (0.22, 262, 262, "square", 0.3)],
     "hit": [(0.09, 300, 80, "noise", 0.7)],
     "big hit": [(0.05, 500, 200, "noise", 0.9), (0.2, 120, 40, "sine", 0.9)],
     "hurt": [(0.16, 300, 120, "square", 0.35)],
@@ -1819,8 +1846,83 @@ BRAWL_STAGES = [
     dict(key="towers", name="TOWER STEPS", sky=("#312e81", "#a5b4fc"), solid=5,
          plats=[(-330, -130, -185, -130), (-185, -130, -95, -60), (-95, -60, 95, -60), (95, -60, 185, -130),
                 (185, -130, 330, -130), (-300, 5, -200, 5), (200, 5, 300, 5), (-60, 60, 60, 60)]),
+    # from Hermes's themed worlds. A 7th platform value is a picture ("trex", "truck", "raft", "vine");
+    # "movers" are platforms that drive back and forth: (platform number, leftmost x1, rightmost x1, speed)
+    dict(key="jungle", name="JUNGLE", sky=("#14532d", "#bbf7d0"), solid=1, hazard="coconut",
+         plats=[(-300, -110, 300, -110), (-260, -15, -150, -15), (150, -15, 260, -15), (-55, 75, 55, 75),
+                (-40, -55, 40, -55, 0, 0, "vine"), (270, -70, 320, -70, 1)],
+         movers=[(5, -230, 150, 1.6)]),
+    dict(key="dino", name="DINO VALLEY", sky=("#ea580c", "#fde68a"), solid=1,
+         plats=[(-320, -120, 320, -120), (-80, -40, 70, -40, 0, 0, "trex"), (-290, 45, -185, 45), (185, 45, 290, 45),
+                (-45, 120, 45, 120)],
+         movers=[(2, -250, 100, 1.3)]),
+    dict(key="highway", name="HIGHWAY", sky=("#0284c7", "#e0f2fe"), solid=1, hazard="truck",
+         plats=[(-330, -110, 330, -110), (-290, -35, -130, 40), (-130, 40, 130, 40), (130, 40, 290, -35),
+                (-60, 72, 50, 72, 0, 0, "truck"), (-300, 125, -210, 125), (210, 125, 300, 125)],
+         movers=[(5, -125, 15, 1.2)]),
+    dict(key="pond", name="FISHING POND", sky=("#4ade80", "#ecfccb"), solid=2, hazard="fish",
+         plats=[(-330, -100, -120, -100), (120, -100, 330, -100), (-50, -118, 50, -118, 0, 0, "raft"),
+                (-245, 5, -150, 5), (150, 5, 245, 5), (-75, 85, 75, 85), (-15, -150, 15, -150, 1)],
+         movers=[(3, -118, 18, 1.3)]),
 ]
+ART_MARGIN = 60   # room either side of a picture platform for a head, a tail or a cab
 THICK = 18
+
+
+def art_platform_svg(art, w, left=False):
+    """A platform that is a picture: its flat top is where fighters stand. Returns svg, centre x, centre y."""
+    m = ART_MARGIN
+    if art == "trex":
+        top = 14
+        body = (
+            # tail, body, armoured back, legs, head (the T-Rex faces right)
+            f'<path d="M{m + 10} {top + 10} Q{m - 40} {top + 10} {m - 58} {top + 40} Q{m - 20} {top + 34} {m + 10} {top + 44} Z" fill="#15803d" stroke="#14532d" stroke-width="3"/>'
+            f'<rect x="{m}" y="{top}" width="{w}" height="48" rx="22" fill="#16a34a" stroke="#14532d" stroke-width="3"/>'
+            + "".join(f'<path d="M{m + x} {top + 2} l9 -10 l9 10 Z" fill="#94a3b8" stroke="#334155" stroke-width="2"/>'
+                      for x in range(14, w - 14, 30))
+            + f'<rect x="{m + 8}" y="{top}" width="{w - 16}" height="9" rx="4" fill="#64748b" stroke="#334155" stroke-width="2"/>'
+            f'<rect x="{m + w * 0.38:.0f}" y="{top + 4}" width="30" height="16" rx="5" fill="#b45309" stroke="#78350f" stroke-width="2"/>'
+            f'<path d="M{m + 28} {top + 40} L{m + 22} {top + 82} L{m + 40} {top + 82} L{m + 44} {top + 44} Z" fill="#15803d" stroke="#14532d" stroke-width="3"/>'
+            f'<path d="M{m + w - 50} {top + 40} L{m + w - 54} {top + 82} L{m + w - 36} {top + 82} L{m + w - 30} {top + 44} Z" fill="#15803d" stroke="#14532d" stroke-width="3"/>'
+            f'<path d="M{m + w - 14} {top + 6} Q{m + w + 6} {top - 34} {m + w + 52} {top - 22} L{m + w + 56} {top - 2} '
+            f'L{m + w + 34} {top + 4} L{m + w + 50} {top + 12} L{m + w + 10} {top + 24} Z" fill="#16a34a" stroke="#14532d" stroke-width="3"/>'
+            f'<circle cx="{m + w + 26}" cy="{top - 18}" r="4" fill="#fef08a" stroke="#000" stroke-width="1.5"/>'
+            + "".join(f'<path d="M{m + w + x} {top + 4} l3 6 l3 -6 Z" fill="#ffffff"/>' for x in (36, 42))
+            + f'<path d="M{m + w - 2} {top + 26} L{m + w + 12} {top + 34}" stroke="#14532d" stroke-width="5" stroke-linecap="round"/>'
+        )
+        width, height = w + 2 * m, top + 86
+    elif art == "truck":
+        top = 8
+        body = (
+            f'<rect x="{m}" y="{top}" width="{w}" height="14" fill="#f59e0b" stroke="#78350f" stroke-width="3"/>'
+            f'<rect x="{m}" y="{top + 14}" width="{w + 6}" height="10" fill="#334155"/>'
+            f'<path d="M{m + w + 6} {top + 24} L{m + w + 6} {top - 10} L{m + w + 34} {top - 10} L{m + w + 46} {top + 6} L{m + w + 46} {top + 24} Z" '
+            f'fill="#dc2626" stroke="#7f1d1d" stroke-width="3"/>'
+            f'<path d="M{m + w + 28} {top - 6} L{m + w + 40} {top + 6} L{m + w + 28} {top + 6} Z" fill="#bae6fd"/>'
+            + "".join(f'<circle cx="{m + x}" cy="{top + 26}" r="8" fill="#111827" stroke="#9ca3af" stroke-width="3"/>'
+                      for x in (16, w - 16, w + 32))
+        )
+        width, height = w + 2 * m, top + 36
+    elif art == "raft":
+        top = 6
+        body = ("".join(f'<rect x="{m + x}" y="{top}" width="18" height="16" rx="8" fill="#a16207" stroke="#713f12" stroke-width="2"/>'
+                        for x in range(0, w - 8, 17))
+                + f'<path d="M{m - 10} {top + 20} q12 -6 24 0 t24 0 t24 0 t24 0 t24 0" stroke="#e0f2fe" stroke-width="3" fill="none"/>'
+                + f'<rect x="{m + w / 2 - 2:.0f}" y="{top - 50}" width="4" height="50" fill="#78350f"/>'
+                f'<path d="M{m + w / 2 + 2:.0f} {top - 48} L{m + w / 2 + 30:.0f} {top - 14} L{m + w / 2 + 2:.0f} {top - 14} Z" fill="#f8fafc" stroke="#cbd5e1"/>')
+        width, height = w + 2 * m, top + 26
+    else:  # vine: a log seat hanging from two long vines
+        top = 220
+        body = (f'<path d="M{m + 8} {top} Q{m - 4} {top / 2:.0f} {m + 14} 0" stroke="#166534" stroke-width="5" fill="none"/>'
+                f'<path d="M{m + w - 8} {top} Q{m + w + 4} {top / 2:.0f} {m + w - 14} 0" stroke="#166534" stroke-width="5" fill="none"/>'
+                + "".join(f'<ellipse cx="{m + 10 + (k % 2) * (w - 20)}" cy="{30 + 40 * k}" rx="8" ry="4" fill="#22c55e"/>' for k in range(5))
+                + f'<rect x="{m}" y="{top}" width="{w}" height="16" rx="8" fill="#92400e" stroke="#451a03" stroke-width="3"/>')
+        width, height = w + 2 * m, top + 20
+    svg = svg_doc(width, height, body)
+    if left:   # face the other way
+        inner = svg[svg.index(">") + 1: -len("</svg>")]
+        svg = svg_doc(width, height, f'<g transform="translate({width} 0) scale(-1 1)">{inner}</g>')
+    return svg, m, top
 
 
 def platform_svg(stage, x1, y1, x2, y2, bounce=0, push=0):
@@ -1832,7 +1934,9 @@ def platform_svg(stage, x1, y1, x2, y2, bounce=0, push=0):
               "towers": ("#6366f1", "#312e81", "#c4b5fd"), "pagoda": ("#991b1b", "#450a0a", "#fbbf24"),
               "pirate": ("#92400e", "#451a03", "#fbbf24"), "castle": ("#a8a29e", "#44403c", "#e7e5e4"),
               "space": ("#64748b", "#1e293b", "#22d3ee"), "snow": ("#bae6fd", "#0369a1", "#ffffff"),
-              "candy": ("#f472b6", "#9d174d", "#fde68a"), "factory": ("#57534e", "#1c1917", "#facc15")}[stage]
+              "candy": ("#f472b6", "#9d174d", "#fde68a"), "factory": ("#57534e", "#1c1917", "#facc15"),
+              "jungle": ("#78350f", "#3f1d0b", "#4ade80"), "dino": ("#a8a29e", "#57534e", "#84cc16"),
+              "highway": ("#475569", "#1e293b", "#fde047"), "pond": ("#a16207", "#713f12", "#d6d3d1")}[stage]
     if bounce:
         colors = ("#a3e635", "#3f6212", "#ecfccb")
     extra = ""
@@ -1885,6 +1989,32 @@ def brawl_sky_svg(stage):
                    + '<rect x="200" y="90" width="18" height="170" fill="#1e293b"/><circle cx="310" cy="170" r="10" fill="#ef4444"/>',
         "towers": "".join(f'<circle cx="{x}" cy="{y}" r="2" fill="#ffffff"/>' for x, y in ((40, 40), (130, 80), (260, 30), (390, 60), (450, 140)))
                   + '<circle cx="90" cy="70" r="26" fill="#e0e7ff"/>',
+        # far trees (pale), near trees (dark) and hanging vines: layers of depth
+        "jungle": "".join(f'<ellipse cx="{x}" cy="{y}" rx="{r}" ry="{r * 0.8:.0f}" fill="#4ade80" opacity="0.5"/>'
+                          for x, y, r in ((40, 150, 60), (160, 120, 70), (300, 140, 60), (430, 120, 70)))
+                  + "".join(f'<rect x="{x}" y="0" width="22" height="360" fill="#3f1d0b"/><ellipse cx="{x + 11}" cy="20" rx="70" ry="45" fill="#166534"/>'
+                            for x in (20, 440))
+                  + "".join(f'<path d="M{x} 0 Q{x + 14} 80 {x} {h}" stroke="#15803d" stroke-width="4" fill="none"/>'
+                            f'<ellipse cx="{x + 4}" cy="{h}" rx="7" ry="4" fill="#22c55e"/>' for x, h in ((90, 140), (200, 100), (330, 160), (390, 90)))
+                  + '<circle cx="250" cy="250" r="10" fill="#f97316"/><path d="M243 246 l-10 -6 M257 246 l10 -6" stroke="#f97316" stroke-width="3"/>',
+        "dino": '<circle cx="380" cy="70" r="36" fill="#fef08a"/>'
+                '<path d="M0 260 L70 170 L120 210 L190 120 L230 150 L250 80 L280 150 L330 200 L400 140 L480 220 L480 360 L0 360 Z" fill="#7c2d12" opacity="0.7"/>'
+                '<path d="M240 85 L250 80 L262 88 Q256 60 250 40 Q246 60 240 85 Z" fill="#ef4444"/>'
+                '<path d="M250 40 Q230 10 260 -10 Q290 10 250 40" fill="#9ca3af" opacity="0.6"/>'
+                + "".join(f'<path d="M{x} 260 q4 -30 -12 -50 M{x} 260 q-4 -30 12 -50" stroke="#166534" stroke-width="5" fill="none"/>' for x in (60, 420))
+                + '<path d="M120 90 q10 -8 20 0 q10 -8 20 0" stroke="#1c1917" stroke-width="3" fill="none"/>',
+        "highway": '<circle cx="80" cy="60" r="30" fill="#fef08a"/>'
+                   + "".join(f'<rect x="{x}" y="{y}" width="{w}" height="{260 - y}" fill="#94a3b8" opacity="0.7"/>'
+                             for x, y, w in ((150, 120, 40), (195, 90, 50), (250, 140, 34), (290, 100, 44), (340, 130, 30)))
+                   + '<rect y="255" width="480" height="105" fill="#334155"/>'
+                   + "".join(f'<rect x="{x}" y="300" width="34" height="6" fill="#fde047"/>' for x in range(10, 480, 70)),
+        "pond": '<circle cx="400" cy="60" r="32" fill="#fef9c3"/>'
+                '<ellipse cx="240" cy="300" rx="260" ry="90" fill="#0ea5e9"/>'
+                '<ellipse cx="240" cy="290" rx="200" ry="50" fill="#38bdf8"/>'
+                + "".join(f'<ellipse cx="{x}" cy="{y}" rx="16" ry="6" fill="#16a34a"/><circle cx="{x + 6}" cy="{y - 3}" r="3" fill="#f9a8d4"/>'
+                          for x, y in ((120, 300), (330, 320), (200, 330)))
+                + "".join(f'<rect x="{x}" y="220" width="4" height="50" fill="#65a30d"/><ellipse cx="{x + 2}" cy="220" rx="4" ry="11" fill="#78350f"/>'
+                          for x in (30, 44, 440, 452)),
     }[stage["key"]]
     body = (f'<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{top}"/>'
             f'<stop offset="1" stop-color="{bottom}"/></linearGradient></defs><rect width="480" height="360" fill="url(#g)"/>' + deco)
@@ -1908,13 +2038,15 @@ def marker_svg():
 
 def declare_brawl(game):
     for name in ("B SY", "B X", "B Y", "B Dmg", "B Stock", "B Alive", "B Hit", "B KX", "B KY", "B Kind", "B Pool",
-                 "Plat X1", "Plat Y1", "Plat X2", "Plat Y2", "Plat Bounce", "Plat Push"):
+                 "Plat X1", "Plat Y1", "Plat X2", "Plat Y2", "Plat Bounce", "Plat Push", "Plat Art",
+                 "Mv Id", "Mv Min", "Mv Max", "Mv V"):
         game.list(name)
     for name, value in (("Brawl On", 0), ("Brawl Live", 0), ("Brawl Stage", 0), ("Cam X", 0), ("Cam Y", 0), ("Zoom", 1),
                         ("P1 Screen X", 0), ("P1 Screen Y", 0), ("P1 Screen Size", BRAWL_SIZE), ("Brawl Winner", 0),
                         ("BF X", 0), ("BF Y", 0), ("BF Dir", 1), ("BF Power", 0), ("Plat Count", 0),
                         ("Solid Count", 1), ("Joy Y", 0), ("Want Drop", 0), ("Stage Grav", 1), ("Stage Grip", 0.45),
                         ("Stage Key", ""), ("Stage Pick", 0), ("CB X", 0), ("CB Y", 0), ("CB Dir", 1),
+                        ("CB VX", 0), ("CB VY", 0), ("CB G", 0), ("CB W", 24), ("CB Kind", "ball"), ("CB Size", 60),
                         ("P1 %", 0), ("P2 %", 0), ("P3 %", 0), ("P4 %", 0)):
         game.var(name, value)
 
@@ -1928,6 +2060,23 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
     # ---------------------------------------------------- stage: set up --
     s.local("K", 0)
     s.local("Pick", 0)
+    s.local("MI", 0)
+    s.define(
+        "move platforms",
+        s.set("K", 0),
+        s.repeat(listlen("Mv Id"), [
+            s.change("K", 1), s.set("MI", item("Mv Id", V("K"))),
+            s.list_set("Plat X1", V("MI"), add(item("Plat X1", V("MI")), item("Mv V", V("K")))),
+            s.list_set("Plat X2", V("MI"), add(item("Plat X2", V("MI")), item("Mv V", V("K")))),
+            s.if_(or_(lt(item("Plat X1", V("MI")), item("Mv Min", V("K"))), gt(item("Plat X1", V("MI")), item("Mv Max", V("K")))),
+                  [s.list_set("Mv V", V("K"), mul(-1, item("Mv V", V("K"))))]),
+            # whoever stands on it rides along (the same push a conveyor belt uses)
+            s.list_set("Plat Push", V("MI"), item("Mv V", V("K"))),
+        ]),
+        note="Moving platforms (the T-Rex, the truck, the raft, the vine swing) drive back and forth.",
+    )
+    s.on_flag(s.forever([s.if_(and_(eq(V("Brawl Live"), 1), gt(listlen("Mv Id"), 0)), [s.call("move platforms")])]),
+              note="Moves the moving platforms once a frame during a BRAWL.")
     load_stage = []
     for i, st in enumerate(BRAWL_STAGES, start=1):
         rows = []
@@ -1936,7 +2085,9 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
             bounce = pl[4] if len(pl) > 4 else 0
             push = pl[5] if len(pl) > 5 else 0
             rows += [s.list_add("Plat X1", x1), s.list_add("Plat Y1", y1), s.list_add("Plat X2", x2), s.list_add("Plat Y2", y2),
-                     s.list_add("Plat Bounce", bounce), s.list_add("Plat Push", push)]
+                     s.list_add("Plat Bounce", bounce), s.list_add("Plat Push", push), s.list_add("Plat Art", 1 if len(pl) > 6 else 0)]
+        for idx, lo, hi, speed in st.get("movers", []):
+            rows += [s.list_add("Mv Id", idx), s.list_add("Mv Min", lo), s.list_add("Mv Max", hi), s.list_add("Mv V", speed)]
         load_stage.append(s.if_(eq(V("Brawl Stage"), i), [s.backdrop(f"brawl {st['key']}"), *rows,
                                                           s.set("Plat Count", len(st["plats"])), s.set("Solid Count", st["solid"]),
                                                           s.set("Stage Grav", st.get("grav", 1)), s.set("Stage Grip", st.get("grip", 0.45)),
@@ -1948,7 +2099,8 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         s.broadcast("brawl clear", wait=True),
         # the STAGE button picks one; RANDOM (0) picks for you
         s.if_(eq(V("Stage Pick"), 0), [s.set("Brawl Stage", rnd(1, len(BRAWL_STAGES)))], [s.set("Brawl Stage", V("Stage Pick"))]),
-        *[s.list_clear(n) for n in ("Plat X1", "Plat Y1", "Plat X2", "Plat Y2", "Plat Bounce", "Plat Push", "B X", "B Y", "B Dmg", "B Stock",
+        *[s.list_clear(n) for n in ("Plat X1", "Plat Y1", "Plat X2", "Plat Y2", "Plat Bounce", "Plat Push", "Plat Art",
+                                    "Mv Id", "Mv Min", "Mv Max", "Mv V", "B X", "B Y", "B Dmg", "B Stock",
                                     "B Alive", "B Hit", "B KX", "B KY", "B Kind", "B Pool")],
         *load_stage,
         *[s.list_add("B Pool", k) for k in CPU_POOL],
@@ -2041,6 +2193,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
     s.on_msg("brawl hit", s.play("hit"))
     s.on_msg("boing", s.play("jump"))
     s.on_msg("cannon fire", s.play("big hit"))
+    s.on_msg("honk", s.play("honk"))
     s.on_msg("brawl smash", s.play("big hit"))
     s.on_msg("brawl ko", s.play("boom"))
     for m in ("show title", "choose hero"):
@@ -2373,6 +2526,11 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
     for st in BRAWL_STAGES:
         for i, plat in enumerate(st["plats"], start=1):
             x1, y1, x2, y2 = plat[:4]
+            if len(plat) > 6:
+                for left in (False, True):
+                    svg, cx, cy = art_platform_svg(plat[6], x2 - x1, left)
+                    pl.costume(f"{st['key']} {i}" + (" l" if left else ""), svg, cx, cy)
+                continue
             svg, cy = platform_svg(st["key"], x1, y1, x2, y2, plat[4] if len(plat) > 4 else 0, plat[5] if len(plat) > 5 else 0)
             pl.costume(f"{st['key']} {i}", svg, 0, cy)
     PL = pl
@@ -2388,6 +2546,11 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         PL.set("Is Clone", 1), PL.wear(join(V("Stage Key"), join(" ", V("My Id")))), PL.show(),
         PL.until(eq(V("Brawl Live"), 0), [
             PL.size_to(mul(100, V("Zoom"))),
+            # a T-Rex, truck or raft turns round when it drives the other way
+            PL.if_(eq(item("Plat Art", V("My Id")), 1), [
+                PL.if_(lt(item("Plat Push", V("My Id")), 0), [PL.wear(join(V("Stage Key"), join(" ", join(V("My Id"), " l"))))],
+                       [PL.wear(join(V("Stage Key"), join(" ", V("My Id"))))]),
+            ]),
             PL.goto(mul(sub(item("Plat X1", V("My Id")), V("Cam X")), V("Zoom")),
                     mul(sub(item("Plat Y1", V("My Id")), V("Cam Y")), V("Zoom"))),
         ]),
@@ -2451,42 +2614,83 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
     cb = game.sprite("Cannonball", size=60, rotation="don't rotate")
     cb.costume("ball", svg_doc(40, 40, '<circle cx="20" cy="20" r="16" fill="#1f2937" stroke="#f97316" stroke-width="3"/>'
                                        '<circle cx="14" cy="14" r="4" fill="#9ca3af"/>'), 20, 20)
+    truck = ('<rect x="4" y="6" width="96" height="44" rx="4" fill="#2563eb" stroke="#1e3a8a" stroke-width="3"/>'
+             '<path d="M100 50 L100 18 L124 18 L136 34 L136 50 Z" fill="#facc15" stroke="#a16207" stroke-width="3"/>'
+             '<path d="M106 22 L120 22 L130 34 L106 34 Z" fill="#bae6fd"/>'
+             + "".join(f'<circle cx="{x}" cy="54" r="9" fill="#111827" stroke="#9ca3af" stroke-width="3"/>' for x in (24, 80, 120))
+             + '<rect x="134" y="40" width="6" height="6" fill="#fef08a"/>')
+    cb.costume("truck", svg_doc(144, 66, truck), 72, 34)
+    cb.costume("truck l", svg_doc(144, 66, f'<g transform="translate(144 0) scale(-1 1)">{truck}</g>'), 72, 34)
+    cb.costume("coconut", svg_doc(36, 36, '<circle cx="18" cy="18" r="15" fill="#78350f" stroke="#3f1d0b" stroke-width="3"/>'
+                                          '<circle cx="13" cy="12" r="2.5" fill="#1c1917"/><circle cx="21" cy="11" r="2.5" fill="#1c1917"/>'
+                                          '<circle cx="17" cy="18" r="2.5" fill="#1c1917"/>'), 18, 18)
+    cb.costume("fish", svg_doc(60, 40, '<path d="M8 20 Q28 0 48 20 Q28 40 8 20 Z" fill="#f97316" stroke="#9a3412" stroke-width="3"/>'
+                                       '<path d="M46 20 L58 8 L58 32 Z" fill="#fb923c" stroke="#9a3412" stroke-width="3"/>'
+                                       '<circle cx="18" cy="17" r="3" fill="#111827"/>'
+                                       '<path d="M26 12 q4 8 0 16" stroke="#fed7aa" stroke-width="2" fill="none"/>'), 30, 20)
     CB = cb
     CB.local("Done", 0)
     CB.local("J", 0)
+    CB.local("KD", 1)
     CB.define(
         "cannon frame",
-        CB.change("CB X", mul(10, V("CB Dir"))),
-        CB.size_to(mul(60, V("Zoom"))),
+        CB.change("CB X", V("CB VX")), CB.change("CB Y", V("CB VY")), CB.change("CB VY", mul(-1, V("CB G"))),
+        CB.size_to(mul(V("CB Size"), V("Zoom"))),
         CB.goto(mul(sub(V("CB X"), V("Cam X")), V("Zoom")), mul(sub(V("CB Y"), V("Cam Y")), V("Zoom"))),
         CB.set("J", 0),
         CB.repeat(N, [
             CB.change("J", 1),
-            CB.if_(and_(eq(V("Done"), 0), eq(item("B Alive", V("J")), 1), lt(abs_(sub(item("B X", V("J")), V("CB X"))), 24),
+            CB.if_(and_(eq(V("Done"), 0), eq(item("B Alive", V("J")), 1), lt(abs_(sub(item("B X", V("J")), V("CB X"))), V("CB W")),
                         lt(abs_(sub(add(item("B Y", V("J")), 35), V("CB Y"))), 40)), [
                 CB.set("Done", 1),
+                # knocked the way it was going (or away from it, for things that fall or jump)
+                CB.if_(eq(V("CB VX"), 0), [CB.if_(gt(item("B X", V("J")), V("CB X")), [CB.set("KD", 1)], [CB.set("KD", -1)])],
+                       [CB.if_(gt(V("CB VX"), 0), [CB.set("KD", 1)], [CB.set("KD", -1)])]),
                 CB.list_set("B Hit", V("J"), add(item("B Hit", V("J")), 12)),
-                CB.list_set("B KX", V("J"), mul(V("CB Dir"), add(7, div(item("B Dmg", V("J")), 9)))),
+                CB.list_set("B KX", V("J"), mul(V("KD"), add(7, div(item("B Dmg", V("J")), 9)))),
                 CB.list_set("B KY", V("J"), add(7, div(item("B Dmg", V("J")), 11))),
                 CB.broadcast("brawl ko"),
             ]),
         ]),
     )
+    hazard_keys = [st["key"] for st in BRAWL_STAGES if st.get("hazard")]
+    has_hazard = or_(*[eq(V("Stage Key"), k) for k in hazard_keys])
+
+    def side():
+        return CB.if_(eq(rnd(1, 2), 1), [CB.set("CB Dir", 1)], [CB.set("CB Dir", -1)])
+
+    launch = {
+        "pirate": [CB.wait(rnd(6, 10)), side(), CB.set("CB Kind", "ball"), CB.set("CB Size", 60), CB.set("CB W", 24),
+                   CB.set("CB X", mul(V("CB Dir"), -520)), CB.set("CB Y", rnd(-85, 40)),
+                   CB.set("CB VX", mul(10, V("CB Dir"))), CB.set("CB VY", 0), CB.set("CB G", 0),
+                   CB.set("Pop Text", "CANNON!"), CB.broadcast("cannon fire")],
+        "highway": [CB.wait(rnd(5, 9)), side(), CB.set("CB Size", 100), CB.set("CB W", 62),
+                    CB.if_(eq(V("CB Dir"), 1), [CB.set("CB Kind", "truck")], [CB.set("CB Kind", "truck l")]),
+                    CB.set("CB X", mul(V("CB Dir"), -540)), CB.set("CB Y", -78),
+                    CB.set("CB VX", mul(9, V("CB Dir"))), CB.set("CB VY", 0), CB.set("CB G", 0),
+                    CB.set("Pop Text", "TRUCK! JUMP!"), CB.broadcast("honk")],
+        "jungle": [CB.wait(rnd(3, 6)), CB.set("CB Kind", "coconut"), CB.set("CB Size", 70), CB.set("CB W", 22),
+                   CB.set("CB X", rnd(-270, 270)), CB.set("CB Y", 280), CB.set("CB VX", 0), CB.set("CB VY", -2), CB.set("CB G", 0.6),
+                   CB.set("Pop Text", "COCONUT!"), CB.broadcast("whirl sfx")],
+        "pond": [CB.wait(rnd(4, 7)), CB.set("CB Kind", "fish"), CB.set("CB Size", 80), CB.set("CB W", 24),
+                 CB.set("CB X", rnd(-100, 100)), CB.set("CB Y", -210), CB.set("CB VX", 0), CB.set("CB VY", 16), CB.set("CB G", 0.55),
+                 CB.set("Pop Text", "SPLASH!"), CB.broadcast("boing")],
+    }
     CB.on_flag(
         CB.hide(),
         CB.forever([
-            CB.if_(and_(eq(V("Brawl On"), 1), eq(V("Stage Key"), "pirate")), [
-                CB.wait(rnd(6, 10)),
-                CB.if_(and_(eq(V("Brawl On"), 1), eq(V("Stage Key"), "pirate")), [
-                    CB.if_(eq(rnd(1, 2), 1), [CB.set("CB Dir", 1)], [CB.set("CB Dir", -1)]),
-                    CB.set("CB X", mul(V("CB Dir"), -520)), CB.set("CB Y", rnd(-85, 40)), CB.set("Done", 0),
-                    CB.set("Pop Text", "CANNON!"), CB.broadcast("popup"), CB.broadcast("cannon fire"), CB.show(), CB.front(),
-                    CB.until(or_(eq(V("Done"), 1), gt(abs_(V("CB X")), 560), eq(V("Brawl Live"), 0)), [CB.call("cannon frame")]),
+            CB.if_(and_(eq(V("Brawl On"), 1), has_hazard), [
+                *[CB.if_(eq(V("Stage Key"), k), launch[k]) for k in hazard_keys],
+                CB.if_(and_(eq(V("Brawl On"), 1), has_hazard), [
+                    CB.set("Done", 0), CB.wear(V("CB Kind")), CB.broadcast("popup"), CB.show(), CB.front(),
+                    CB.until(or_(eq(V("Done"), 1), gt(abs_(V("CB X")), 560), lt(V("CB Y"), -320), eq(V("Brawl Live"), 0)),
+                             [CB.call("cannon frame")]),
                     CB.hide(),
                 ]),
             ], [CB.wait(0.3)]),
         ]),
-        note="PIRATE SHIP: every few seconds a cannonball flies across the deck. Jump over it!",
+        note="Stage hazards: cannonballs on the PIRATE SHIP, trucks on the HIGHWAY, coconuts in the JUNGLE "
+             "and jumping fish at the FISHING POND. Jump out of the way!",
     )
     for m in ("brawl clear", "show title"):
         CB.on_msg(m, CB.hide())
@@ -2712,6 +2916,12 @@ def build():
             ], [
                 s.if_(and_(eq(V("Hero Safe"), 0), gt(TIMER, V("Hero Safe Until"))), [
                     s.set("Hero Safe Until", add(TIMER, 0.6)),
+                    # a SHIELD blocks most of the hit and wears down a little
+                    s.if_(and_(eq(V("Weapon"), "shield"), gt(V("Weapon Uses"), 0)), [
+                        s.set("Hurt Power", round_(div(V("Hurt Power"), SHIELD_BLOCK))), s.change("Weapon Uses", -1),
+                        s.set("Pop Text", "BLOCKED!"), s.broadcast("popup"), s.broadcast("swing sfx"),
+                        s.if_(lt(V("Weapon Uses"), 1), [s.broadcast("weapon break")]),
+                    ]),
                     s.change("Hero HP", sub(0, V("Hurt Power"))),
                     s.set("Combo", 0),
                     s.if_(lt(V("Super"), 100), [s.change("Super", SUPER_PER_HURT),
@@ -3170,6 +3380,11 @@ def build():
             H.set("Hit Power", add(V("Punch Power"), V("Weapon Bonus"))),
             weapon_swing(),
             H.if_(in_reach(PUNCH_REACH), [land_hit()]), area(PUNCH_REACH * 0.55, V("Hit Power")),
+            # nunchucks: the second stick whips round for another hit
+            H.if_(eq(V("Weapon"), "nunchucks"), [
+                H.wait(0.17), pose("punch 1"), H.wait(0.04), pose("punch"), H.broadcast("swing"),
+                H.if_(in_reach(PUNCH_REACH), [land_hit()]), area(PUNCH_REACH * 0.55, V("Hit Power")),
+            ]),
         ]),
         H.wait(0.16), break_check(), rest_pose(),
     ]
@@ -3859,7 +4074,7 @@ def build():
     # ------------------------------------------------------------ weapons --
     held = game.sprite("Held Weapon", size=70, rotation="all around")
     for w in WEAPONS:
-        held.costume(w["key"], weapon_svg(w["key"]), 30, 66)
+        held.costume(w["key"], weapon_svg(w["key"]), *WEAPON_GRIP.get(w["key"], (30, 66)))
     HW = held
     HW.local("Swing Until", 0)
     HW.local("C", 1)
@@ -3890,7 +4105,7 @@ def build():
 
     drop = game.sprite("Weapon Drop", size=70, rotation="don't rotate")
     for w in WEAPONS:
-        drop.costume(w["key"], weapon_svg(w["key"], sparkle=True), 30, 40)
+        drop.costume(w["key"], weapon_svg(w["key"], sparkle=True), 30, 55 if w["key"] == "spear" else 40)
     D = drop
     D.local("Kind", "sword")
     D.local("Life", 0)
@@ -3907,10 +4122,8 @@ def build():
             D.if_(and_(eq(V("Fight On"), 1), eq(V("Weapon"), "none")), [
                 D.wait(rnd(3, 7)),
                 D.if_(and_(eq(V("Fight On"), 1), eq(V("Weapon"), "none")), [
-                    D.set("Kind", rnd(1, 3)),
-                    D.if_(eq(V("Kind"), 1), [D.set("Kind", "sword")]),
-                    D.if_(eq(V("Kind"), 2), [D.set("Kind", "hammer")]),
-                    D.if_(eq(V("Kind"), 3), [D.set("Kind", "boomerang")]),
+                    D.set("Kind", rnd(1, len(WEAPONS))),
+                    *[D.if_(eq(V("Kind"), w["n"]), [D.set("Kind", w["key"])]) for w in WEAPONS],
                     D.wear(V("Kind")), D.goto(rnd(-170, 60), 170), D.show(), D.front(),
                     D.until(lt(YPOS, GROUND + 30), [D.dy(-10)]), D.set_y(GROUND + 25),
                     D.set("Life", 0), D.set("Got", 0),
@@ -3928,7 +4141,9 @@ def build():
         ]),
         note="Every 3 to 7 seconds a weapon falls from the sky. Walk over it to pick it up. "
              "Sword: +4 power, longer reach, 10 swings. Hammer: +9 power and a shake, 5 swings. "
-             "Boomerang: PUNCH throws it, 6 throws.",
+             "Boomerang: PUNCH throws it, 6 throws. Spear: +5 power and the longest reach, 8 jabs. "
+             "Nunchucks: every punch hits twice, 12 swings. Shield: blocks most of the damage you take "
+             "(each block uses it up a bit) and you can bash with it.",
     )
     for m in FIGHT_HIDE:
         D.on_msg(m, D.hide())

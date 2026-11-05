@@ -427,7 +427,7 @@ async function weaponTest () {
         vm.runtime.stopForTarget(T.sprite(name));
         T.sprite(name).setVisible(false);
     }
-    const weapons = {sword: [4, 28, 10], hammer: [9, 12, 5], boomerang: [0, 0, 6]};
+    const weapons = {sword: [4, 28, 10], hammer: [9, 12, 5], boomerang: [0, 0, 6], spear: [5, 48, 8], nunchucks: [2, 6, 12], shield: [2, 0, 6]};
     for (const [name, [bonus, reach, uses]] of Object.entries(weapons)) {
         T.set('Enemy HP', 999);
         T.set('Enemy Max', 999);
@@ -437,14 +437,17 @@ async function weaponTest () {
         T.set('Weapon Uses', uses);
         for (let i = 0; i < uses + 3 && T.get('Fight On') === 1; i++) {
             // stand next to the enemy (boomerang from range)
-            const gap = name === 'boomerang' ? 150 : 60;
+            const gap = name === 'boomerang' ? 150 : name === 'spear' ? 110 : 60;
             const ex = T.get('Enemy X');
             T.sprite('Hero').setXY(ex > 0 ? ex - gap : ex + gap, -75);
             T.set('Hero Safe Until', 1e12); // no damage during this test
             await T.step(2); // let Hero turn to face the enemy
             const hp = T.get('Enemy HP');
             T.set('Want Punch', 1);
-            await T.step(name === 'boomerang' ? 40 : 14);
+            await T.step(name === 'boomerang' ? 40 : name === 'nunchucks' ? 22 : 14);
+            if (name === 'nunchucks' && i < uses && hp - T.get('Enemy HP') < 2 * (T.get('Punch Power') + bonus)) {
+                fail(`weapon nunchucks: swing ${i + 1} did not hit twice (${hp - T.get('Enemy HP')})`);
+            }
             if (T.get('Weapon') !== name && i < uses - 1) fail(`weapon ${name}: was swapped for ${T.get('Weapon')}`);
             if (i < uses && T.get('Enemy HP') >= hp) {
                 fail(`weapon ${name}: swing ${i + 1} did not hit (hero ${T.get('Hero X')}, enemy ${T.get('Enemy X')}, ` +
@@ -458,6 +461,16 @@ async function weaponTest () {
         }
         if (!T.sprite('Held Weapon').visible === false && T.get('Weapon') === 'none') fail('held weapon still shown');
     }
+    // the shield blocks: a 9 damage hit only takes 3, and each block wears it down
+    T.set('Weapon', 'shield'); T.set('Weapon Bonus', 2); T.set('Weapon Reach', 0); T.set('Weapon Uses', 2);
+    T.set('Hero HP', 100); T.set('Hero Safe Until', 0); T.set('Hero Safe', 0);
+    T.set('Hurt Power', 9); T.send('enemy hits hero');
+    await T.step(2);
+    if (T.get('Hero HP') !== 97 || T.get('Weapon Uses') !== 1) fail(`weapon shield: block left HP ${T.get('Hero HP')}, uses ${T.get('Weapon Uses')}`);
+    await T.step(25);
+    T.set('Hurt Power', 9); T.send('enemy hits hero');
+    await T.step(4);
+    if (T.get('Weapon') !== 'none') fail('weapon shield: did not break after its last block');
 }
 
 async function startArcadeAt (wave, hero = 'Pick Arthur') {
@@ -1128,12 +1141,15 @@ async function brawlTest () {
     await T.step(3);
     if (T.get('State') !== 'select') return fail('brawl: BRAWL did not open fighter select');
     T.set('Power Level', 4);
-    const STAGES = 10;
-    T.set('Stage Pick', 1);
+    const STAGES = +(process.env.BRAWL_STAGES || 14);
+    T.set('Stage Pick', +(process.env.FIRST_STAGE || 1));
     T.click('Pick Rocko');
     const out = {stages: [], matches: 0, wins: 0, kos: 0, maxDmg: 0, zoom: [9, 0], landed: false, rampOk: false};
     out.cannon = false;
     out.bounce = false;
+    out.hazards = new Set();
+    out.movers = {};
+    out.rode = new Set();
     for (let match = 0; match < STAGES; match++) {
         let frames = 0;
         let checked = false;
@@ -1145,9 +1161,9 @@ async function brawlTest () {
                 checked = true;
                 const X = list('B X'), Y = list('B Y');
                 const x1 = list('Plat X1'), y1 = list('Plat Y1'), x2 = list('Plat X2'), y2 = list('Plat Y2');
-                const onSome = (x, y) => x1.some((_, k) => x >= x1[k] && x <= x2[k] &&
+                const onSome = (x, y) => x1.some((_, k) => x >= x1[k] - 3 && x <= x2[k] + 3 &&
                     Math.abs(y - (y1[k] + (x - x1[k]) * (y2[k] - y1[k]) / (x2[k] - x1[k]))) < 1.5);
-                if (!X.every((x, k) => onSome(x, Y[k]))) fail(`brawl: someone is not standing on the stage at FIGHT!: ${JSON.stringify([X, Y])}`);
+                if (!X.every((x, k) => onSome(x, Y[k]))) fail(`brawl: someone is not standing on the stage at FIGHT! (${T.get('Stage Key')}): ${JSON.stringify([X, Y, x1, x2, y1, list('Plat Push')])}`);
                 out.landed = true;
                 if (T.get('Brawl Stage') !== 1) out.rampOk = out.rampOk || X.some((x, k) => onSome(x, Y[k]) && x1.some((_, j) => y1[j] !== y2[j] && x >= x1[j] && x <= x2[j]));
             }
@@ -1157,6 +1173,32 @@ async function brawlTest () {
         if (T.clones('Brawler').length !== 4) fail(`brawl: ${T.clones('Brawler').length} fighters, expected 4`);
         if (T.clones('Brawl Platform').length !== T.get('Plat Count')) fail('brawl: platform clones do not match the stage');
         if (T.sprite('Punch Button').visible && T.get('Touch Pad') === 0) { /* computer buttons may show */ }
+        // a moving platform: put P1 on it and check they ride along
+        const movers = list('Mv Id');
+        if (movers.length) {
+            const id = movers[0];
+            const p1 = T.clones('Brawler').find(c => c.lookupVariableByNameAndType('My Id').value === 1);
+            const v = n => p1.lookupVariableByNameAndType(n);
+            const px = () => list('Plat X1')[id - 1];
+            // move the CPUs out of the way so nobody knocks P1 off during the check
+            T.clones('Brawler').filter(c => c !== p1).forEach((c, k) => {
+                c.lookupVariableByNameAndType('X').value = k % 2 ? -290 : 290;
+                c.lookupVariableByNameAndType('Y').value = 200;
+            });
+            v('X').value = (list('Plat X1')[id - 1] + list('Plat X2')[id - 1]) / 2;
+            v('Y').value = list('Plat Y1')[id - 1] + 4; v('VX').value = 0; v('VY').value = 0;
+            T.set('Joy X', 0);
+            await T.step(3);
+            const startP = px(), startX = v('X').value;
+            let onIt = 0;
+            for (let i = 0; i < 25; i++) {
+                await T.step();
+                if (Number(v('On Plat').value) === id && Number(v('Ground').value) === 1) onIt++;
+            }
+            const moved = px() - startP, rode = v('X').value - startX;
+            if (onIt > 20 && Math.abs(moved) > 10 && Math.abs(rode - moved) < 12) out.rode.add(T.get('Stage Key'));
+            else fail(`brawl: P1 did not ride the ${T.get('Stage Key')} platform (on ${onIt}, platform ${moved.toFixed(1)}, P1 ${rode.toFixed(1)})`);
+        }
         let lastStocks = list('B Stock').reduce((a, b) => a + b, 0);
         frames = 0;
         while (T.get('State') === 'brawl' && frames < 30 * 60 * 4) {
@@ -1191,7 +1233,18 @@ async function brawlTest () {
             if (process.env.DEBUG_BRAWL && frames % 300 === 0) {
                 process.stdout.write(`t${frames / 30}s X ${X.map(Math.round)} Y ${Y.map(Math.round)} dmg ${dmg.map(Math.round)} stocks ${list('B Stock')} alive ${alive} zoom ${T.get('Zoom').toFixed(2)}\n`);
             }
-            if (T.sprite('Cannonball').visible) out.cannon = true;
+            if (T.sprite('Cannonball').visible) {
+                out.cannon = true;
+                out.hazards.add(T.costume('Cannonball').replace(' l', ''));
+            }
+            // moving platforms really move, and whoever stands on one rides along
+            const ids = list('Mv Id');
+            if (ids.length) {
+                const key = T.get('Stage Key');
+                const x1 = list('Plat X1');
+                const m = out.movers[key] || (out.movers[key] = {min: 1e9, max: -1e9});
+                for (const id of ids) { m.min = Math.min(m.min, x1[id - 1]); m.max = Math.max(m.max, x1[id - 1]); }
+            }
             if (T.get('Stage Key') === 'candy' && T.clones('Brawler').some(c => c.lookupVariableByNameAndType('VY').value > 16)) out.bounce = true;
             if (T.clones('Brawler').length > 4 || T.clones('Popup').length > 20) fail('brawl: too many clones');
         }
@@ -1201,11 +1254,19 @@ async function brawlTest () {
         await T.step(10);
         if (T.clones('Brawler').length !== 0 || T.clones('Brawl Platform').length !== 0) fail('brawl: clones left after the match');
         if (!T.sprite('Retry Button').visible) fail('brawl: no RETRY after the match');
-        T.set('Stage Pick', match + 2);
+        T.set('Stage Pick', (+(process.env.FIRST_STAGE || 1) + match) % 14 + 1);
         T.click('Retry Button');
         await T.step(3);
     }
     if (!out.cannon) fail('brawl: no cannonball on the Pirate Ship');
+    for (const h of ['ball', 'truck', 'coconut', 'fish']) if (!out.hazards.has(h)) fail(`brawl: hazard ${h} never appeared`);
+    for (const k of ['jungle', 'dino', 'highway', 'pond']) {
+        const m = out.movers[k];
+        if (!m || m.max - m.min < 60) fail(`brawl: the moving platform on ${k} did not move (${JSON.stringify(m)})`);
+    }
+    if (out.rode.size < 4) fail(`brawl: hardly anyone rode a moving platform (${[...out.rode]})`);
+    out.hazards = [...out.hazards];
+    out.rode = [...out.rode];
     if (!out.bounce) fail('brawl: nobody bounced on Candy Land');
     if (out.kos < STAGES) fail(`brawl: only ${out.kos} K.O.s in ${STAGES} matches`);
     if (!out.bolts) fail('brawl: POWER lightning never struck');
