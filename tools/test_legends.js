@@ -587,6 +587,88 @@ async function flipTest () {
     return {once, twice};
 }
 
+async function adventureTest () {
+    const {vm} = await boot();
+    const T = tools(vm);
+    await T.step(10);
+    T.click('Adventure Button');
+    await T.step(3);
+    T.click('Pick Arthur');
+    const out = {stages: []};
+    const expect = [['grunt', 'brute'], ['ninja', 'kage'], ['robot', 'megaspike']];
+    for (let st = 0; st < expect.length; st++) {
+        let frames = 0;
+        while (T.get('Fight On') !== 1 && frames < 30 * 12) { await T.step(); frames++; }
+        if (T.get('Wave Phase') !== 1) return fail(`adventure: stage ${st + 1} did not start with waves`);
+        if (T.sprite('Enemy').visible) fail(`adventure: the boss showed during the waves of stage ${st + 1}`);
+        T.set('Hero Safe Until', 1e12);
+        const kinds = new Set();
+        let waves = 0;
+        frames = 0;
+        // beat every small enemy that shows up
+        while (T.get('Wave Phase') === 1 && frames < 30 * 90) {
+            await T.step();
+            frames++;
+            waves = Math.max(waves, T.get('Wave Num'));
+            for (const c of T.clones('Ninja Minion')) {
+                kinds.add(c.getCostumes()[c.currentCostume].name.split(' ')[0]);
+                if (frames % 10 === 0) {
+                    T.set('Area X', c.x); T.set('Area R', 20); T.set('Area Power', 6); T.set('Area Kind', 'hit');
+                    T.send('area hit');
+                }
+            }
+            if (T.clones('Ninja Minion').length > 3) fail('adventure: more than 3 small enemies at once');
+        }
+        if (T.get('Wave Phase') !== 0) return fail(`adventure: stage ${st + 1} waves never ended (wave ${T.get('Wave Num')}, beaten ${T.get('Beaten')}/${T.get('Wave Total')})`);
+        frames = 0;
+        while (!T.sprite('Enemy').visible && frames < 120) { await T.step(); frames++; }
+        await T.step(40);
+        const boss = T.get('Enemy Name');
+        if (!kinds.has(expect[st][0]) || [...kinds].some(k => k !== expect[st][0])) fail(`adventure: stage ${st + 1} small enemies were ${[...kinds]}`);
+        if (boss !== expect[st][1]) fail(`adventure: stage ${st + 1} boss is ${boss}`);
+        if (!T.sprite('Enemy').visible) fail(`adventure: stage ${st + 1} boss never appeared`);
+        out.stages.push({kinds: [...kinds], waves, boss});
+        // beat the boss, with some damage taken: health carries over (+30)
+        T.set('Hero HP', 40);
+        T.set('Enemy HP', 1);
+        T.set('Enemy Stun Until', 0);
+        T.set('Hit Power', 5);
+        T.send('hero hits');
+        frames = 0;
+        while (T.get('Adv Stage') === st + 1 && frames < 30 * 8) { await T.step(); frames++; }
+        if (T.get('Adv Stage') !== st + 2) return fail(`adventure: did not move on after stage ${st + 1}`);
+        if (T.get('Hero HP') !== 70) fail(`adventure: health after stage ${st + 1} is ${T.get('Hero HP')}, expected 70`);
+    }
+    // quitting resets the waves so Story still works
+    T.click('Quit Button');
+    await T.step(10);
+    if (T.get('Wave Phase') !== 0) fail('adventure: Quit left the waves on');
+    return out;
+}
+
+async function adventureBotRun () {
+    // the bot plays ADVENTURE with the buttons only
+    const {vm, errors} = await boot();
+    const T = tools(vm);
+    await T.step(10);
+    T.click('Adventure Button');
+    await T.step(3);
+    const bot = makeBot(T, 1);
+    let frames = 0, deaths = 0;
+    while (T.get('Adv Stage') < 4 && frames < 30 * 60 * 10) {
+        await T.step();
+        frames++;
+        bot.tick();
+        if (T.get('State') === 'over' && T.sprite('Retry Button').visible) {
+            deaths++;
+            T.click('Retry Button');
+        }
+    }
+    if (T.get('Adv Stage') < 4) fail(`adventure bot: only reached stage ${T.get('Adv Stage')} in 10 minutes (${deaths} retries)`);
+    if (errors.length) fail(`adventure bot: engine errors ${errors.slice(0, 2)}`);
+    return {minutes: +(frames / 1800).toFixed(1), retries: deaths, ninjaHits: bot.stats.ninjaHits || 0};
+}
+
 async function introTest () {
     const {vm} = await boot(false);
     const T = tools(vm);
@@ -1021,6 +1103,8 @@ async function brawlTest () {
     if (want('intro')) results.intro = await introTest();
     if (want('powerup')) results.powerup = await powerUpTest();
     if (want('flip')) results.flip = await flipTest();
+    if (want('adventure')) results.adventure = await adventureTest();
+    if (want('adventure')) results.adventureBot = await adventureBotRun();
     if (want('brawl')) results.brawl = await brawlTest();
     if (want('mash')) await mashTest();
     if (want('weapons')) await weaponTest();

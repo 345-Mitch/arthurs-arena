@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "2.0"
+VERSION = "2.1"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -145,6 +145,15 @@ POWER_HP_PER_LEVEL = 10
 BOSS_WEAPONS = {"brute": "club", "megaspike": "mace", "ninja": "katana", "kage": "katana", "quake": "hammer",
                 "shadow": "dark sword"}
 MINION_HP = 7
+# ADVENTURE: stage after stage. Each stage = waves of small enemies, then its boss. After the last stage: LAP 2 (harder).
+ADVENTURE = [
+    dict(name="TRAINING YARD", backdrop="Yard", kind="grunt", waves=(3, 4), boss=3),     # Brute
+    dict(name="BAMBOO FOREST", backdrop="Bamboo", kind="ninja", waves=(3, 4), boss=7),   # MASTER KAGE
+    dict(name="ROBOT FACTORY", backdrop="Factory", kind="robot", waves=(4, 5), boss=5),  # MEGA SPIKE
+    dict(name="VOLCANO GATE", backdrop="Volcano", kind="mix", waves=(4, 5), boss=8),     # Quake
+    dict(name="SHADOW CASTLE", backdrop="Castle", kind="mix", waves=(4, 5, 6), boss=9),  # Shadow King
+]
+MINION_KINDS = ("ninja", "grunt", "robot")
 BOSS_WEAPON_POWER = 3
 RAIN_HURT = 8
 CHARGE_RATE = 3.5    # charge per frame: full (100) in about one second
@@ -2353,7 +2362,8 @@ def build():
         ("Hit Power", 5), ("Hurt Power", 6), ("Shot Y", GROUND + 18), ("Shot Dir", -1), ("Wave Dir", -1),
         ("Line", ""), ("Line Secs", 2), ("Skip", 0), ("Pop Text", ""), ("Banner", "fight"),
         ("Joy X", 0), ("Touch Pad", 0), ("Spikes", 0), ("Difficulty", 2), ("Enemy Weapon", "none"), ("Enemy Swing Until", 0),
-        ("Turn Until", 0), ("Turn Dir", 1), ("Hero Look", "arthur"), ("Powering", 0), ("Pen X", 999), ("Pen Y", 0), ("Sound On", 1), ("Debug", 0), ("FPS", 0), ("Minions", 0), ("Summon Count", 1), ("Smoke X", 0), ("Smoke Y", GROUND),
+        ("Turn Until", 0), ("Turn Dir", 1), ("Summon Kind", "ninja"), ("Wave Phase", 0), ("Adv Stage", 1), ("Lap", 1),
+        ("Beaten", 0), ("Wave Total", 0), ("Spawned", 0), ("Wave Num", 0), ("Hero Look", "arthur"), ("Powering", 0), ("Pen X", 999), ("Pen Y", 0), ("Sound On", 1), ("Debug", 0), ("FPS", 0), ("Minions", 0), ("Summon Count", 1), ("Smoke X", 0), ("Smoke Y", GROUND),
         ("Area X", 0), ("Area R", 0), ("Area Power", 0), ("Area Kind", "hit"), ("Fire Stop", 0),
         ("Power Level", 1), ("Power XP", 0), ("XP Gain", 0), ("Want Power", 0), ("Power Ready At", 0), ("Power Move", "none"),
         ("Bolt X", 0), ("Bolt Y", GROUND), ("Bolt Owner", "hero"), ("Bolt Power", 0), ("Bolt Size", 100),
@@ -2363,6 +2373,7 @@ def build():
         G(name, value)
 
     declare_brawl(game)
+    game.list("M X")
     stage = Target(game, "Stage", is_stage=True)
     game.stage = stage
     for kind in ("Title", "Select", "Yard", "Woods", "Pass", "Factory", "Fortress", "Bamboo", "Dojo", "Volcano", "Castle", "Arcade", "Ending"):
@@ -2378,7 +2389,7 @@ def build():
         s.broadcast("intro"),
         note="Green flag. Best and Crown are kept, so a saved project remembers them. The paper intro plays first.",
     )
-    s.on_msg("show title", s.set("State", "title"), s.set("Fight On", 0), s.backdrop("Title"),
+    s.on_msg("show title", s.set("State", "title"), s.set("Fight On", 0), s.set("Wave Phase", 0), s.backdrop("Title"),
              s.clear_fx(), s.hide_var("Score"), s.hide_var("Wave"), s.show_var("Best"))
     s.on_msg("choose hero", s.set("State", "select"), s.backdrop("Select"), s.hide_var("Best"))
 
@@ -2397,7 +2408,9 @@ def build():
         s.if_(eq(V("Mode"), "story"),
               [s.set("Chapter", 1), s.broadcast("story scene")],
               [s.if_(eq(V("Mode"), "brawl"), [s.set("Score", 0), s.broadcast("brawl start")],
-                     [s.set("Wave", 1), s.broadcast("start fight")])]),
+                     [s.if_(eq(V("Mode"), "adventure"),
+                            [s.set("Adv Stage", 1), s.set("Lap", 1), s.set("Score", 0), s.broadcast("adventure stage")],
+                            [s.set("Wave", 1), s.broadcast("start fight")])])]),
         note="Each fighter has different health, speed, punch, kick and super.",
     )
 
@@ -2413,14 +2426,24 @@ def build():
     s.on_msg(
         "load enemy",
         s.if_(eq(V("Mode"), "practice"), [s.set("Enemy Type", 1), s.backdrop("Yard"), s.set("Pace", 1)]),
+        s.if_(eq(V("Mode"), "adventure"), [
+            *[s.if_(eq(V("Adv Stage"), i), [s.set("Enemy Type", st["boss"]), s.backdrop(st["backdrop"])])
+              for i, st in enumerate(ADVENTURE, start=1)],
+            s.set("Pace", sub(1, mul(0.08, sub(V("Lap"), 1)))),
+        ]),
+
         s.if_(eq(V("Mode"), "story"),
               [s.set("Enemy Type", V("Chapter")), *chapter_backdrops, s.set("Pace", 1)],
-              [s.if_(eq(V("Mode"), "practice"), [], [s.if_(eq(mod(V("Wave"), KING), 0),
+              [s.if_(not_(eq(V("Mode"), "arcade")), [], [s.if_(eq(mod(V("Wave"), KING), 0),
                      [s.set("Enemy Type", KING)],
                      [s.set("Enemy Type", add(mod(sub(V("Wave"), 1), KING), 1))]),
                s.backdrop("Arcade"),
                s.set("Pace", div(8, add(7, V("Wave"))))])]),
         *loads,
+        s.if_(eq(V("Mode"), "adventure"), [
+            s.set("Enemy Max", mul(V("Enemy Max"), add(1, mul(0.35, sub(V("Lap"), 1))))),
+            s.change("Enemy Power", mul(2, sub(V("Lap"), 1))),
+        ]),
         s.if_(eq(V("Mode"), "arcade"), [
             s.change("Enemy Max", mul(8, sub(V("Wave"), 1))),
             s.change("Enemy Power", floor_(div(sub(V("Wave"), 1), 2))),
@@ -2443,7 +2466,9 @@ def build():
         "start fight",
         s.set("Fight On", 0), s.set("State", "fight"),
         s.broadcast("load enemy", wait=True),
-        s.if_(eq(V("Mode"), "arcade"), [s.show_var("Wave")], [s.set("Hero HP", V("Hero Max"))]),
+        s.if_(eq(V("Mode"), "arcade"), [s.show_var("Wave")],
+              [s.if_(not_(eq(V("Mode"), "adventure")), [s.set("Hero HP", V("Hero Max"))])]),
+        s.list_clear("M X"), s.repeat(3, [s.list_add("M X", 9999)]),
         s.show_var("Score"), s.hide_var("Best"),
         s.set("Minions", 0), s.set("Combo", 0), s.set("Weapon", "none"), s.set("Weapon Uses", 0), s.set("Boomerang Out", 0),
         s.set("Hero Lock", 0), s.set("Hero Safe", 0), s.set("Hero Air", 0),
@@ -2465,7 +2490,7 @@ def build():
     # hero hits enemy -- no waits here, so a fast second hit cannot break it
     s.on_msg(
         "hero hits",
-        s.if_(and_(eq(V("Fight On"), 1), gt(TIMER, V("Enemy Stun Until"))), [
+        s.if_(and_(eq(V("Fight On"), 1), gt(TIMER, V("Enemy Stun Until")), eq(V("Wave Phase"), 0)), [
             s.set("Enemy Stun Until", add(TIMER, 0.15)),
             s.change("Hit Power", sub(V("Power Level"), 1)),
             s.if_(lt(sub(TIMER, V("Combo Clock")), COMBO_WINDOW), [s.change("Combo", 1)], [s.set("Combo", 1)]),
@@ -2556,6 +2581,63 @@ def build():
     debug_vars = ("FPS", "State", "Mode", "Fight On", "Hero HP", "Enemy HP", "Enemy Name", "Minions", "Power Level", "Brawl Live")
     s.on_msg("toggle debug", s.set("Debug", sub(1, V("Debug"))),
              s.if_(eq(V("Debug"), 1), [s.show_var(n) for n in debug_vars], [s.hide_var(n) for n in debug_vars]))
+    s.on_msg(
+        "adventure stage",
+        s.set("Wave Phase", 1), s.set("Fight On", 0),
+        *[s.if_(eq(V("Adv Stage"), i), [s.set("Pop Text", f"STAGE {i}: {st['name']}"), s.set("Summon Kind", st["kind"])])
+          for i, st in enumerate(ADVENTURE, start=1)],
+        s.broadcast("start fight"), s.wait(0.6), s.broadcast("popup"),
+        note="ADVENTURE: a stage starts with waves of small enemies (the boss stays hidden), then the boss comes.",
+    )
+    s.local("Waves", 1)
+    s.local("Near", 9999)
+    s.local("I", 0)
+    s.define(
+        "aim at nearest",
+        # the hero turns toward the closest small enemy (Enemy X is what the hero faces)
+        s.set("Near", 99999), s.set("I", 0),
+        s.repeat(3, [
+            s.change("I", 1),
+            s.if_(and_(lt(item("M X", V("I")), 9000), lt(abs_(sub(item("M X", V("I")), V("Hero X"))), V("Near"))), [
+                s.set("Near", abs_(sub(item("M X", V("I")), V("Hero X")))), s.set("Enemy X", item("M X", V("I"))),
+            ]),
+        ]),
+    )
+    wave_counts = [s.if_(eq(V("Adv Stage"), i), [s.set("Waves", len(st["waves"]))]) for i, st in enumerate(ADVENTURE, start=1)]
+
+    def wave_size():
+        out = []
+        for i, st in enumerate(ADVENTURE, start=1):
+            for w, n in enumerate(st["waves"], start=1):
+                out.append(s.if_(and_(eq(V("Adv Stage"), i), eq(V("Wave Num"), w)), [s.set("Wave Total", add(n, sub(V("Lap"), 1)))]))
+        return out
+    s.on_msg(
+        "fight on",
+        s.if_(and_(eq(V("Mode"), "adventure"), eq(V("Wave Phase"), 1)), [
+            *wave_counts, s.set("Wave Num", 0),
+            s.repeat(V("Waves"), [
+                s.change("Wave Num", 1), *wave_size(), s.set("Beaten", 0), s.set("Spawned", 0),
+                s.set("Enemy Max", V("Wave Total")), s.set("Enemy HP", V("Wave Total")),
+                s.set("Pop Text", join("WAVE ", join(V("Wave Num"), join(" of ", V("Waves"))))), s.broadcast("popup"),
+                s.until(or_(not_(lt(V("Beaten"), V("Wave Total"))), eq(V("Fight On"), 0)), [
+                    s.if_(and_(lt(V("Minions"), 3), lt(V("Spawned"), V("Wave Total"))), [
+                        s.change("Spawned", 1), s.set("Summon Count", 1), s.broadcast("ninja summon"), s.wait(0.45),
+                    ]),
+                    s.set("Enemy HP", sub(V("Wave Total"), V("Beaten"))),
+                    s.call("aim at nearest"),
+                ]),
+                s.if_(eq(V("Fight On"), 0), [s.stop()]),
+                s.wait(0.8),
+            ]),
+            # the boss arrives
+            s.set("Wave Phase", 0), s.broadcast("load enemy", wait=True), s.set("Enemy X", 170),
+            s.play("alarm"), s.set("Banner", "boss"), s.broadcast("banner"),
+            s.broadcast("boss enter", wait=True), s.wait(0.6),
+            s.broadcast("fight on"),
+        ]),
+        note="The waves: small enemies come in (up to 3 at once) until the wave is beaten; the enemy bar shows how many are left. "
+             "Then the boss arrives with a BOSS FIGHT! warning.",
+    )
     s.on_msg("enemy hurt", s.play("hit"))
     s.on_msg("charge start", s.play("charge"))
     s.on_msg("charge full", s.play("charged"), s.set("Pop Text", "FULL POWER!"), s.broadcast("popup"))
@@ -2598,6 +2680,18 @@ def build():
                 s.broadcast("gain xp"),
                 s.wait(2), s.change("Chapter", 1), s.broadcast("story scene"),
             ]),
+        ], [s.if_(eq(V("Mode"), "adventure"), [
+            s.play("win"), s.set("Banner", "stage clear"), s.broadcast("banner"),
+            s.change("Score", add(800, mul(V("Hero HP"), 5))),
+            s.set("XP Gain", 2), s.broadcast("gain xp"),
+            s.change("Hero HP", ARCADE_HEAL), s.if_(gt(V("Hero HP"), V("Hero Max")), [s.set("Hero HP", V("Hero Max"))]),
+            s.if_(gt(V("Score"), V("Best")), [s.set("Best", V("Score"))]),
+            s.wait(2), s.change("Adv Stage", 1),
+            s.if_(gt(V("Adv Stage"), len(ADVENTURE)), [
+                s.set("Adv Stage", 1), s.change("Lap", 1),
+                s.set("Pop Text", join("LAP ", join(V("Lap"), "! Enemies are tougher!"))), s.broadcast("popup"), s.wait(1),
+            ]),
+            s.broadcast("adventure stage"),
         ], [
             s.play("win"), s.set("Banner", "wave clear"), s.broadcast("banner"),
             s.change("Score", add(200, mul(V("Wave"), 50))),
@@ -2607,8 +2701,8 @@ def build():
             s.set("Pop Text", f"+{ARCADE_HEAL} HEALTH"), s.broadcast("popup"),
             s.if_(gt(V("Score"), V("Best")), [s.set("Best", V("Score"))]),
             s.wait(1.8), s.change("Wave", 1), s.broadcast("start fight"),
-        ]),
-        note="Story: next chapter, or the ending after the Shadow King. Arcade: heal a little and start the next, harder wave.",
+        ])]),
+        note="Adventure: heal and go on to the next stage. Story: next chapter, or the ending after the Shadow King. Arcade: heal a little and start the next, harder wave.",
     )
     s.on_msg(
         "hero down",
@@ -2988,7 +3082,7 @@ def build():
                  H.if_(eq(rnd(1, 2), 1), [pose("hurt")], [pose("hurt high")]), H.move(-12), *H.clamp_x(-215, 215)]),
              H.effect("COLOR", 60), H.wait(0.15), H.effect("COLOR", 0), H.if_(eq(V("Hero Lock"), 0), [rest_pose()]))
     H.on_msg("show title", H.show(), H.clear_fx(), H.point(90), H.set("Hero Name", "arthur"), H.wear("arthur idle"),
-             H.goto(-205, GROUND), H.size_to(90), H.front(), H.say("I'm Arthur!", 2))
+             H.goto(-212, GROUND), H.size_to(90), H.front(), H.say("I'm Arthur!", 2))
     H.on_msg("choose hero", H.hide())
     H.on_msg("intro", H.hide())
     H.on_msg("story scene", H.hide())
@@ -3140,7 +3234,8 @@ def build():
 
     def summon(count):
         return E.if_(lt(V("Minions"), 3), [
-            epose("windup"), E.say("NINJA SQUAD!", pw(0.6)), E.set("Summon Count", count), E.broadcast("ninja summon"),
+            epose("windup"), E.say("NINJA SQUAD!", pw(0.6)), E.set("Summon Kind", "ninja"), E.set("Summon Count", count),
+            E.broadcast("ninja summon"),
             epose("idle"), E.wait(pw(0.5)),
         ], [*teleport_slash()])
 
@@ -3275,14 +3370,14 @@ def build():
     )
     E.on_flag(
         E.rotation_style("left-right"), E.hide(),
-        E.forever([E.set("Enemy X", XPOS)]),
+        E.forever([E.if_(eq(V("Wave Phase"), 0), [E.set("Enemy X", XPOS)])]),
         note="Enemy X is read by Hero and the weapons.",
     )
     E.on_msg(
         "fight on",
         E.until(eq(V("Fight On"), 0), [
             face_hero(),
-            E.if_(or_(lt(TIMER, V("Enemy Stun Until")), eq(V("Mode"), "practice")), [E.wait(0.05)], [
+            E.if_(or_(lt(TIMER, V("Enemy Stun Until")), eq(V("Mode"), "practice"), eq(V("Wave Phase"), 1)), [E.wait(0.05)], [
                 E.if_(eq(V("Enemy Type"), 1), walker()),
                 E.if_(eq(V("Enemy Type"), 2), thrower()),
                 E.if_(eq(V("Enemy Type"), 3), charger()),
@@ -3303,7 +3398,7 @@ def build():
     E.on_msg("enemy hurt", E.if_(eq(rnd(1, 2), 1), [epose("hurt")], [epose("hurt high")]), E.move(-12), *E.clamp_x(-210, 210), E.effect("BRIGHTNESS", 60),
              E.wait(0.1), E.effect("BRIGHTNESS", 0))
     E.on_msg("king angry",
-             E.if_(eq(V("Enemy Type"), KAGE), [E.say("Shadow clones... ATTACK!", 1.4), E.set("Summon Count", 2),
+             E.if_(eq(V("Enemy Type"), KAGE), [E.say("Shadow clones... ATTACK!", 1.4), E.set("Summon Kind", "ninja"), E.set("Summon Count", 2),
                                                E.broadcast("ninja summon")]),
              E.if_(eq(V("Enemy Type"), KING), [E.wear("shadow angry"), E.say("You're strong... but I'm STRONGER!", 1.6),
                                                 E.wear("shadow idle")],
@@ -3312,7 +3407,11 @@ def build():
     for m in ("show title", "choose hero"):
         E.on_msg(m, E.hide())
     E.on_msg("fighters ready", E.show(), E.clear_fx(), E.size_to(V("Enemy Size")), E.point(-90), E.set("Enemy Facing", -1),
-             E.goto(150, GROUND), epose("idle"), E.say(""))
+             E.goto(150, GROUND), epose("idle"), E.say(""), E.if_(eq(V("Wave Phase"), 1), [E.hide()]))
+    E.on_msg("boss enter", E.clear_fx(), E.size_to(V("Enemy Size")), E.point(-90), E.set("Enemy Facing", -1),
+             E.goto(170, GROUND), epose("idle"), E.set("Smoke X", 170), E.set("Smoke Y", add(GROUND, 40)), E.broadcast("smoke"),
+             E.show(), E.say(V("Enemy Title"), 1.2),
+             note="ADVENTURE: the stage boss bursts in after the waves.")
     E.on_msg("scene setup", E.show(), E.clear_fx(), E.size_to(V("Enemy Size")), E.point(-90), E.goto(150, GROUND), epose("idle"))
     E.on_msg("story scene", E.hide())
     E.on_msg("enemy line", E.say(V("Line")), E.set("Line Until", add(TIMER, V("Line Secs"))),
@@ -3524,60 +3623,90 @@ def build():
     # ---------------------------------------------------- ninja minions --
     nm = game.sprite("Ninja Minion", size=70, rotation="left-right")
     for pose_ in ("idle", "run 1", "run 2", "slash", "hurt", "hurt high", "flip", "down"):
-        nm.costume(pose_, fighter_svg("#374151", pose_, "ninja", "ko" if pose_ == "down" else "smile"), 50, 168)
+        face = "ko" if pose_ == "down" else "smile"
+        nm.costume(f"ninja {pose_}", fighter_svg("#374151", pose_, "ninja", face), 50, 168)
+        grunt_pose = {"slash": "punch", "flip": "jump"}.get(pose_, pose_)
+        nm.costume(f"grunt {pose_}", fighter_svg("#78716c", grunt_pose, "none", "hurt" if "hurt" in pose_ else face), 50, 168)
+        robot_pose = {"run 1": "attack", "run 2": "windup", "slash": "attack", "hurt high": "hurt", "flip": "idle"}.get(pose_, pose_)
+        nm.costume(f"robot {pose_}", robot_svg(robot_pose), 50, 168)
     NM = nm
     for name, value in (("Is Clone", 0), ("HP", MINION_HP), ("Hit Until", 0), ("Was Hit", 0), ("Atk Until", 0),
-                        ("Dir", 1), ("D", 0), ("Side", 1), ("Gap", 34)):
+                        ("Dir", 1), ("D", 0), ("Side", 1), ("Gap", 34), ("Kind", "ninja"), ("Slot", 0), ("J", 0), ("Speed", 3)):
         NM.local(name, value)
-    NM.on_flag(NM.hide(), NM.set("Is Clone", 0), NM.set("Minions", 0))
+
+    def mpose(name):
+        return NM.wear(join(V("Kind"), " " + name))
+    NM.on_flag(NM.hide(), NM.set("Is Clone", 0), NM.set("Minions", 0), NM.list_clear("M X"),
+               NM.repeat(3, [NM.list_add("M X", 9999)]))
+    NM.define(
+        "pick slot",
+        NM.set("Slot", 0), NM.set("J", 0),
+        NM.repeat(3, [NM.change("J", 1),
+                      NM.if_(and_(eq(V("Slot"), 0), not_(lt(item("M X", V("J")), 9000))), [NM.set("Slot", V("J"))])]),
+        NM.if_(gt(V("Slot"), 0), [NM.list_set("M X", V("Slot"), XPOS)]),
+    )
     NM.on_msg(
         "ninja summon",
         NM.if_(eq(V("Is Clone"), 0), [
             NM.repeat(V("Summon Count"), [
                 NM.if_(and_(lt(V("Minions"), 3), eq(V("Fight On"), 1)), [
-                    NM.change("Minions", 1),
+                    NM.set("Kind", V("Summon Kind")),
+                    NM.if_(eq(V("Kind"), "mix"), [NM.set("J", rnd(1, 3)), *[NM.if_(eq(V("J"), i), [NM.set("Kind", k)])
+                                                                            for i, k in enumerate(MINION_KINDS, start=1)]]),
                     NM.if_(eq(rnd(1, 2), 1), [NM.set("Side", -1)], [NM.set("Side", 1)]),
-                    NM.goto(mul(V("Side"), rnd(150, 215)), GROUND), NM.set("Smoke X", XPOS), NM.set("Smoke Y", add(GROUND, 40)),
-                    NM.broadcast("smoke"), NM.clone(), NM.wait(0.25),
+                    NM.goto(mul(V("Side"), rnd(150, 215)), GROUND), NM.call("pick slot"),
+                    NM.if_(gt(V("Slot"), 0), [
+                        NM.change("Minions", 1),
+                        NM.set("Smoke X", XPOS), NM.set("Smoke Y", add(GROUND, 40)), NM.broadcast("smoke"), NM.clone(),
+                    ]),
+                    NM.wait(0.25),
                 ]),
             ]),
         ]),
-        note="MASTER KAGE and the ninjas call a NINJA SQUAD: up to 3 small ninjas that fight you at the same time.",
+        note="Calls small enemies (up to 3 at once): ninjas, gray grunts or small robots (Summon Kind; \"mix\" picks any). "
+             "MASTER KAGE's NINJA SQUAD and the ADVENTURE waves both use this.",
     )
     NM.on_clone(
-        NM.set("Is Clone", 1), NM.set("Gap", rnd(26, 58)), NM.set("HP", add(MINION_HP, V("Difficulty"))), NM.set("Was Hit", 0), NM.set("Atk Until", add(TIMER, 0.6)),
-        NM.wear("flip"), NM.size_to(70), NM.show(), NM.front(), NM.wait(0.15),
+        NM.set("Is Clone", 1), NM.set("Gap", rnd(26, 58)), NM.set("HP", add(MINION_HP, V("Difficulty"))), NM.set("Was Hit", 0),
+        NM.set("Atk Until", add(TIMER, 0.6)), NM.set("Speed", add(3, mul(0.5, V("Difficulty")))),
+        NM.if_(eq(V("Kind"), "robot"), [NM.size_to(55), NM.change("Speed", 1.5), NM.change("HP", -2)], [NM.size_to(70)]),
+        NM.if_(eq(V("Kind"), "grunt"), [NM.change("HP", 1)]),
+        NM.change("HP", mul(2, sub(V("Lap"), 1))),
+        mpose("flip"), NM.show(), NM.front(), NM.wait(0.15),
         NM.until(or_(lt(V("HP"), 1), eq(V("Fight On"), 0)), [
+            NM.list_set("M X", V("Slot"), XPOS),
             NM.if_(eq(V("Was Hit"), 1), [
-                NM.set("Was Hit", 0), NM.if_(eq(rnd(1, 2), 1), [NM.wear("hurt")], [NM.wear("hurt high")]),
+                NM.set("Was Hit", 0), NM.if_(eq(rnd(1, 2), 1), [mpose("hurt")], [mpose("hurt high")]),
                 NM.effect("BRIGHTNESS", 60), NM.move(-14), *NM.clamp_x(-220, 220), NM.wait(0.15), NM.effect("BRIGHTNESS", 0),
             ], [
                 NM.set("D", sub(V("Hero X"), XPOS)),
                 NM.if_(gt(V("D"), 0), [NM.point(90)], [NM.point(-90)]),
                 NM.if_(gt(abs_(V("D")), V("Gap")), [
-                    NM.move(add(3, mul(0.5, V("Difficulty")))),
-                    NM.if_(eq(mod(round_(mul(TIMER, 9)), 2), 0), [NM.wear("run 1")], [NM.wear("run 2")]),
+                    NM.move(V("Speed")),
+                    NM.if_(eq(mod(round_(mul(TIMER, 9)), 2), 0), [mpose("run 1")], [mpose("run 2")]),
                 ], [
                     NM.if_(and_(gt(TIMER, V("Atk Until")), lt(abs_(V("D")), 45)), [
-                        NM.wear("slash"), NM.broadcast("swing sfx"),
+                        mpose("slash"), NM.broadcast("swing sfx"),
                         NM.if_(lt(sub(V("Hero Y"), GROUND), 50),
                                [NM.set("Hurt Power", add(3, V("Power Level"))), NM.broadcast("enemy hits hero")]),
                         NM.set("Atk Until", add(TIMER, sub(1.1, mul(0.1, V("Difficulty"))))), NM.wait(0.18),
                     ], [
-                        NM.wear("idle"),
-                        # too far to slash: step in for the attack now and then
+                        mpose("idle"),
+                        # too far to attack: step in now and then
                         NM.if_(and_(gt(TIMER, V("Atk Until")), eq(rnd(1, 20), 1)), [NM.set("Gap", rnd(26, 40))]),
                     ]),
                 ]),
             ]),
         ]),
+        NM.list_set("M X", V("Slot"), 9999),
         NM.if_(lt(V("HP"), 1), [
-            NM.wear("down"), NM.change("Score", 50), NM.wait(0.35),
+            mpose("down"), NM.change("Score", 50), NM.change("Beaten", 1), NM.wait(0.35),
         ]),
         NM.set("Smoke X", XPOS), NM.set("Smoke Y", add(GROUND, 30)), NM.broadcast("smoke"),
         NM.change("Minions", -1), NM.if_(lt(V("Minions"), 0), [NM.set("Minions", 0)]),
         NM.delete_clone(),
-        note="One ninja: runs at you, slashes when close, flinches when hit, vanishes in smoke when beaten.",
+        note="One small enemy: runs at you, attacks when close, flinches when hit, vanishes in smoke when beaten. "
+             "Robots are smaller and faster; grunts are a little tougher.",
     )
     NM.on_msg(
         "area hit",
@@ -3595,7 +3724,7 @@ def build():
     # ----------------------------------------------------------- shadows --
     for who, xvar, yvar, cond, scale in (
         ("Hero Shadow", V("Hero X"), V("Hero Y"), or_(eq(V("State"), "fight"), eq(V("State"), "over")), 75),
-        ("Enemy Shadow", V("Enemy X"), None, and_(eq(V("State"), "fight"), gt(V("Enemy HP"), 0)), None),
+        ("Enemy Shadow", V("Enemy X"), None, and_(eq(V("State"), "fight"), gt(V("Enemy HP"), 0), eq(V("Wave Phase"), 0)), None),
     ):
         sh = game.sprite(who, size=100, rotation="don't rotate")
         sh.costume("shadow", shadow_svg(), 35, 8)
@@ -3747,7 +3876,7 @@ def build():
                     AU.if_(eq(V("Brawl On"), 1), [AU.show()], [AU.hide()]),
                 ], [
                     AU.if_(and_(eq(V("State"), "title"), gt(V("Power Level"), 1)), [
-                        AU.goto(-205, GROUND), AU.size_to(mul(90, V("Grow"))), AU.show(),
+                        AU.goto(-212, GROUND), AU.size_to(mul(90, V("Grow"))), AU.show(),
                     ], [AU.hide()]),
                 ]),
             ]),
@@ -3830,7 +3959,7 @@ def build():
     BW.on_flag(
         BW.hide(),
         BW.forever([
-            BW.if_(and_(eq(V("State"), "fight"), not_(eq(V("Enemy Weapon"), "none")), gt(V("Enemy HP"), 0),
+            BW.if_(and_(eq(V("State"), "fight"), not_(eq(V("Enemy Weapon"), "none")), gt(V("Enemy HP"), 0), eq(V("Wave Phase"), 0),
                         or_(eq(V("Fight On"), 1), gt(V("Enemy X"), -300))), [
                 BW.wear(V("Enemy Weapon")),
                 BW.size_to(mul(V("Enemy Size"), 0.8)),
@@ -3917,8 +4046,11 @@ def build():
     for e in ENEMIES:
         word = e["tag"]
         enemy_tag.costume(e["key"], tag_svg(word, e["color"] if e["n"] != KING else "#581c87"), 12 + 10 * len(word), 10)
+    enemy_tag.costume("squad", tag_svg("ENEMY WAVE", "#b45309"), 12 + 10 * len("ENEMY WAVE"), 10)
     enemy_tag.on_flag(enemy_tag.hide(), enemy_tag.forever([
-        enemy_tag.if_(eq(V("State"), "fight"), [enemy_tag.wear(V("Enemy Name")), enemy_tag.goto(228, 174), enemy_tag.show()],
+        enemy_tag.if_(eq(V("State"), "fight"), [
+            enemy_tag.if_(eq(V("Wave Phase"), 1), [enemy_tag.wear("squad")], [enemy_tag.wear(V("Enemy Name"))]),
+            enemy_tag.goto(228, 174), enemy_tag.show()],
                       [enemy_tag.hide()])]))
 
     # pop-up words (combo, perfect, weapon names) as clones that float up
@@ -3952,7 +4084,7 @@ def build():
 
     banner = game.sprite("Banner", x=0, y=40, rotation="don't rotate")
     for key, word, fill in (("ready", "READY...", "#facc15"), ("fight", "FIGHT!", "#ef4444"), ("ko", "K.O.!", "#f97316"),
-                            ("clear", "CHAPTER CLEAR!", "#22c55e"), ("wave clear", "WAVE CLEAR!", "#22d3ee"), ("boss", "BOSS FIGHT!", "#ef4444"), ("game", "GAME!", "#facc15"), ("power up", "POWER UP!", "#a855f7")):
+                            ("clear", "CHAPTER CLEAR!", "#22c55e"), ("wave clear", "WAVE CLEAR!", "#22d3ee"), ("boss", "BOSS FIGHT!", "#ef4444"), ("game", "GAME!", "#facc15"), ("stage clear", "STAGE CLEAR!", "#22c55e"), ("power up", "POWER UP!", "#a855f7")):
         banner.costume(key, banner_svg(word, fill), banner_size(word)[1] / 2, 45)
     BN = banner
     BN.on_flag(BN.hide())
@@ -4125,10 +4257,11 @@ def build():
                 *show_level(), DB.broadcast("swing sfx"),
                 note="Tap to change the level: EASY, NORMAL, HARD, CHAMPION. Higher levels give enemies more health "
                      "(longer fights), harder hits and faster attacks.")
-    story_btn = button("Story Button", "STORY", "#2563eb", -100, -25, width=112, height=52, size=19)
-    arcade_btn = button("Arcade Button", "ARCADE", "#db2777", 18, -25, width=112, height=52, size=19)
-    brawl_btn = button("Brawl Button", "BRAWL", "#ea580c", 136, -25, width=112, height=52, size=19)
-    for b, mode in ((story_btn, "story"), (arcade_btn, "arcade"), (brawl_btn, "brawl")):
+    story_btn = button("Story Button", "STORY", "#2563eb", -130, -25, width=90, height=50, size=16)
+    adv_btn = button("Adventure Button", "ADVENTURE", "#16a34a", -26, -25, width=110, height=50, size=14)
+    arcade_btn = button("Arcade Button", "ARCADE", "#db2777", 78, -25, width=90, height=50, size=16)
+    brawl_btn = button("Brawl Button", "BRAWL", "#ea580c", 176, -25, width=90, height=50, size=16)
+    for b, mode in ((story_btn, "story"), (adv_btn, "adventure"), (arcade_btn, "arcade"), (brawl_btn, "brawl")):
         b.on_msg("show title", b.show(), b.front())
         b.on_msg("choose hero", b.hide())
         b.on_click(b.set("Mode", mode), b.broadcast("choose hero"))
@@ -4158,7 +4291,9 @@ def build():
         retry.hide(),
         retry.if_(eq(V("Mode"), "arcade"), [retry.set("Wave", 1), retry.set("Score", 0), retry.set("Hero HP", V("Hero Max"))]),
         retry.set("Super", 0),
-        retry.if_(eq(V("Mode"), "brawl"), [retry.set("Score", 0), retry.broadcast("brawl start")], [retry.broadcast("start fight")]),
+        retry.if_(eq(V("Mode"), "brawl"), [retry.set("Score", 0), retry.broadcast("brawl start")], [
+            retry.if_(eq(V("Mode"), "adventure"), [retry.set("Hero HP", V("Hero Max")), retry.broadcast("adventure stage")],
+                      [retry.broadcast("start fight")])]),
         note="Story: try the same chapter again (no talking). Arcade: a new run from wave 1.",
     )
 

@@ -98,6 +98,23 @@ Tap **BRAWL**, pick your fighter, and fight three CPU fighters at once (ninjas c
   - **SMASH:** when SUPER is full you glow with red fire. SUPER then does a SMASH that sends fighters flying.
 - The yellow **P1** arrow shows which fighter is you.
 
+## Adventure
+
+Tap **ADVENTURE** for a journey that keeps going, stage after stage:
+
+| Stage | Small enemies | Boss |
+| --- | --- | --- |
+| 1 Training Yard | gray grunts | Brute |
+| 2 Bamboo Forest | ninjas | MASTER KAGE |
+| 3 Robot Factory | small robots | MEGA SPIKE |
+| 4 Volcano Gate | a mix | Quake |
+| 5 Shadow Castle | a mix | Shadow King |
+
+- **Waves:** each stage starts with waves of small enemies (up to 3 at a time). The bar at the top says **ENEMY WAVE** and shrinks as you beat them. Then the **BOSS FIGHT!** starts.
+- **Health:** it carries over from stage to stage. Beating a boss gives back 30 and 2 XP.
+- **Lap 2:** after the Shadow King it goes round again as **LAP 2**, then 3 and so on, with tougher enemies and more of them.
+- **Retry:** if you get knocked out, RETRY starts that stage again with full health.
+
 ## Practice
 
 Tap **PRACTICE** on the title to try every move on a dummy that never hits back and never goes down. Leave with the ✕ button.
@@ -216,7 +233,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v2.0` in the bottom corner of the title.
+- **Version line:** `v2.1` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).

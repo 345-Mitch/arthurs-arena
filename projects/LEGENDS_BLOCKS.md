@@ -7,7 +7,7 @@ Made by `tools/build_legends_sb3.py` from the same blocks that are inside
 
 Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Bamboo, Dojo, Volcano, Castle, Arcade, Ending, Paper, brawl sky, brawl ramps, brawl pagoda, brawl pirate, brawl castle, brawl space, brawl snow, brawl candy, brawl factory, brawl towers
 Sounds: hit, big hit, hurt, ki roar, ki flare, transform, scribble, page, jump, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, poof, shuriken, spike fall, win
-Sprite-only variables: New Level, Frames, Second, K, Pick, Min X, Max X, Min Y, Max Y, Alive, Zoom To
+Sprite-only variables: New Level, Frames, Second, Waves, Near, I, K, Pick, Min X, Max X, Min Y, Max Y, Alive, Zoom To
 
 ```
 when green flag clicked
@@ -27,6 +27,7 @@ broadcast [intro]
 when I receive [show title]
 set [State] to [title]
 set [Fight On] to [0]
+set [Wave Phase] to [0]
 switch backdrop to (Title)
 clear graphic effects
 hide variable [Score]
@@ -85,8 +86,15 @@ else
         set [Score] to [0]
         broadcast [brawl start]
     else
-        set [Wave] to [1]
-        broadcast [start fight]
+        if <(Mode) = [adventure]> then
+            set [Adv Stage] to [1]
+            set [Lap] to [1]
+            set [Score] to [0]
+            broadcast [adventure stage]
+        else
+            set [Wave] to [1]
+            broadcast [start fight]
+        end
     end
 end
 ```
@@ -99,6 +107,29 @@ if <(Mode) = [practice]> then
     set [Enemy Type] to [1]
     switch backdrop to (Yard)
     set [Pace] to [1]
+end
+if <(Mode) = [adventure]> then
+    if <(Adv Stage) = [1]> then
+        set [Enemy Type] to [3]
+        switch backdrop to (Yard)
+    end
+    if <(Adv Stage) = [2]> then
+        set [Enemy Type] to [7]
+        switch backdrop to (Bamboo)
+    end
+    if <(Adv Stage) = [3]> then
+        set [Enemy Type] to [5]
+        switch backdrop to (Factory)
+    end
+    if <(Adv Stage) = [4]> then
+        set [Enemy Type] to [8]
+        switch backdrop to (Volcano)
+    end
+    if <(Adv Stage) = [5]> then
+        set [Enemy Type] to [9]
+        switch backdrop to (Castle)
+    end
+    set [Pace] to ([1] - ([0.08] * ((Lap) - [1])))
 end
 if <(Mode) = [story]> then
     set [Enemy Type] to (Chapter)
@@ -131,7 +162,7 @@ if <(Mode) = [story]> then
     end
     set [Pace] to [1]
 else
-    if <(Mode) = [practice]> then
+    if <not <(Mode) = [arcade]>> then
     else
         if <((Wave) mod [9]) = [0]> then
             set [Enemy Type] to [9]
@@ -232,6 +263,10 @@ if <(Enemy Type) = [9]> then
     set [Enemy Size] to [125]
     set [Enemy Weapon] to [dark sword]
 end
+if <(Mode) = [adventure]> then
+    set [Enemy Max] to ((Enemy Max) * ([1] + ([0.35] * ((Lap) - [1]))))
+    change [Enemy Power] by ([2] * ((Lap) - [1]))
+end
 if <(Mode) = [arcade]> then
     change [Enemy Max] by ([8] * ((Wave) - [1]))
     change [Enemy Power] by (floor of (((Wave) - [1]) / [2]))
@@ -276,7 +311,13 @@ broadcast [load enemy] and wait
 if <(Mode) = [arcade]> then
     show variable [Wave]
 else
-    set [Hero HP] to (Hero Max)
+    if <not <(Mode) = [adventure]>> then
+        set [Hero HP] to (Hero Max)
+    end
+end
+delete all of [M X]
+repeat [3]
+    add [9999] to [M X]
 end
 show variable [Score]
 hide variable [Best]
@@ -325,7 +366,7 @@ end
 
 ```
 when I receive [hero hits]
-if <<(Fight On) = [1]> and <(timer) > (Enemy Stun Until)>> then
+if <<<(Fight On) = [1]> and <(timer) > (Enemy Stun Until)>> and <(Wave Phase) = [0]>> then
     set [Enemy Stun Until] to ((timer) + [0.15])
     change [Hit Power] by ((Power Level) - [1])
     if <((timer) - (Combo Clock)) < [1.2]> then
@@ -546,6 +587,139 @@ end
 ```
 
 ```
+when I receive [adventure stage]
+set [Wave Phase] to [1]
+set [Fight On] to [0]
+if <(Adv Stage) = [1]> then
+    set [Pop Text] to [STAGE 1: TRAINING YARD]
+    set [Summon Kind] to [grunt]
+end
+if <(Adv Stage) = [2]> then
+    set [Pop Text] to [STAGE 2: BAMBOO FOREST]
+    set [Summon Kind] to [ninja]
+end
+if <(Adv Stage) = [3]> then
+    set [Pop Text] to [STAGE 3: ROBOT FACTORY]
+    set [Summon Kind] to [robot]
+end
+if <(Adv Stage) = [4]> then
+    set [Pop Text] to [STAGE 4: VOLCANO GATE]
+    set [Summon Kind] to [mix]
+end
+if <(Adv Stage) = [5]> then
+    set [Pop Text] to [STAGE 5: SHADOW CASTLE]
+    set [Summon Kind] to [mix]
+end
+broadcast [start fight]
+wait [0.6] seconds
+broadcast [popup]
+```
+
+> ADVENTURE: a stage starts with waves of small enemies (the boss stays hidden), then the boss comes.
+
+```
+define (aim at nearest)   [run without screen refresh]
+set [Near] to [99999]
+set [I] to [0]
+repeat [3]
+    change [I] by [1]
+    if <<(item (I) of [M X]) < [9000]> and <(abs of ((item (I) of [M X]) - (Hero X))) < (Near)>> then
+        set [Near] to (abs of ((item (I) of [M X]) - (Hero X)))
+        set [Enemy X] to (item (I) of [M X])
+    end
+end
+```
+
+```
+when I receive [fight on]
+if <<(Mode) = [adventure]> and <(Wave Phase) = [1]>> then
+    if <(Adv Stage) = [1]> then
+        set [Waves] to [2]
+    end
+    if <(Adv Stage) = [2]> then
+        set [Waves] to [2]
+    end
+    if <(Adv Stage) = [3]> then
+        set [Waves] to [2]
+    end
+    if <(Adv Stage) = [4]> then
+        set [Waves] to [2]
+    end
+    if <(Adv Stage) = [5]> then
+        set [Waves] to [3]
+    end
+    set [Wave Num] to [0]
+    repeat (Waves)
+        change [Wave Num] by [1]
+        if <<(Adv Stage) = [1]> and <(Wave Num) = [1]>> then
+            set [Wave Total] to ([3] + ((Lap) - [1]))
+        end
+        if <<(Adv Stage) = [1]> and <(Wave Num) = [2]>> then
+            set [Wave Total] to ([4] + ((Lap) - [1]))
+        end
+        if <<(Adv Stage) = [2]> and <(Wave Num) = [1]>> then
+            set [Wave Total] to ([3] + ((Lap) - [1]))
+        end
+        if <<(Adv Stage) = [2]> and <(Wave Num) = [2]>> then
+            set [Wave Total] to ([4] + ((Lap) - [1]))
+        end
+        if <<(Adv Stage) = [3]> and <(Wave Num) = [1]>> then
+            set [Wave Total] to ([4] + ((Lap) - [1]))
+        end
+        if <<(Adv Stage) = [3]> and <(Wave Num) = [2]>> then
+            set [Wave Total] to ([5] + ((Lap) - [1]))
+        end
+        if <<(Adv Stage) = [4]> and <(Wave Num) = [1]>> then
+            set [Wave Total] to ([4] + ((Lap) - [1]))
+        end
+        if <<(Adv Stage) = [4]> and <(Wave Num) = [2]>> then
+            set [Wave Total] to ([5] + ((Lap) - [1]))
+        end
+        if <<(Adv Stage) = [5]> and <(Wave Num) = [1]>> then
+            set [Wave Total] to ([4] + ((Lap) - [1]))
+        end
+        if <<(Adv Stage) = [5]> and <(Wave Num) = [2]>> then
+            set [Wave Total] to ([5] + ((Lap) - [1]))
+        end
+        if <<(Adv Stage) = [5]> and <(Wave Num) = [3]>> then
+            set [Wave Total] to ([6] + ((Lap) - [1]))
+        end
+        set [Beaten] to [0]
+        set [Spawned] to [0]
+        set [Enemy Max] to (Wave Total)
+        set [Enemy HP] to (Wave Total)
+        set [Pop Text] to (join [WAVE ] (join (Wave Num) (join [ of ] (Waves))))
+        broadcast [popup]
+        repeat until <<not <(Beaten) < (Wave Total)>> or <(Fight On) = [0]>>
+            if <<(Minions) < [3]> and <(Spawned) < (Wave Total)>> then
+                change [Spawned] by [1]
+                set [Summon Count] to [1]
+                broadcast [ninja summon]
+                wait [0.45] seconds
+            end
+            set [Enemy HP] to ((Wave Total) - (Beaten))
+            (aim at nearest)
+        end
+        if <(Fight On) = [0]> then
+            stop [this script]
+        end
+        wait [0.8] seconds
+    end
+    set [Wave Phase] to [0]
+    broadcast [load enemy] and wait
+    set [Enemy X] to [170]
+    start sound (alarm)
+    set [Banner] to [boss]
+    broadcast [banner]
+    broadcast [boss enter] and wait
+    wait [0.6] seconds
+    broadcast [fight on]
+end
+```
+
+> The waves: small enemies come in (up to 3 at once) until the wave is beaten; the enemy bar shows how many are left. Then the boss arrives with a BOSS FIGHT! warning.
+
+```
 when I receive [enemy hurt]
 start sound (hit)
 ```
@@ -684,31 +858,57 @@ if <(Mode) = [story]> then
         broadcast [story scene]
     end
 else
-    start sound (win)
-    set [Banner] to [wave clear]
-    broadcast [banner]
-    change [Score] by ([200] + ((Wave) * [50]))
-    set [XP Gain] to [1]
-    if <<<(Enemy Type) = [5]> or <(Enemy Type) = [7]>> or <(Enemy Type) = [9]>> then
+    if <(Mode) = [adventure]> then
+        start sound (win)
+        set [Banner] to [stage clear]
+        broadcast [banner]
+        change [Score] by ([800] + ((Hero HP) * [5]))
         set [XP Gain] to [2]
+        broadcast [gain xp]
+        change [Hero HP] by [30]
+        if <(Hero HP) > (Hero Max)> then
+            set [Hero HP] to (Hero Max)
+        end
+        if <(Score) > (Best)> then
+            set [Best] to (Score)
+        end
+        wait [2] seconds
+        change [Adv Stage] by [1]
+        if <(Adv Stage) > [5]> then
+            set [Adv Stage] to [1]
+            change [Lap] by [1]
+            set [Pop Text] to (join [LAP ] (join (Lap) [! Enemies are tougher!]))
+            broadcast [popup]
+            wait [1] seconds
+        end
+        broadcast [adventure stage]
+    else
+        start sound (win)
+        set [Banner] to [wave clear]
+        broadcast [banner]
+        change [Score] by ([200] + ((Wave) * [50]))
+        set [XP Gain] to [1]
+        if <<<(Enemy Type) = [5]> or <(Enemy Type) = [7]>> or <(Enemy Type) = [9]>> then
+            set [XP Gain] to [2]
+        end
+        broadcast [gain xp]
+        change [Hero HP] by [30]
+        if <(Hero HP) > (Hero Max)> then
+            set [Hero HP] to (Hero Max)
+        end
+        set [Pop Text] to [+30 HEALTH]
+        broadcast [popup]
+        if <(Score) > (Best)> then
+            set [Best] to (Score)
+        end
+        wait [1.8] seconds
+        change [Wave] by [1]
+        broadcast [start fight]
     end
-    broadcast [gain xp]
-    change [Hero HP] by [30]
-    if <(Hero HP) > (Hero Max)> then
-        set [Hero HP] to (Hero Max)
-    end
-    set [Pop Text] to [+30 HEALTH]
-    broadcast [popup]
-    if <(Score) > (Best)> then
-        set [Best] to (Score)
-    end
-    wait [1.8] seconds
-    change [Wave] by [1]
-    broadcast [start fight]
 end
 ```
 
-> Story: next chapter, or the ending after the Shadow King. Arcade: heal a little and start the next, harder wave.
+> Adventure: heal and go on to the next stage. Story: next chapter, or the ending after the Shadow King. Arcade: heal a little and start the next, harder wave.
 
 ```
 when I receive [hero down]
@@ -2549,7 +2749,7 @@ clear graphic effects
 point in direction [90]
 set [Hero Name] to [arthur]
 switch costume to (arthur idle)
-go to x: [-205] y: [-75]
+go to x: [-212] y: [-75]
 set size to [90] %
 go to [front] layer
 say [I'm Arthur!] for [2] seconds
@@ -2726,7 +2926,9 @@ when green flag clicked
 set rotation style [left-right]
 hide
 forever
-    set [Enemy X] to (x position)
+    if <(Wave Phase) = [0]> then
+        set [Enemy X] to (x position)
+    end
 end
 ```
 
@@ -2742,7 +2944,7 @@ repeat until <(Fight On) = [0]>
         point in direction [90]
         set [Enemy Facing] to [1]
     end
-    if <<(timer) < (Enemy Stun Until)> or <(Mode) = [practice]>> then
+    if <<<(timer) < (Enemy Stun Until)> or <(Mode) = [practice]>> or <(Wave Phase) = [1]>> then
         wait [0.05] seconds
     else
         if <(Enemy Type) = [1]> then
@@ -3019,6 +3221,7 @@ repeat until <(Fight On) = [0]>
                     if <(Minions) < [3]> then
                         switch costume to (join (Enemy Name) [ windup])
                         say [NINJA SQUAD!] for ([0.6] * (Pace)) seconds
+                        set [Summon Kind] to [ninja]
                         set [Summon Count] to [1]
                         broadcast [ninja summon]
                         switch costume to (join (Enemy Name) [ idle])
@@ -3215,6 +3418,7 @@ repeat until <(Fight On) = [0]>
                         if <(Minions) < [3]> then
                             switch costume to (join (Enemy Name) [ windup])
                             say [NINJA SQUAD!] for ([0.6] * (Pace)) seconds
+                            set [Summon Kind] to [ninja]
                             set [Summon Count] to [3]
                             broadcast [ninja summon]
                             switch costume to (join (Enemy Name) [ idle])
@@ -3260,6 +3464,7 @@ repeat until <(Fight On) = [0]>
                         if <(Minions) < [3]> then
                             switch costume to (join (Enemy Name) [ windup])
                             say [NINJA SQUAD!] for ([0.6] * (Pace)) seconds
+                            set [Summon Kind] to [ninja]
                             set [Summon Count] to [2]
                             broadcast [ninja summon]
                             switch costume to (join (Enemy Name) [ idle])
@@ -3554,6 +3759,7 @@ set [brightness] effect to [0]
 when I receive [king angry]
 if <(Enemy Type) = [7]> then
     say [Shadow clones... ATTACK!] for [1.4] seconds
+    set [Summon Kind] to [ninja]
     set [Summon Count] to [2]
     broadcast [ninja summon]
 end
@@ -3590,7 +3796,27 @@ set [Enemy Facing] to [-1]
 go to x: [150] y: [-75]
 switch costume to (join (Enemy Name) [ idle])
 say []
+if <(Wave Phase) = [1]> then
+    hide
+end
 ```
+
+```
+when I receive [boss enter]
+clear graphic effects
+set size to (Enemy Size) %
+point in direction [-90]
+set [Enemy Facing] to [-1]
+go to x: [170] y: [-75]
+switch costume to (join (Enemy Name) [ idle])
+set [Smoke X] to [170]
+set [Smoke Y] to ([-75] + [40])
+broadcast [smoke]
+show
+say (Enemy Title) for [1.2] seconds
+```
+
+> ADVENTURE: the stage boss bursts in after the waves.
 
 ```
 when I receive [scene setup]
@@ -4170,14 +4396,33 @@ end
 
 ## Ninja Minion
 
-Costumes: idle, run 1, run 2, slash, hurt, hurt high, flip, down
-Sprite-only variables: Is Clone, HP, Hit Until, Was Hit, Atk Until, Dir, D, Side, Gap
+Costumes: ninja idle, grunt idle, robot idle, ninja run 1, grunt run 1, robot run 1, ninja run 2, grunt run 2, robot run 2, ninja slash, grunt slash, robot slash, ninja hurt, grunt hurt, robot hurt, ninja hurt high, grunt hurt high, robot hurt high, ninja flip, grunt flip, robot flip, ninja down, grunt down, robot down
+Sprite-only variables: Is Clone, HP, Hit Until, Was Hit, Atk Until, Dir, D, Side, Gap, Kind, Slot, J, Speed
 
 ```
 when green flag clicked
 hide
 set [Is Clone] to [0]
 set [Minions] to [0]
+delete all of [M X]
+repeat [3]
+    add [9999] to [M X]
+end
+```
+
+```
+define (pick slot)   [run without screen refresh]
+set [Slot] to [0]
+set [J] to [0]
+repeat [3]
+    change [J] by [1]
+    if <<(Slot) = [0]> and <not <(item (J) of [M X]) < [9000]>>> then
+        set [Slot] to (J)
+    end
+end
+if <(Slot) > [0]> then
+    replace item (Slot) of [M X] with (x position)
+end
 ```
 
 ```
@@ -4185,24 +4430,40 @@ when I receive [ninja summon]
 if <(Is Clone) = [0]> then
     repeat (Summon Count)
         if <<(Minions) < [3]> and <(Fight On) = [1]>> then
-            change [Minions] by [1]
+            set [Kind] to (Summon Kind)
+            if <(Kind) = [mix]> then
+                set [J] to (pick random [1] to [3])
+                if <(J) = [1]> then
+                    set [Kind] to [ninja]
+                end
+                if <(J) = [2]> then
+                    set [Kind] to [grunt]
+                end
+                if <(J) = [3]> then
+                    set [Kind] to [robot]
+                end
+            end
             if <(pick random [1] to [2]) = [1]> then
                 set [Side] to [-1]
             else
                 set [Side] to [1]
             end
             go to x: ((Side) * (pick random [150] to [215])) y: [-75]
-            set [Smoke X] to (x position)
-            set [Smoke Y] to ([-75] + [40])
-            broadcast [smoke]
-            create clone of (myself)
+            (pick slot)
+            if <(Slot) > [0]> then
+                change [Minions] by [1]
+                set [Smoke X] to (x position)
+                set [Smoke Y] to ([-75] + [40])
+                broadcast [smoke]
+                create clone of (myself)
+            end
             wait [0.25] seconds
         end
     end
 end
 ```
 
-> MASTER KAGE and the ninjas call a NINJA SQUAD: up to 3 small ninjas that fight you at the same time.
+> Calls small enemies (up to 3 at once): ninjas, gray grunts or small robots (Summon Kind; "mix" picks any). MASTER KAGE's NINJA SQUAD and the ADVENTURE waves both use this.
 
 ```
 when I start as a clone
@@ -4211,18 +4472,30 @@ set [Gap] to (pick random [26] to [58])
 set [HP] to ([7] + (Difficulty))
 set [Was Hit] to [0]
 set [Atk Until] to ((timer) + [0.6])
-switch costume to (flip)
-set size to [70] %
+set [Speed] to ([3] + ([0.5] * (Difficulty)))
+if <(Kind) = [robot]> then
+    set size to [55] %
+    change [Speed] by [1.5]
+    change [HP] by [-2]
+else
+    set size to [70] %
+end
+if <(Kind) = [grunt]> then
+    change [HP] by [1]
+end
+change [HP] by ([2] * ((Lap) - [1]))
+switch costume to (join (Kind) [ flip])
 show
 go to [front] layer
 wait [0.15] seconds
 repeat until <<(HP) < [1]> or <(Fight On) = [0]>>
+    replace item (Slot) of [M X] with (x position)
     if <(Was Hit) = [1]> then
         set [Was Hit] to [0]
         if <(pick random [1] to [2]) = [1]> then
-            switch costume to (hurt)
+            switch costume to (join (Kind) [ hurt])
         else
-            switch costume to (hurt high)
+            switch costume to (join (Kind) [ hurt high])
         end
         set [brightness] effect to [60]
         move [-14] steps
@@ -4242,15 +4515,15 @@ repeat until <<(HP) < [1]> or <(Fight On) = [0]>>
             point in direction [-90]
         end
         if <(abs of (D)) > (Gap)> then
-            move ([3] + ([0.5] * (Difficulty))) steps
+            move (Speed) steps
             if <((round ((timer) * [9])) mod [2]) = [0]> then
-                switch costume to (run 1)
+                switch costume to (join (Kind) [ run 1])
             else
-                switch costume to (run 2)
+                switch costume to (join (Kind) [ run 2])
             end
         else
             if <<(timer) > (Atk Until)> and <(abs of (D)) < [45]>> then
-                switch costume to (slash)
+                switch costume to (join (Kind) [ slash])
                 broadcast [swing sfx]
                 if <((Hero Y) - [-75]) < [50]> then
                     set [Hurt Power] to ([3] + (Power Level))
@@ -4259,7 +4532,7 @@ repeat until <<(HP) < [1]> or <(Fight On) = [0]>>
                 set [Atk Until] to ((timer) + ([1.1] - ([0.1] * (Difficulty))))
                 wait [0.18] seconds
             else
-                switch costume to (idle)
+                switch costume to (join (Kind) [ idle])
                 if <<(timer) > (Atk Until)> and <(pick random [1] to [20]) = [1]>> then
                     set [Gap] to (pick random [26] to [40])
                 end
@@ -4267,9 +4540,11 @@ repeat until <<(HP) < [1]> or <(Fight On) = [0]>>
         end
     end
 end
+replace item (Slot) of [M X] with [9999]
 if <(HP) < [1]> then
-    switch costume to (down)
+    switch costume to (join (Kind) [ down])
     change [Score] by [50]
+    change [Beaten] by [1]
     wait [0.35] seconds
 end
 set [Smoke X] to (x position)
@@ -4282,7 +4557,7 @@ end
 delete this clone
 ```
 
-> One ninja: runs at you, slashes when close, flinches when hit, vanishes in smoke when beaten.
+> One small enemy: runs at you, attacks when close, flinches when hit, vanishes in smoke when beaten. Robots are smaller and faster; grunts are a little tougher.
 
 ```
 when I receive [area hit]
@@ -4359,7 +4634,7 @@ Costumes: shadow
 when green flag clicked
 hide
 forever
-    if <<(State) = [fight]> and <(Enemy HP) > [0]>> then
+    if <<<(State) = [fight]> and <(Enemy HP) > [0]>> and <(Wave Phase) = [0]>> then
         go to x: (Enemy X) y: ([-75] + [1])
         set size to ((Enemy Size) * [0.95]) %
         go to [back] layer
@@ -4658,7 +4933,7 @@ forever
             end
         else
             if <<(State) = [title]> and <(Power Level) > [1]>> then
-                go to x: [-205] y: [-75]
+                go to x: [-212] y: [-75]
                 set size to ([90] * (Grow)) %
                 show
             else
@@ -4824,7 +5099,7 @@ Costumes: club, mace, hammer, dark sword, katana
 when green flag clicked
 hide
 forever
-    if <<<<(State) = [fight]> and <not <(Enemy Weapon) = [none]>>> and <(Enemy HP) > [0]>> and <<(Fight On) = [1]> or <(Enemy X) > [-300]>>> then
+    if <<<<<(State) = [fight]> and <not <(Enemy Weapon) = [none]>>> and <(Enemy HP) > [0]>> and <(Wave Phase) = [0]>> and <<(Fight On) = [1]> or <(Enemy X) > [-300]>>> then
         switch costume to (Enemy Weapon)
         set size to ((Enemy Size) * [0.8]) %
         go to x: ((Enemy X) + (((Enemy Facing) * [0.24]) * (Enemy Size))) y: ([-75] + ((Enemy Size) * [0.62]))
@@ -5066,14 +5341,18 @@ end
 
 ## Enemy Tag
 
-Costumes: rival, ivy, brute, spikebot, megaspike, ninja, kage, quake, shadow
+Costumes: rival, ivy, brute, spikebot, megaspike, ninja, kage, quake, shadow, squad
 
 ```
 when green flag clicked
 hide
 forever
     if <(State) = [fight]> then
-        switch costume to (Enemy Name)
+        if <(Wave Phase) = [1]> then
+            switch costume to (squad)
+        else
+            switch costume to (Enemy Name)
+        end
         go to x: [228] y: [174]
         show
     else
@@ -5173,7 +5452,7 @@ delete this clone
 
 ## Banner
 
-Costumes: ready, fight, ko, clear, wave clear, boss, game, power up
+Costumes: ready, fight, ko, clear, wave clear, boss, game, stage clear, power up
 
 ```
 when green flag clicked
@@ -6336,6 +6615,32 @@ set [Mode] to [story]
 broadcast [choose hero]
 ```
 
+## Adventure Button
+
+Costumes: button
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [show title]
+show
+go to [front] layer
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when this sprite clicked
+set [Mode] to [adventure]
+broadcast [choose hero]
+```
+
 ## Arcade Button
 
 Costumes: button
@@ -6572,7 +6877,12 @@ if <(Mode) = [brawl]> then
     set [Score] to [0]
     broadcast [brawl start]
 else
-    broadcast [start fight]
+    if <(Mode) = [adventure]> then
+        set [Hero HP] to (Hero Max)
+        broadcast [adventure stage]
+    else
+        broadcast [start fight]
+    end
 end
 ```
 
