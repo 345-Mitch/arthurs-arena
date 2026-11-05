@@ -81,21 +81,22 @@ const PAD_JS = `
     var css = [
         '#pad{position:fixed;inset:0;pointer-events:none;z-index:50;display:none;-webkit-user-select:none;user-select:none}',
         '#pad.on{display:block}',
-        '#joy{position:absolute;left:0;bottom:0;width:42vw;height:70vh;pointer-events:auto;touch-action:none}',
-        '#base{position:absolute;width:30vmin;height:30vmin;margin:-15vmin 0 0 -15vmin;border-radius:50%;',
+        // the controls live in two side columns (SIDE wide); the game is shrunk to fit between them
+        '#joy{position:absolute;left:0;bottom:0;width:27vmin;height:64vh;pointer-events:auto;touch-action:none}',
+        '#base{position:absolute;width:22vmin;height:22vmin;margin:-11vmin 0 0 -11vmin;border-radius:50%;',
         ' background:radial-gradient(circle,rgba(255,255,255,.10),rgba(255,255,255,.22));border:.8vmin solid rgba(255,255,255,.55);box-sizing:border-box}',
-        '#knob{position:absolute;left:50%;top:50%;width:13vmin;height:13vmin;margin:-6.5vmin 0 0 -6.5vmin;border-radius:50%;',
+        '#knob{position:absolute;left:50%;top:50%;width:10vmin;height:10vmin;margin:-5vmin 0 0 -5vmin;border-radius:50%;',
         ' background:radial-gradient(circle at 35% 30%,#93c5fd,#2563eb);border:.6vmin solid #fff;box-shadow:0 .6vmin 1.5vmin rgba(0,0,0,.45)}',
-        '.pb{position:absolute;width:16vmin;height:16vmin;margin:-8vmin 0 0 -8vmin;border-radius:50%;pointer-events:auto;touch-action:none;',
-        ' display:flex;align-items:center;justify-content:center;font:900 2.9vmin Verdana,Arial,sans-serif;color:#fff;',
+        '.pb{position:absolute;width:12.5vmin;height:12.5vmin;margin:-6.25vmin 0 0 -6.25vmin;border-radius:50%;pointer-events:auto;touch-action:none;',
+        ' display:flex;align-items:center;justify-content:center;font:900 2.4vmin Verdana,Arial,sans-serif;color:#fff;',
         ' border:.6vmin solid rgba(255,255,255,.85);box-shadow:0 .7vmin 0 rgba(0,0,0,.35);opacity:.88;box-sizing:border-box}',
         '.pb.down{transform:translateY(.5vmin) scale(.93);box-shadow:0 .2vmin 0 rgba(0,0,0,.35);opacity:1}',
         '#bP{background:#ea580c}#bK{background:#ca8a04}#bJ{background:#16a34a}#bD{background:#64748b}',
-        '#bF{background:#dc2626;width:17vmin;height:17vmin;margin:-8.5vmin 0 0 -8.5vmin;font-size:3.1vmin;text-shadow:0 .3vmin 0 rgba(0,0,0,.4)}',
+        '#bF{background:#dc2626;width:15vmin;height:15vmin;margin:-7.5vmin 0 0 -7.5vmin;font-size:2.9vmin;text-shadow:0 .3vmin 0 rgba(0,0,0,.4)}',
         '#bF.full{animation:glow .3s infinite alternate}',
-        '#bW{background:#7c3aed;width:15vmin;height:15vmin;margin:-7.5vmin 0 0 -7.5vmin;font-size:2.6vmin}',
+        '#bW{background:#7c3aed;width:12vmin;height:12vmin;margin:-6vmin 0 0 -6vmin;font-size:2.1vmin}',
         '#bW.locked{background:#334155;color:#94a3b8}',
-        '#bS{background:#475569;width:13vmin;height:13vmin;margin:-6.5vmin 0 0 -6.5vmin;font-size:2.4vmin}',
+        '#bS{background:#475569;width:12vmin;height:12vmin;margin:-6vmin 0 0 -6vmin;font-size:2.1vmin}',
         '#bS.ready{background:#facc15;color:#7c2d12;animation:glow .5s infinite alternate}',
         '@keyframes glow{from{box-shadow:0 0 1vmin #fde047}to{box-shadow:0 0 4vmin #fde047}}'
     ].join('');
@@ -111,13 +112,30 @@ const PAD_JS = `
     document.body.appendChild(pad);
 
     // right-hand buttons in a diamond, like a game controller
-    var cx = 'calc(100vw - 21vmin)', cy = 'calc(100vh - 21vmin)', r = '13vmin';
-    function place (id, dx, dy) {
+    // right column: two buttons wide, three rows; left column: FIRE above the joystick
+    function place (id, left, top) {
         var el = document.getElementById(id);
-        el.style.left = 'calc(' + cx + ' + ' + dx + ' * ' + r + ')';
-        el.style.top = 'calc(' + cy + ' + ' + dy + ' * ' + r + ')';
+        el.style.left = 'calc(' + left + ')';
+        el.style.top = 'calc(' + top + ')';
     }
-    place('bP', 0, 1); place('bK', 1, 0); place('bJ', 0, -1); place('bD', -1, 0); place('bS', -1.15, -1.55); place('bF', -2.15, 0.85); place('bW', -2.3, -0.6);
+    var A = '100vw - 20vmin', B = '100vw - 7vmin';
+    place('bP', A, '100vh - 8vmin'); place('bK', B, '100vh - 8vmin');
+    place('bD', A, '100vh - 21.5vmin'); place('bJ', B, '100vh - 21.5vmin');
+    place('bS', A, '100vh - 35vmin'); place('bW', B, '100vh - 35vmin');
+    place('bF', '13.5vmin', '36vh - 9vmin');
+
+    // keep the game itself clear of the buttons: tell the player to leave a column free on each side
+    var SIDE = 0.27;
+    function reserve () {
+        var sc = window.scaffolding;
+        if (!sc || typeof sc.relayout !== 'function') return;
+        var side = Math.round(SIDE * Math.min(innerWidth, innerHeight));
+        if (sc._offsetFromLeft !== side || sc._offsetFromRight !== side) {
+            sc._offsetFromLeft = side;
+            sc._offsetFromRight = side;
+            sc.relayout();
+        }
+    }
 
     var vars = null;
     function v (name) {
@@ -169,12 +187,12 @@ const PAD_JS = `
     var held = null, ox = 0, oy = 0, jumpArmed = true;
     function home () {
         var b = joy.getBoundingClientRect(), m = Math.min(innerWidth, innerHeight);
-        base.style.left = (0.2 * m) + 'px';
-        base.style.top = (b.height - 0.2 * m) + 'px';
+        base.style.left = (0.135 * m) + 'px';
+        base.style.top = (b.height - 0.14 * m) + 'px';
         knob.style.transform = '';
     }
     function move (e) {
-        var R = Math.min(innerWidth, innerHeight) * 0.13;
+        var R = Math.min(innerWidth, innerHeight) * 0.11;
         var dx = e.clientX - ox, dy = e.clientY - oy, d = Math.sqrt(dx * dx + dy * dy), up = dy;
         if (d > R) { dx = dx * R / d; dy = dy * R / d; }
         knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
@@ -213,6 +231,7 @@ const PAD_JS = `
     var bS = document.getElementById('bS');
     var bW = document.getElementById('bW');
     (function tick () {
+        reserve();
         if (get('State') !== null) {
             set('Touch Pad', 1);
             var fighting = get('State') === 'fight' || get('State') === 'brawl';

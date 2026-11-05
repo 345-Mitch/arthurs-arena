@@ -6268,7 +6268,7 @@ end
 ## Popup
 
 Costumes: dot
-Sprite-only variables: My Text, Is Clone
+Sprite-only variables: My Text, Is Clone, My Seq
 
 ```
 when green flag clicked
@@ -6279,24 +6279,28 @@ hide
 when I receive [popup]
 if <(Is Clone) = [0]> then
     set [My Text] to (Pop Text)
+    change [Pop Seq] by [1]
     if <(State) = [brawl]> then
-        go to x: (P1 Screen X) y: ((P1 Screen Y) + [70])
+        go to x: [-70] y: [92]
     else
-        go to x: ((Hero X) + [10]) y: ((Hero Y) + [125])
+        go to x: [-70] y: [62]
     end
     create clone of (myself)
 end
 ```
 
-> Copies Pop Text into a clone so two pop-ups in a row both show. Clones hear messages too, so only the original (Is Clone = 0) makes new clones.
+> Shows Pop Text at the top middle of the screen, away from the fighters. A new pop-up replaces the old one, so they never pile up. Clones hear messages too, so only the original makes new clones.
 
 ```
 when I start as a clone
 set [Is Clone] to [1]
+set [My Seq] to (Pop Seq)
 show
 say (My Text)
-repeat [14]
-    change y by [2]
+repeat [18]
+    if <(Pop Seq) > (My Seq)> then
+        delete this clone
+    end
     wait [0.06] seconds
 end
 delete this clone
@@ -6306,7 +6310,8 @@ delete this clone
 when I receive [super ready]
 if <(Is Clone) = [0]> then
     set [My Text] to [SUPER READY! Tap SUPER]
-    go to x: [-150] y: [120]
+    change [Pop Seq] by [1]
+    go to x: [-70] y: [62]
     create clone of (myself)
 end
 ```

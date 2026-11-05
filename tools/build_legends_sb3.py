@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "2.5"
+VERSION = "2.6"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -2746,7 +2746,7 @@ def build():
         ("Power Level", 1), ("Power XP", 0), ("XP Gain", 0), ("Want Power", 0), ("Power Ready At", 0), ("Power Move", "none"),
         ("Bolt X", 0), ("Bolt Y", GROUND), ("Bolt Owner", "hero"), ("Bolt Power", 0), ("Bolt Size", 100),
         ("Fire Held", 0), ("Charge", 0), ("Fire Power", 0), ("Fireball Out", 0),
-        ("Punch Held", 0), ("Kick Held", 0), ("Melee Charge", 0), ("Glow DX", 0), ("Glow DY", 60), ("Glow Kind", "punch"),
+        ("Pop Seq", 0), ("Punch Held", 0), ("Kick Held", 0), ("Melee Charge", 0), ("Glow DX", 0), ("Glow DY", 60), ("Glow Kind", "punch"),
         ("Swirl On", 0),
         ("Shot X", 999), ("Shot Live", 0), ("Shot Cancel", 0), ("Boom X", 0),
     ]:
@@ -4667,16 +4667,18 @@ def build():
     P.local("My Text", "")
     P.on_flag(P.hide())
     P.local("Is Clone", 0)
+    P.local("My Seq", 0)
     P.on_msg("popup", P.if_(eq(V("Is Clone"), 0), [
-        P.set("My Text", V("Pop Text")),
-        P.if_(eq(V("State"), "brawl"), [P.goto(V("P1 Screen X"), add(V("P1 Screen Y"), 70))],
-              [P.goto(add(V("Hero X"), 10), add(V("Hero Y"), 125))]),
+        P.set("My Text", V("Pop Text")), P.change("Pop Seq", 1),
+        # top middle of the screen, above the fighters, so it never covers the fight
+        P.if_(eq(V("State"), "brawl"), [P.goto(-70, 92)], [P.goto(-70, 62)]),
         P.clone()]),
-             note="Copies Pop Text into a clone so two pop-ups in a row both show. Clones hear messages too, "
-                  "so only the original (Is Clone = 0) makes new clones.")
-    P.on_clone(P.set("Is Clone", 1), P.show(), P.say(V("My Text")), P.repeat(14, [P.dy(2), P.wait(0.06)]), P.delete_clone())
+             note="Shows Pop Text at the top middle of the screen, away from the fighters. A new pop-up replaces "
+                  "the old one, so they never pile up. Clones hear messages too, so only the original makes new clones.")
+    P.on_clone(P.set("Is Clone", 1), P.set("My Seq", V("Pop Seq")), P.show(), P.say(V("My Text")),
+               P.repeat(18, [P.if_(gt(V("Pop Seq"), V("My Seq")), [P.delete_clone()]), P.wait(0.06)]), P.delete_clone())
     P.on_msg("super ready", P.if_(eq(V("Is Clone"), 0), [
-        P.set("My Text", "SUPER READY! Tap SUPER"), P.goto(-150, 120), P.clone()]))
+        P.set("My Text", "SUPER READY! Tap SUPER"), P.change("Pop Seq", 1), P.goto(-70, 62), P.clone()]))
 
     spark = game.sprite("Hit Spark", size=50, rotation="all around")
     spark.costume("spark", spark_svg(), 40, 40)
