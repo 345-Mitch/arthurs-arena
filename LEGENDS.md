@@ -92,7 +92,7 @@ Tap **BRAWL**, pick your fighter, and fight three CPU fighters at once (ninjas c
 - **Lives:** the dots show lives (3 each). Get knocked off the screen and you lose one, then drop back in from the sky.
 - **Win:** be the last fighter standing. The match ends if you lose all three lives.
 - **Moves:**
-  - **Walking and jumping:** walk, jump, and **double jump** in the air.
+  - **Walking and jumping:** walk, jump, and **double jump** in the air, with a front flip.
   - **Drop down:** push the stick **down** (or the down arrow) to drop through a thin platform.
   - **Attacks:** PUNCH is quick, KICK hits harder, DODGE makes you safe for a moment, and FIRE charges a fireball.
   - **SMASH:** when SUPER is full you glow with red fire. SUPER then does a SMASH that sends fighters flying.
@@ -129,7 +129,7 @@ The buttons are along the bottom of the screen.
 | Button | Keyboard | What it does |
 | --- | --- | --- |
 | ◀ LEFT / RIGHT ▶ | arrows | Step. **Hold** the button to keep walking. |
-| JUMP | up arrow or space | Jump. You can punch and kick in the air. |
+| JUMP | up arrow or space | Jump. **Tap again in the air** for a second, higher jump with a **front flip**. You can punch and kick in the air. |
 | DODGE | C | Hop backwards and turn see-through. Nothing can hurt you while you dodge. |
 | PUNCH | Z | Quick hit. With a boomerang, PUNCH throws it. |
 | KICK | X | Steps in and hits harder. |
@@ -216,7 +216,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v1.9` in the bottom corner of the title.
+- **Version line:** `v2.0` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).

@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "1.9"
+VERSION = "2.0"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -108,6 +108,10 @@ WEAPONS = [
 BOOMERANG_HIT = 7
 
 PUNCH_REACH = 70
+JUMP_UP = 15        # first jump speed
+FLIP_UP = 11        # second jump (front flip) speed
+HERO_GRAV = 1.3
+FLIP_FRAMES = 16    # one full turn
 KICK_REACH = 82
 SUPER_PER_HIT = 4
 SUPER_PER_HURT = 8
@@ -293,6 +297,9 @@ SKEL = {
     "down":    dict(h=(20, 150), n=(32, 152), c=(46, 154), p=(64, 156), fe=(38, 140), fh=(48, 132), ne=(40, 162), nh=(52, 166),
                     fk=(78, 144), ff=(92, 152), nk=(80, 160), nf=(95, 166)),
     # ninjas
+    # tucked into a ball for the front flip (it is drawn turning round in 4 steps)
+    "tuck":    dict(h=(58, 82), n=(54, 96), c=(50, 106), p=(44, 120), fe=(58, 104), fh=(66, 116), ne=(62, 102), nh=(70, 114),
+                    fk=(62, 112), ff=(56, 132), nk=(64, 116), nf=(58, 136)),
     # powering up: wide crouch, fists clenched, head back, yelling
     "charge up": dict(h=(48, 44), n=(49, 62), c=(50, 86), p=(50, 112), fe=(34, 92), fh=(25, 110), ne=(66, 92), nh=(75, 110),
                       fk=(33, 138), ff=(20, 168), nk=(67, 138), nf=(80, 168)),
@@ -325,7 +332,16 @@ def hair_svg(kind, hx, hy):
     return f'<polygon points="{path}" fill="{fill}" stroke="{edge}" stroke-width="2.5" stroke-linejoin="round"/>'
 
 
-def fighter_svg(color, pose, gear="none", face="smile", glow=None, hair=None):
+def fighter_svg(color, pose, gear="none", face="smile", glow=None, hair=None, rot=0):
+    """rot turns the whole figure around its middle (for the front flip)."""
+    svg = _fighter_svg(color, pose, gear, face, glow, hair)
+    if not rot:
+        return svg
+    inner = svg[svg.index(">") + 1: -len("</svg>")]
+    return svg_doc(100, 180, f'<g transform="rotate({rot} 54 108)">{inner}</g>')
+
+
+def _fighter_svg(color, pose, gear="none", face="smile", glow=None, hair=None):
     """A jointed stick figure in a 100 by 180 box, facing right. Feet sit on y=168."""
     j = SKEL[pose]
     hx, hy = j["h"]
@@ -883,7 +899,7 @@ def apple_svg():
 
 
 def help_svg():
-    rows = [("◀ ▶  /  joystick", "walk (push up to jump)"), ("JUMP", "jump, twice in BRAWL"), ("PUNCH", "quick hit"),
+    rows = [("◀ ▶  /  joystick", "walk (push up to jump)"), ("JUMP", "jump; tap again to flip"), ("PUNCH", "quick hit"),
             ("KICK", "strong hit"), ("DODGE", "safe for a moment"), ("FIRE (hold)", "charge a fireball, let go"),
             ("SUPER", "when the bar is full"), ("POWER", "your power-level move"), ("Walk over", "weapons and apples")]
     body = ['<rect x="6" y="6" width="428" height="308" rx="22" fill="#fffbeb" stroke="#0f172a" stroke-width="6"/>',
@@ -1873,13 +1889,15 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
                      "fall", "hurt high"):
             br.costume(f"{k['key']} {pose}", fighter_svg(k["color"], pose, k["gear"], "hurt" if pose == "hurt" else "smile",
                                                          glow="#ef4444" if pose == "special" else None), 50, 168)
+        for f in range(4):
+            br.costume(f"{k['key']} flip {f + 1}", fighter_svg(k["color"], "tuck", k["gear"], rot=90 * f), 50, 168)
     B = br
     for name, value in (("Is Clone", 0), ("My Id", 0), ("Kind", ""), ("X", 0), ("Y", 0), ("VX", 0), ("VY", 0),
                         ("Ground", 0), ("Was Ground", 0), ("Jumps", 0), ("Stun", 0), ("Atk CD", 0), ("Pose Until", 0),
                         ("Speed", 3), ("Punch", 4), ("Kick", 7), ("Weight", 1), ("Face", 1), ("Inv Until", 0),
                         ("Tgt", 0), ("Think", 0), ("Dir", 0), ("Want Atk", 0), ("Want Hop", 0), ("J", 0),
                         ("Surf", 0), ("NX", 0), ("NY", 0), ("Reach", 50), ("Power", 4), ("KB", 0), ("Move Dir", 0),
-                        ("Move Until", 0), ("Smash", 0), ("Dash", 9), ("Best D", 0), ("D", 0), ("On Plat", 0), ("Drop", 0)):
+                        ("Move Until", 0), ("Smash", 0), ("Dash", 9), ("Flip", 0), ("Best D", 0), ("D", 0), ("On Plat", 0), ("Drop", 0)):
         B.local(name, value)
 
     stats = []
@@ -2016,6 +2034,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         ]),
         B.if_(and_(eq(V("Want Hop"), 1), lt(V("Jumps"), 2)), [
             B.if_(eq(V("Jumps"), 0), [B.set("VY", JUMP_V)], [B.set("VY", DJUMP_V)]),
+            B.if_(eq(V("Jumps"), 1), [B.set("Flip", 16)]),
             B.change("Jumps", 1), B.set("Ground", 0), B.broadcast("jump sfx"),
         ]),
         # 3. attacks
@@ -2044,10 +2063,10 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
                     B.set("Surf", surf),
                     # land if I was above it (12 lets you walk up a ramp), or stick to it walking down
                     B.if_(and_(not_(gt(V("NY"), V("Surf"))), not_(lt(add(V("Y"), 12), V("Surf")))),
-                          [B.set("NY", V("Surf")), B.set("VY", 0), B.set("Ground", 1), B.set("Jumps", 0), B.set("On Plat", V("J"))],
+                          [B.set("NY", V("Surf")), B.set("VY", 0), B.set("Ground", 1), B.set("Jumps", 0), B.set("Flip", 0), B.set("On Plat", V("J"))],
                           [B.if_(and_(eq(V("Was Ground"), 1), gt(V("NY"), V("Surf")), lt(sub(V("NY"), V("Surf")), 10),
                                       not_(gt(V("Stun"), 0))),
-                                 [B.set("NY", V("Surf")), B.set("VY", 0), B.set("Ground", 1), B.set("Jumps", 0), B.set("On Plat", V("J"))])]),
+                                 [B.set("NY", V("Surf")), B.set("VY", 0), B.set("Ground", 1), B.set("Jumps", 0), B.set("Flip", 0), B.set("On Plat", V("J"))])]),
                 ]),
             ]),
         ]),
@@ -2079,7 +2098,10 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
                 B.if_(gt(abs_(V("VX")), 0.6),
                       [B.wear(join(V("Kind"), join(" walk ", add(floor_(mod(div(add(V("X"), 1000), 13), 4)), 1))))],
                       [B.if_(eq(mod(round_(mul(TIMER, 1.6)), 2), 0), [pose("idle")], [pose("idle b")])]),
-            ], [B.if_(gt(V("VY"), 0), [pose("jump")], [pose("fall")])]),
+            ], [B.if_(gt(V("Flip"), 0),
+                      [B.change("Flip", -1),
+                       B.wear(join(V("Kind"), join(" flip ", add(floor_(mod(div(sub(16, V("Flip")), 4), 4)), 1))))],
+                      [B.if_(gt(V("VY"), 0), [pose("jump")], [pose("fall")])])]),
         ]),
         # shadow: the highest platform under me
         B.set("Surf", -9999), B.set("NX", V("X")), B.set("J", 0),
@@ -2706,6 +2728,9 @@ def build():
                 glow = {"special": "#facc15", "charge": "#fb923c"}.get(pose)
                 hero.costume(f"{h['key']}{look} {pose}", fighter_svg(h["color"], "aim" if pose == "charge" else pose, h["gear"],
                                                                     face, glow=glow, hair=hair), 50, 168)
+            for k in range(4):
+                hero.costume(f"{h['key']}{look} flip {k + 1}", fighter_svg(h["color"], "tuck", h["gear"], "smile", hair=hair,
+                                                                            rot=90 * k), 50, 168)
     H = hero
 
     def pose(name):
@@ -2757,6 +2782,9 @@ def build():
     )
 
     H.local("Last X", 0)
+    H.local("HVY", 0)
+    H.local("Jumps", 0)
+    H.local("Flip", 0)
     H.local("Look", "")
     H.on_flag(
         H.forever([
@@ -2889,15 +2917,34 @@ def build():
         H.forever([
             H.if_(and_(eq(V("Want Jump"), 1), not_(eq(V("State"), "brawl"))), [
                 H.set("Want Jump", 0),
-                H.if_(and_(eq(V("Fight On"), 1), eq(V("Hero Air"), 0), eq(V("Hero Lock"), 0)), [
-                    H.set("Hero Air", 1), pose("jump"), H.broadcast("jump sfx"),
-                    H.repeat(8, [H.dy(11)]), H.wait(0.1), H.repeat(8, [H.dy(-11)]),
-                    H.set_y(GROUND), H.set("Hero Air", 0),
+                H.if_(and_(eq(V("Fight On"), 1), eq(V("Hero Lock"), 0)), [
+                    H.if_(eq(V("Hero Air"), 0), [
+                        H.set("Hero Air", 1), H.set("Jumps", 1), H.set("HVY", JUMP_UP), pose("jump"), H.broadcast("jump sfx"),
+                    ], [
+                        # second tap in the air: jump again with a front flip
+                        H.if_(eq(V("Jumps"), 1), [H.set("Jumps", 2), H.set("HVY", FLIP_UP), H.set("Flip", FLIP_FRAMES),
+                                                  H.broadcast("jump sfx")]),
+                    ]),
+                ]),
+            ]),
+            H.if_(eq(V("Hero Air"), 1), [
+                H.dy(V("HVY")), H.change("HVY", -HERO_GRAV),
+                H.if_(gt(V("Flip"), 0), [
+                    H.change("Flip", -1),
+                    H.if_(and_(eq(V("Hero Lock"), 0), not_(contains(COSTUME, "punch")), not_(contains(COSTUME, "kick"))), [
+                        H.if_(gt(V("Flip"), 0),
+                              [H.wear(join(V("Hero Look"), join(" flip ", add(floor_(mod(div(sub(FLIP_FRAMES, V("Flip")), 4), 4)), 1))))],
+                              [pose("jump")]),
+                    ]),
+                ]),
+                H.if_(not_(gt(YPOS, GROUND)), [
+                    H.set_y(GROUND), H.set("Hero Air", 0), H.set("Jumps", 0), H.set("HVY", 0), H.set("Flip", 0),
                     H.if_(eq(V("Hero Lock"), 0), [pose("idle")]),
                 ]),
             ]),
         ]),
-        note="The jump loop runs beside the action loop, so you can punch and kick in the air.",
+        note="The jump loop runs beside the action loop, so you can punch and kick in the air. "
+             "Tap JUMP again while in the air for a second jump with a front flip.",
     )
     holding = or_(eq(V("Fire Held"), 1), ("keypressed", "f"))
     H.on_flag(
@@ -4180,6 +4227,9 @@ def validate(game):
                         errors.append(f"{t.name}: broadcast {item}")
         if not t.costumes:
             errors.append(f"{t.name}: no costumes")
+        names_ = [c["name"] for c in t.costumes]
+        if len(names_) != len(set(names_)):
+            errors.append(f"{t.name}: two costumes with the same name")
         # Clones hear every message too. A sprite that makes clones from a message
         # must check "Is Clone" or each clone makes more clones.
         if any(b["opcode"] == "control_create_clone_of" for b in t.blocks.values()) and "Is Clone" not in t.locals:

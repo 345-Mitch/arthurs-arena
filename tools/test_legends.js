@@ -552,6 +552,41 @@ async function powerUpTest () {
     return out;
 }
 
+async function flipTest () {
+    // tap JUMP once: a jump; tap again in the air: a higher second jump with a front flip
+    const T = await startArcadeAt(1);
+    if (T.get('Fight On') !== 1) return fail('flip: fight did not start');
+    T.set('Enemy Stun Until', 1e12);
+    T.set('Hero Safe Until', 1e12);
+    const jump = async twice => {
+        let top = -999, flips = new Set(), frames = 0;
+        T.set('Want Jump', 1);
+        await T.step(6);
+        if (twice) T.set('Want Jump', 1);
+        do {
+            await T.step();
+            frames++;
+            top = Math.max(top, T.sprite('Hero').y);
+            const c = T.costume('Hero');
+            if (c.includes(' flip ')) flips.add(c.split(' flip ')[1]);
+        } while (T.get('Hero Air') === 1 && frames < 120);
+        return {top: Math.round(top + 75), flips: [...flips].sort(), frames, landed: T.get('Hero Air') === 0 && T.sprite('Hero').y === -75};
+    };
+    const once = await jump(false);
+    await T.step(10);
+    const twice = await jump(true);
+    if (!once.landed || !twice.landed) fail('flip: the hero did not land back on the ground');
+    if (once.flips.length) fail('flip: a single jump flipped');
+    if (twice.flips.length < 4) fail(`flip: the second jump only showed flip frames ${twice.flips}`);
+    if (twice.top <= once.top + 20) fail(`flip: the second jump was not higher (${once.top} vs ${twice.top})`);
+    // a third tap in the air does nothing
+    T.set('Want Jump', 1); await T.step(6); T.set('Want Jump', 1); await T.step(4); T.set('Want Jump', 1);
+    let frames = 0;
+    while (T.get('Hero Air') === 1 && frames < 150) { await T.step(); frames++; }
+    if (T.get('Hero Air') !== 0) fail('flip: a third tap kept the hero in the air');
+    return {once, twice};
+}
+
 async function introTest () {
     const {vm} = await boot(false);
     const T = tools(vm);
@@ -985,6 +1020,7 @@ async function brawlTest () {
     if (want('grok')) results.grok = await grokTest();
     if (want('intro')) results.intro = await introTest();
     if (want('powerup')) results.powerup = await powerUpTest();
+    if (want('flip')) results.flip = await flipTest();
     if (want('brawl')) results.brawl = await brawlTest();
     if (want('mash')) await mashTest();
     if (want('weapons')) await weaponTest();
