@@ -2,7 +2,7 @@
 
 Written 2026-11-05 for Arthur.
 
-This is the big version of Arthur's Arena. It has a **Story** with seven chapters, an **Arcade** mode that never ends, a Smash-style **BRAWL** mode, four difficulty levels, three fighters to pick from, a charge-up **fireball**, spiky robots and spiky bosses, falling weapons, combos, and a SUPER move.
+This is the big version of Arthur's Arena. It has a **Story** with nine chapters, an **Arcade** mode that never ends, a Smash-style **BRAWL** mode, four difficulty levels, three fighters to pick from, a charge-up **fireball**, spiky robots and spiky bosses, ninjas, falling weapons, combos, and a SUPER move.
 
 The playable file is `projects/arthurs-arena-legends.sb3`. The boss game from before (`projects/arthurs-arena-bosses.sb3`, see `BOSSES.md`) is still there.
 
@@ -57,22 +57,25 @@ In BRAWL, higher levels make the CPU fighters attack more often and hit harder.
 | 3 | The Rocky Pass | **Brute** | He says **Ready?**, then charges where you are standing. Move or DODGE. |
 | 4 | The Robot Factory | **Spike Bot** | It shouts **SPIKES OUT!** and rolls at you. Don't punch the spikes, it hurts! Jump over it, shoot a **fireball**, or hit it while it says **Cooling down...** |
 | 5 | The Spike Fortress | **BOSS: MEGA SPIKE** | A giant robot covered in spikes. It has three attacks: **SPIKE ROLL!** (jump over it), spike shots (**Low!** / **High!**), and **SPIKE RAIN!** (red marks show where spikes will fall, so move off them or DODGE). After each attack it says **Cooling down...** with its spikes in: that's when to punch. At half health it goes into **OVERDRIVE**: faster, with more spikes. |
-| 6 | The Volcano Gate | **Quake** | He shouts **STOMP!** and sends a wave along the ground. Jump over it. |
-| 7 | Shadow Castle | **BOSS: The Shadow King** | He uses all of those tricks. At half health he gets **angry**: he gets faster, throws two shots, and grows **SPIKE ARMOR**. Don't punch the armor; use a fireball or wait for it to go away. |
+| 6 | The Bamboo Forest | **Ninja** | Fast. Throws spinning **shurikens**, dashes in with a katana, vanishes in a puff of smoke and **appears behind you**, and calls a ninja to help. |
+| 7 | The Ninja Dojo | **BOSS: MASTER KAGE** | The ninja master: shuriken fans (low, high, low), smoke teleports, a katana, and a **NINJA SQUAD** of up to 3 small ninjas that fight you at the same time. At half health: **SHADOW CLONES!**, even more ninjas. Punches, kicks, fireballs, lightning and SUPER moves all hit the small ninjas too. |
+| 8 | The Volcano Gate | **Quake** | He shouts **STOMP!** and sends a wave along the ground. Jump over it. |
+| 9 | Shadow Castle | **BOSS: The Shadow King** | He uses all of those tricks. At half health he gets **angry**: he gets faster, throws two shots, and grows **SPIKE ARMOR**. Don't punch the armor; use a fireball or wait for it to go away. |
 
 Before each fight there is a chapter card, and then the hero and the enemy talk. Tap **SKIP** if you just want to fight.
 
-Win chapter 7 and the Golden Crown drops onto your fighter's head. After that, **every fighter wears the crown** in every fight. Save the project to keep it.
+Win chapter 9 and the Golden Crown drops onto your fighter's head. After that, **every fighter wears the crown** in every fight. Save the project to keep it.
 
 If you get knocked out, tap **RETRY** to try the same chapter again. You get full health, and the talking is skipped.
 
 ## BRAWL (like a platform fighter)
 
-Tap **BRAWL**, pick your fighter, and fight three CPU fighters at once, everyone against everyone. Fighters are smaller and the **camera follows the action**, zooming out when fighters are far apart and in when they're close.
+Tap **BRAWL**, pick your fighter, and fight three CPU fighters at once (ninjas can show up too), everyone against everyone. Fighters are smaller and the **camera follows the action**, zooming out when fighters are far apart and in when they're close.
 
 - **Stages:** each match moves to the next one:
   - **Sky Ruins:** floating platforms
   - **Ramp Valley:** a hill with ramps up and down, plus ledges
+  - **Pagoda Roofs:** sloped red roofs and a high platform at night
   - **Tower Steps:** ramps, steps and high towers
 - **Damage %:** the number at the top shows each fighter's damage. The higher it is, the further they fly when hit.
 - **Lives:** the dots show lives (3 each). Get knocked off the screen and you lose one, then drop back in from the sky.
@@ -88,7 +91,7 @@ Tap **BRAWL**, pick your fighter, and fight three CPU fighters at once, everyone
 
 Fight wave after wave until you get knocked down.
 
-- Waves 1 to 6 are Rival, Ivy, Brute, Spike Bot, the MEGA SPIKE boss, and Quake. Every 7th wave is the Shadow King.
+- Waves 1 to 8 are Rival, Ivy, Brute, Spike Bot, the MEGA SPIKE boss, Ninja, the MASTER KAGE boss, and Quake. Every 9th wave is the Shadow King.
 - Boss fights start with a **BOSS FIGHT!** warning and an alarm.
 - Every wave, enemies get more health, hit a little harder, and attack faster.
 - Clearing a wave gives you back 30 health.
@@ -125,6 +128,17 @@ You always turn to face the enemy, so you can fight from either side.
 
 In the Android app these buttons are replaced by a thumb joystick and game-pad buttons, so you can walk and punch at the same time (see `ANDROID.md`).
 
+## How the fighters move
+
+The stick fighters move more like people now:
+
+- **Joints:** arms and legs bend at the **elbows and knees**. The far arm and leg are a little darker, so the body looks like it has depth.
+- **Moving:** they **breathe** while standing and take real **steps** when they walk, with a 4-step stride.
+- **Attacks:** a punch **winds up** before it flies, and a kick **lifts the knee** first.
+- **Getting hit:** a hit to the belly **folds** the body over; a hit to the head **snaps it back**.
+- **Shadows:** everyone has a **shadow** on the floor that shrinks and fades when they jump, in BRAWL too.
+- **Turning:** you face the way you walk, so you can turn and fight ninjas behind you.
+
 ## Cool moves
 
 - **Fire aura.** When your SUPER is full, during a SUPER move, and when a fireball is fully charged, your fighter glows in **red fire**.
@@ -154,6 +168,7 @@ The big fighters carry weapons and hit 3 harder with them. Watch for the swing!
 | Brute | Wooden club |
 | MEGA SPIKE | Spiked mace |
 | Quake | Hammer |
+| Ninja and MASTER KAGE | Katana |
 | Shadow King | Dark sword |
 
 ## Weapons

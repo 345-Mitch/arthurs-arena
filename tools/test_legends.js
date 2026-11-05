@@ -170,6 +170,15 @@ function makeBot (T, hero) {
             if (charging === 0) T.set('Fire Held', 0);
             return;
         }
+        // ninja minions close by: turn and hit them
+        const ninjas = T.clones('Ninja Minion').filter(c => c.visible);
+        const near = ninjas.find(c => Math.abs(c.x - hx) < 55);
+        if (near && frame % 5 === 0) {
+            T.send(near.x > hx ? 'move right' : 'move left');
+            T.set(frame % 15 ? 'Want Punch' : 'Want Kick', 1);
+            stats.ninjaHits = (stats.ninjaHits || 0) + 1;
+            return;
+        }
         // Spike Rain: step away from a red mark under the hero
         const marks = T.clones('Spike Rain').filter(c => c.visible && c.getCostumes()[c.currentCostume].name === 'warning');
         const danger = marks.find(c => Math.abs(c.x - hx) < 34);
@@ -489,6 +498,70 @@ async function fireTest () {
     return {tap: tap.damage, full: full.damage};
 }
 
+async function ninjaTest () {
+    const T = await startArcadeAt(7); // wave 7 is MASTER KAGE
+    if (T.get('Enemy Name') !== 'kage') return fail(`ninja: wave 7 is ${T.get('Enemy Name')}`);
+    const out = {shuriken: false, smoke: false, teleport: false};
+    T.set('Enemy HP', 999);
+    T.set('Enemy Max', 999);
+    // watch the boss for a while
+    for (let i = 0; i < 30 * 25 && !(out.shuriken && out.smoke && out.teleport); i++) {
+        await T.step();
+        T.set('Hero HP', 100);
+        if (T.sprite('Enemy Shot').visible && T.costume('Enemy Shot') === 'shuriken') out.shuriken = true;
+        if (T.clones('Smoke').length) out.smoke = true;
+        if (T.sprite('Enemy').effects.ghost === 100) out.teleport = true;
+        if (T.clones('Ninja Minion').length > 3) fail('ninja: more than 3 minions');
+    }
+    if (!out.shuriken) fail('ninja: MASTER KAGE never threw a shuriken');
+    if (!out.smoke || !out.teleport) fail('ninja: MASTER KAGE never vanished in smoke');
+    // a full squad, then try for more: still only 3
+    T.set('Enemy Stun Until', 1e12);
+    T.set('Summon Count', 3);
+    T.send('ninja summon');
+    await T.step(40);
+    T.send('ninja summon');
+    await T.step(40);
+    const squad = T.clones('Ninja Minion').length;
+    if (squad !== 3 || T.get('Minions') !== 3) fail(`ninja: squad is ${squad} clones, Minions ${T.get('Minions')}`);
+    // beat one ninja with punches
+    T.set('Hero Safe Until', 1e12);
+    const target = T.clones('Ninja Minion')[0];
+    let punches = 0;
+    while (T.clones('Ninja Minion').includes(target) && punches < 20) {
+        const side = target.x > T.get('Hero X') ? 1 : -1;
+        T.sprite('Hero').setXY(target.x - 30 * side, -75);
+        T.set('Turn Dir', side);
+        T.set('Turn Until', 1e12);
+        await T.step(2);
+        T.set('Want Punch', 1);
+        await T.step(12);
+        punches++;
+    }
+    T.set('Turn Until', 0);
+    if (T.clones('Ninja Minion').includes(target)) fail('ninja: 20 punches did not beat a ninja');
+    await T.step(20);
+    out.punchesToBeat = punches;
+    if (T.get('Minions') !== T.clones('Ninja Minion').length) fail(`ninja: Minions ${T.get('Minions')} but ${T.clones('Ninja Minion').length} clones`);
+    // lightning hits ninjas too
+    const n2 = T.clones('Ninja Minion')[0];
+    if (n2) {
+        const hp = n2.lookupVariableByNameAndType('HP').value;
+        T.set('Bolt X', n2.x); T.set('Bolt Y', -75); T.set('Bolt Owner', 'hero'); T.set('Bolt Power', 4); T.set('Bolt Size', 100);
+        T.send('bolt');
+        await T.step(6);
+        if (T.clones('Ninja Minion').includes(n2) && n2.lookupVariableByNameAndType('HP').value >= hp) fail('ninja: lightning missed a ninja under it');
+    }
+    // the fight ends: every ninja leaves
+    T.set('Enemy HP', 1);
+    T.set('Enemy Stun Until', 0);
+    T.set('Hit Power', 5);
+    T.send('hero hits');
+    await T.step(30);
+    if (T.clones('Ninja Minion').length || T.get('Minions') !== 0) fail('ninja: minions stayed after the boss was beaten');
+    return out;
+}
+
 async function powerTest () {
     const T = await startArcadeAt(1);
     if (T.get('Fight On') !== 1) return fail('power: fight did not start');
@@ -651,7 +724,7 @@ async function brawlTest () {
     T.set('Power Level', 4);
     T.click('Pick Rocko');
     const out = {stages: [], matches: 0, wins: 0, kos: 0, maxDmg: 0, zoom: [9, 0], landed: false, rampOk: false};
-    for (let match = 0; match < 3; match++) {
+    for (let match = 0; match < 4; match++) {
         let frames = 0;
         let checked = false;
         while (T.get('Brawl On') !== 1 && frames < 300) {
@@ -719,10 +792,10 @@ async function brawlTest () {
         T.click('Retry Button');
         await T.step(3);
     }
-    if (out.kos < 3) fail(`brawl: only ${out.kos} K.O.s in three matches`);
+    if (out.kos < 4) fail(`brawl: only ${out.kos} K.O.s in four matches`);
     if (!out.bolts) fail('brawl: POWER lightning never struck');
     if (out.zoom[0] < 0.49 || out.zoom[1] > 1.16 || out.zoom[1] - out.zoom[0] < 0.05) fail(`brawl: camera zoom ${out.zoom}`);
-    if (new Set(out.stages).size < 3) fail(`brawl: stages did not change: ${out.stages}`);
+    if (new Set(out.stages).size < 4) fail(`brawl: not every stage was played: ${out.stages}`);
     T.click('Quit Button');
     await T.step(10);
     if (T.get('State') !== 'title' || T.clones('Brawler').length || T.get('Brawl Live') !== 0) {
@@ -745,6 +818,7 @@ async function brawlTest () {
     if (want('spikes')) results.spikes = await spikeTest();
     if (want('boss')) results.boss = await bossTest();
     if (want('power')) results.power = await powerTest();
+    if (want('ninja')) results.ninja = await ninjaTest();
     if (want('brawl')) results.brawl = await brawlTest();
     if (want('mash')) await mashTest();
     if (want('weapons')) await weaponTest();

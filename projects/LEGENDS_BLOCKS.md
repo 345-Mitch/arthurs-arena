@@ -5,8 +5,8 @@ Made by `tools/build_legends_sb3.py` from the same blocks that are inside
 
 ## Stage
 
-Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Volcano, Castle, Arcade, Ending, brawl sky, brawl ramps, brawl towers
-Sounds: hit, big hit, hurt, jump, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, spike fall, win
+Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Bamboo, Dojo, Volcano, Castle, Arcade, Ending, brawl sky, brawl ramps, brawl pagoda, brawl towers
+Sounds: hit, big hit, hurt, jump, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, poof, shuriken, spike fall, win
 Sprite-only variables: New Level, K, Pick, Min X, Max X, Min Y, Max Y, Alive, Zoom To
 
 ```
@@ -113,17 +113,23 @@ if <(Mode) = [story]> then
         switch backdrop to (Fortress)
     end
     if <(Chapter) = [6]> then
-        switch backdrop to (Volcano)
+        switch backdrop to (Bamboo)
     end
     if <(Chapter) = [7]> then
+        switch backdrop to (Dojo)
+    end
+    if <(Chapter) = [8]> then
+        switch backdrop to (Volcano)
+    end
+    if <(Chapter) = [9]> then
         switch backdrop to (Castle)
     end
     set [Pace] to [1]
 else
-    if <((Wave) mod [7]) = [0]> then
-        set [Enemy Type] to [7]
+    if <((Wave) mod [9]) = [0]> then
+        set [Enemy Type] to [9]
     else
-        set [Enemy Type] to ((((Wave) - [1]) mod [7]) + [1])
+        set [Enemy Type] to ((((Wave) - [1]) mod [9]) + [1])
     end
     switch backdrop to (Arcade)
     set [Pace] to ([8] / ([7] + (Wave)))
@@ -179,6 +185,26 @@ if <(Enemy Type) = [5]> then
     set [Enemy Weapon] to [mace]
 end
 if <(Enemy Type) = [6]> then
+    set [Enemy Name] to [ninja]
+    set [Enemy Title] to [NINJA]
+    set [Enemy Max] to [40]
+    set [Enemy Power] to [9]
+    set [Enemy Speed] to [5]
+    set [Enemy Body] to [12]
+    set [Enemy Size] to [80]
+    set [Enemy Weapon] to [katana]
+end
+if <(Enemy Type) = [7]> then
+    set [Enemy Name] to [kage]
+    set [Enemy Title] to [MASTER KAGE]
+    set [Enemy Max] to [85]
+    set [Enemy Power] to [11]
+    set [Enemy Speed] to [6]
+    set [Enemy Body] to [18]
+    set [Enemy Size] to [100]
+    set [Enemy Weapon] to [katana]
+end
+if <(Enemy Type) = [8]> then
     set [Enemy Name] to [quake]
     set [Enemy Title] to [QUAKE]
     set [Enemy Max] to [50]
@@ -188,7 +214,7 @@ if <(Enemy Type) = [6]> then
     set [Enemy Size] to [120]
     set [Enemy Weapon] to [hammer]
 end
-if <(Enemy Type) = [7]> then
+if <(Enemy Type) = [9]> then
     set [Enemy Name] to [shadow]
     set [Enemy Title] to [SHADOW KING]
     set [Enemy Max] to [90]
@@ -246,6 +272,7 @@ else
 end
 show variable [Score]
 hide variable [Best]
+set [Minions] to [0]
 set [Combo] to [0]
 set [Weapon] to [none]
 set [Weapon Uses] to [0]
@@ -260,7 +287,7 @@ set [Shot Live] to [0]
 set [Hero Safe Until] to [0]
 set [Enemy Stun Until] to [0]
 broadcast [fighters ready] and wait
-if <<(Enemy Type) = [5]> or <(Enemy Type) = [7]>> then
+if <<<(Enemy Type) = [5]> or <(Enemy Type) = [7]>> or <(Enemy Type) = [9]>> then
     start sound (alarm)
     set [Banner] to [boss]
     broadcast [banner]
@@ -309,7 +336,7 @@ if <<(Fight On) = [1]> and <(timer) > (Enemy Stun Until)>> then
         end
     end
     broadcast [enemy hurt]
-    if <<<<<(Enemy Type) = [5]> or <(Enemy Type) = [7]>> and <(Enemy Phase) = [1]>> and <(Enemy HP) > [0]>> and <(Enemy HP) < ((Enemy Max) / [2])>> then
+    if <<<<<<(Enemy Type) = [5]> or <(Enemy Type) = [7]>> or <(Enemy Type) = [9]>> and <(Enemy Phase) = [1]>> and <(Enemy HP) > [0]>> and <(Enemy HP) < ((Enemy Max) / [2])>> then
         set [Enemy Phase] to [2]
         set [Pace] to ((Pace) * [0.7])
         broadcast [king angry]
@@ -486,6 +513,16 @@ start sound (spikes)
 ```
 
 ```
+when I receive [poof sfx]
+start sound (poof)
+```
+
+```
+when I receive [shuriken sfx]
+start sound (shuriken)
+```
+
+```
 when I receive [spike fall sfx]
 wait [0.7] seconds
 start sound (spike fall)
@@ -552,7 +589,7 @@ set [Banner] to [ko]
 broadcast [banner]
 wait [1.4] seconds
 if <(Mode) = [story]> then
-    if <(Chapter) = [7]> then
+    if <(Chapter) = [9]> then
         change [Score] by ([1000] + ((Hero HP) * [5]))
         if <(Score) > (Best)> then
             set [Best] to (Score)
@@ -566,7 +603,7 @@ if <(Mode) = [story]> then
         broadcast [banner]
         change [Score] by ([500] + ((Hero HP) * [5]))
         set [XP Gain] to [1]
-        if <<(Enemy Type) = [5]> or <(Enemy Type) = [7]>> then
+        if <<<(Enemy Type) = [5]> or <(Enemy Type) = [7]>> or <(Enemy Type) = [9]>> then
             set [XP Gain] to [2]
         end
         broadcast [gain xp]
@@ -580,7 +617,7 @@ else
     broadcast [banner]
     change [Score] by ([200] + ((Wave) * [50]))
     set [XP Gain] to [1]
-    if <<(Enemy Type) = [5]> or <(Enemy Type) = [7]>> then
+    if <<<(Enemy Type) = [5]> or <(Enemy Type) = [7]>> or <(Enemy Type) = [9]>> then
         set [XP Gain] to [2]
     end
     broadcast [gain xp]
@@ -679,7 +716,7 @@ set [Brawl On] to [0]
 set [Brawl Live] to [0]
 set [Fight On] to [0]
 broadcast [brawl clear] and wait
-set [Brawl Stage] to (((Brawl Stage) mod [3]) + [1])
+set [Brawl Stage] to (((Brawl Stage) mod [4]) + [1])
 delete all of [Plat X1]
 delete all of [Plat Y1]
 delete all of [Plat X2]
@@ -749,6 +786,37 @@ if <(Brawl Stage) = [2]> then
     broadcast [popup]
 end
 if <(Brawl Stage) = [3]> then
+    switch backdrop to (brawl pagoda)
+    add [-300] to [Plat X1]
+    add [-130] to [Plat Y1]
+    add [300] to [Plat X2]
+    add [-130] to [Plat Y2]
+    add [-265] to [Plat X1]
+    add [-40] to [Plat Y1]
+    add [-175] to [Plat X2]
+    add [5] to [Plat Y2]
+    add [-175] to [Plat X1]
+    add [5] to [Plat Y1]
+    add [-85] to [Plat X2]
+    add [-40] to [Plat Y2]
+    add [85] to [Plat X1]
+    add [-40] to [Plat Y1]
+    add [175] to [Plat X2]
+    add [5] to [Plat Y2]
+    add [175] to [Plat X1]
+    add [5] to [Plat Y1]
+    add [265] to [Plat X2]
+    add [-40] to [Plat Y2]
+    add [-45] to [Plat X1]
+    add [85] to [Plat Y1]
+    add [45] to [Plat X2]
+    add [85] to [Plat Y2]
+    set [Plat Count] to [6]
+    set [Solid Count] to [1]
+    set [Pop Text] to [PAGODA ROOFS]
+    broadcast [popup]
+end
+if <(Brawl Stage) = [4]> then
     switch backdrop to (brawl towers)
     add [-330] to [Plat X1]
     add [-130] to [Plat Y1]
@@ -792,13 +860,16 @@ add [ivy] to [B Pool]
 add [brute] to [B Pool]
 add [quake] to [B Pool]
 add [shadow] to [B Pool]
+add [ninja] to [B Pool]
 add (Hero Name) to [B Kind]
 repeat [3]
     set [Pick] to (pick random [1] to (length of [B Pool]))
     add (item (Pick) of [B Pool]) to [B Kind]
     delete (Pick) of [B Pool]
 end
+delete all of [B SY]
 repeat [4]
+    add [-9999] to [B SY]
     add [0] to [B X]
     add [0] to [B Y]
     add [0] to [B Dmg]
@@ -1036,8 +1107,8 @@ go to x: [0] y: [-80]
 
 ## Hero
 
-Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur win, arthur dodge, arthur special, arthur down, arthur charge, nova idle, nova punch, nova kick, nova jump, nova hurt, nova win, nova dodge, nova special, nova down, nova charge, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko win, rocko dodge, rocko special, rocko down, rocko charge
-Sprite-only variables: Line Until
+Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur win, arthur dodge, arthur special, arthur down, arthur charge, arthur idle b, arthur walk 1, arthur walk 2, arthur walk 3, arthur walk 4, arthur punch 1, arthur kick 1, arthur hurt high, nova idle, nova punch, nova kick, nova jump, nova hurt, nova win, nova dodge, nova special, nova down, nova charge, nova idle b, nova walk 1, nova walk 2, nova walk 3, nova walk 4, nova punch 1, nova kick 1, nova hurt high, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko win, rocko dodge, rocko special, rocko down, rocko charge, rocko idle b, rocko walk 1, rocko walk 2, rocko walk 3, rocko walk 4, rocko punch 1, rocko kick 1, rocko hurt high
+Sprite-only variables: Last X, Look, Line Until
 
 ```
 when green flag clicked
@@ -1047,20 +1118,51 @@ forever
     set [Hero X] to (x position)
     set [Hero Y] to (y position)
     if <<(Fight On) = [1]> and <(Hero Lock) = [0]>> then
-        if <(Enemy X) < ((x position) - [4])> then
-            point in direction [-90]
-            set [Facing] to [-1]
-        else
-            if <(Enemy X) > ((x position) + [4])> then
+        if <(timer) < (Turn Until)> then
+            if <(Turn Dir) > [0]> then
                 point in direction [90]
                 set [Facing] to [1]
+            else
+                point in direction [-90]
+                set [Facing] to [-1]
+            end
+        else
+            if <(Enemy X) < ((x position) - [4])> then
+                point in direction [-90]
+                set [Facing] to [-1]
+            else
+                if <(Enemy X) > ((x position) + [4])> then
+                    point in direction [90]
+                    set [Facing] to [1]
+                end
             end
         end
     end
 end
 ```
 
-> Hero X and Hero Y are read by everyone else. In a fight, Hero always turns to face the enemy.
+> Hero X and Hero Y are read by everyone else. In a fight, Hero faces the way you are walking, then turns back to face the enemy, so you can fight ninjas on both sides.
+
+```
+when green flag clicked
+forever
+    set [Look] to (costume name)
+    if <<<(State) = [fight]> or <(State) = [story]>> and <<(Look) contains [idle]?> or <(Look) contains [walk]?>>> then
+        if <<(Hero Air) = [0]> and <(abs of ((x position) - (Last X))) > [0.6]>> then
+            switch costume to (join (Hero Name) (join [ walk ] ((floor of ((((x position) + [1000]) / [11]) mod [4])) + [1])))
+        else
+            if <((round ((timer) * [1.6])) mod [2]) = [0]> then
+                switch costume to (join (Hero Name) [ idle])
+            else
+                switch costume to (join (Hero Name) [ idle b])
+            end
+        end
+    end
+    set [Last X] to (x position)
+end
+```
+
+> Makes the stick figure feel alive: breathing while standing, a 4-step walk cycle while moving. It only changes the standing and walking pictures, never a punch or a kick.
 
 ```
 when green flag clicked
@@ -1081,6 +1183,13 @@ forever
                     glide [0.18] secs to x: ((Enemy X) - ([45] * (Facing))) y: [-75]
                     set [Hit Power] to (Special Power)
                     broadcast [hero hits]
+                    if <(Minions) > [0]> then
+                        set [Area X] to (Hero X)
+                        set [Area R] to [90]
+                        set [Area Power] to (Special Power)
+                        set [Area Kind] to [hit]
+                        broadcast [area hit]
+                    end
                     broadcast [shake]
                     wait [0.4] seconds
                 end
@@ -1090,6 +1199,13 @@ forever
                         switch costume to (join (Hero Name) [ kick])
                         set [Hit Power] to (round ((Special Power) / [3]))
                         broadcast [hero hits]
+                        if <(Minions) > [0]> then
+                            set [Area X] to (Hero X)
+                            set [Area R] to [90]
+                            set [Area Power] to (round ((Special Power) / [3]))
+                            set [Area Kind] to [hit]
+                            broadcast [area hit]
+                        end
                         wait [0.2] seconds
                         switch costume to (join (Hero Name) [ special])
                         move [-40] steps
@@ -1110,6 +1226,13 @@ forever
                     switch costume to (join (Hero Name) [ special])
                     set [Hit Power] to (Special Power)
                     broadcast [hero hits]
+                    if <(Minions) > [0]> then
+                        set [Area X] to (Hero X)
+                        set [Area R] to [90]
+                        set [Area Power] to (Special Power)
+                        set [Area Kind] to [hit]
+                        broadcast [area hit]
+                    end
                     broadcast [shake]
                     wait [0.4] seconds
                 end
@@ -1160,6 +1283,13 @@ forever
                     end
                     set [Hit Power] to [9]
                     broadcast [hero hits]
+                    if <(Minions) > [0]> then
+                        set [Area X] to (Hero X)
+                        set [Area R] to [90]
+                        set [Area Power] to [9]
+                        set [Area Kind] to [hit]
+                        broadcast [area hit]
+                    end
                     broadcast [shake]
                     wait [0.3] seconds
                 end
@@ -1222,6 +1352,8 @@ forever
         end
         if <<(Want Punch) = [1]> and <(Hero Lock) = [0]>> then
             set [Want Punch] to [0]
+            switch costume to (join (Hero Name) [ punch 1])
+            wait [0.06] seconds
             switch costume to (join (Hero Name) [ punch])
             if <<(Weapon) = [boomerang]> and <(Boomerang Out) = [0]>> then
                 set [Boomerang Out] to [1]
@@ -1246,6 +1378,13 @@ forever
                         end
                     end
                 end
+                if <(Minions) > [0]> then
+                    set [Area X] to ((Hero X) + ((Facing) * [38.5]))
+                    set [Area R] to [38.5]
+                    set [Area Power] to (Hit Power)
+                    set [Area Kind] to [hit]
+                    broadcast [area hit]
+                end
             end
             wait [0.16] seconds
             if <<<not <(Weapon) = [none]>> and <(Weapon Uses) < [1]>> and <(Boomerang Out) = [0]>> then
@@ -1259,6 +1398,8 @@ forever
         end
         if <<(Want Kick) = [1]> and <(Hero Lock) = [0]>> then
             set [Want Kick] to [0]
+            switch costume to (join (Hero Name) [ kick 1])
+            wait [0.07] seconds
             switch costume to (join (Hero Name) [ kick])
             move [14] steps
             if <(x position) < [-215]> then
@@ -1283,6 +1424,13 @@ forever
                         broadcast [shake]
                     end
                 end
+            end
+            if <(Minions) > [0]> then
+                set [Area X] to ((Hero X) + ((Facing) * [45.1]))
+                set [Area R] to [45.1]
+                set [Area Power] to (Hit Power)
+                set [Area Kind] to [hit]
+                broadcast [area hit]
             end
             wait [0.22] seconds
             move [-14] steps
@@ -1416,6 +1564,8 @@ forever
         if <(x position) > [215]> then
             set x to [215]
         end
+        set [Turn Dir] to (Joy X)
+        set [Turn Until] to ((timer) + [0.3])
     end
 end
 ```
@@ -1432,6 +1582,8 @@ if <<(Fight On) = [1]> and <(Hero Lock) = [0]>> then
     if <(x position) > [215]> then
         set x to [215]
     end
+    set [Turn Dir] to [-1]
+    set [Turn Until] to ((timer) + [0.45])
 end
 ```
 
@@ -1445,13 +1597,19 @@ if <<(Fight On) = [1]> and <(Hero Lock) = [0]>> then
     if <(x position) > [215]> then
         set x to [215]
     end
+    set [Turn Dir] to [1]
+    set [Turn Until] to ((timer) + [0.45])
 end
 ```
 
 ```
 when I receive [hero hurt]
 if <(Hero Lock) = [0]> then
-    switch costume to (join (Hero Name) [ hurt])
+    if <(pick random [1] to [2]) = [1]> then
+        switch costume to (join (Hero Name) [ hurt])
+    else
+        switch costume to (join (Hero Name) [ hurt high])
+    end
     move [-12] steps
     if <(x position) < [-215]> then
         set x to [-215]
@@ -1564,8 +1722,29 @@ switch costume to (join (Hero Name) [ win])
 
 ## Enemy
 
-Costumes: rival idle, rival windup, rival attack, rival hurt, rival down, ivy idle, ivy windup, ivy attack, ivy hurt, ivy down, brute idle, brute windup, brute attack, brute hurt, brute down, spikebot idle, spikebot windup, spikebot attack, spikebot hurt, spikebot down, megaspike idle, megaspike windup, megaspike attack, megaspike hurt, megaspike down, quake idle, quake windup, quake attack, quake hurt, quake down, shadow idle, shadow windup, shadow attack, shadow hurt, shadow down, shadow angry, shadow spikes
-Sprite-only variables: Pick, Line Until
+Costumes: rival idle, rival windup, rival attack, rival hurt, rival down, rival idle b, rival walk 1, rival walk 2, rival walk 3, rival walk 4, rival hurt high, ivy idle, ivy windup, ivy attack, ivy hurt, ivy down, ivy idle b, ivy walk 1, ivy walk 2, ivy walk 3, ivy walk 4, ivy hurt high, brute idle, brute windup, brute attack, brute hurt, brute down, brute idle b, brute walk 1, brute walk 2, brute walk 3, brute walk 4, brute hurt high, spikebot idle, spikebot windup, spikebot attack, spikebot hurt, spikebot down, spikebot idle b, spikebot walk 1, spikebot walk 2, spikebot walk 3, spikebot walk 4, spikebot hurt high, megaspike idle, megaspike windup, megaspike attack, megaspike hurt, megaspike down, megaspike idle b, megaspike walk 1, megaspike walk 2, megaspike walk 3, megaspike walk 4, megaspike hurt high, ninja idle, ninja windup, ninja attack, ninja hurt, ninja down, ninja idle b, ninja walk 1, ninja walk 2, ninja walk 3, ninja walk 4, ninja hurt high, kage idle, kage windup, kage attack, kage hurt, kage down, kage idle b, kage walk 1, kage walk 2, kage walk 3, kage walk 4, kage hurt high, quake idle, quake windup, quake attack, quake hurt, quake down, quake idle b, quake walk 1, quake walk 2, quake walk 3, quake walk 4, quake hurt high, shadow idle, shadow windup, shadow attack, shadow hurt, shadow down, shadow idle b, shadow walk 1, shadow walk 2, shadow walk 3, shadow walk 4, shadow hurt high, shadow angry, shadow spikes
+Sprite-only variables: Pick, Line Until, Last X, Look
+
+```
+when green flag clicked
+forever
+    set [Look] to (costume name)
+    if <<(State) = [fight]> and <<(Look) contains [idle]?> or <(Look) contains [walk]?>>> then
+        if <(abs of ((x position) - (Last X))) > [0.6]> then
+            switch costume to (join (Enemy Name) (join [ walk ] ((floor of ((((x position) + [1000]) / [11]) mod [4])) + [1])))
+        else
+            if <((round ((timer) * [1.4])) mod [2]) = [0]> then
+                switch costume to (join (Enemy Name) [ idle])
+            else
+                switch costume to (join (Enemy Name) [ idle b])
+            end
+        end
+    end
+    set [Last X] to (x position)
+end
+```
+
+> Enemies breathe while they wait and walk with a stride cycle.
 
 ```
 when green flag clicked
@@ -1589,7 +1768,6 @@ repeat until <(Fight On) = [0]>
         set [Enemy Facing] to [1]
     end
     if <(timer) < (Enemy Stun Until)> then
-        switch costume to (join (Enemy Name) [ hurt])
         wait [0.05] seconds
     else
         if <(Enemy Type) = [1]> then
@@ -1790,6 +1968,413 @@ repeat until <(Fight On) = [0]>
             end
         end
         if <(Enemy Type) = [6]> then
+            set [Pick] to (pick random [1] to [4])
+            if <(Pick) = [1]> then
+                switch costume to (join (Enemy Name) [ windup])
+                say [Shuriken!] for ([0.3] * (Pace)) seconds
+                set [Shot Y] to [-57]
+                set [Shot Dir] to (Enemy Facing)
+                switch costume to (join (Enemy Name) [ attack])
+                broadcast [enemy shot] and wait
+                switch costume to (join (Enemy Name) [ idle])
+                wait ([0.3] * (Pace)) seconds
+            end
+            if <(Pick) = [2]> then
+                switch costume to (join (Enemy Name) [ windup])
+                say [Hyah!] for ([0.35] * (Pace)) seconds
+                switch costume to (join (Enemy Name) [ attack])
+                set [Enemy Swing Until] to ((timer) + [0.3])
+                broadcast [swing sfx]
+                set [Pick] to (Hero X)
+                glide ([0.22] * (Pace)) secs to x: (Pick) y: [-75]
+                if <<(abs of ((Hero X) - (x position))) < ([42] + (Enemy Body))> and <((Hero Y) - [-75]) < [70]>> then
+                    set [Enemy Swing Until] to ((timer) + [0.3])
+                    set [Hurt Power] to (Enemy Power)
+                    broadcast [enemy hits hero]
+                end
+                glide [0.3] secs to x: ((x position) + ([-80] * (Enemy Facing))) y: [-75]
+                if <(x position) < [-205]> then
+                    set x to [-205]
+                end
+                if <(x position) > [205]> then
+                    set x to [205]
+                end
+                switch costume to (join (Enemy Name) [ idle])
+                wait ([0.35] * (Pace)) seconds
+            end
+            if <(Pick) = [3]> then
+                set [Smoke X] to (x position)
+                set [Smoke Y] to ([-75] + [40])
+                broadcast [smoke]
+                set [ghost] effect to [100]
+                wait ([0.35] * (Pace)) seconds
+                set x to ((Hero X) - ([70] * (Facing)))
+                if <(x position) < [-205]> then
+                    set x to [-205]
+                end
+                if <(x position) > [205]> then
+                    set x to [205]
+                end
+                if <(Hero X) < (x position)> then
+                    point in direction [-90]
+                    set [Enemy Facing] to [-1]
+                else
+                    point in direction [90]
+                    set [Enemy Facing] to [1]
+                end
+                set [ghost] effect to [0]
+                set [Smoke X] to (x position)
+                set [Smoke Y] to ([-75] + [40])
+                broadcast [smoke]
+                switch costume to (join (Enemy Name) [ windup])
+                wait ([0.18] * (Pace)) seconds
+                switch costume to (join (Enemy Name) [ attack])
+                set [Enemy Swing Until] to ((timer) + [0.3])
+                broadcast [swing sfx]
+                if <<(abs of ((Hero X) - (x position))) < ([42] + (Enemy Body))> and <((Hero Y) - [-75]) < [70]>> then
+                    set [Enemy Swing Until] to ((timer) + [0.3])
+                    set [Hurt Power] to (Enemy Power)
+                    broadcast [enemy hits hero]
+                end
+                wait ([0.35] * (Pace)) seconds
+                switch costume to (join (Enemy Name) [ idle])
+            end
+            if <(Pick) = [4]> then
+                if <(Minions) < [1]> then
+                    if <(Minions) < [3]> then
+                        switch costume to (join (Enemy Name) [ windup])
+                        say [NINJA SQUAD!] for ([0.6] * (Pace)) seconds
+                        set [Summon Count] to [1]
+                        broadcast [ninja summon]
+                        switch costume to (join (Enemy Name) [ idle])
+                        wait ([0.5] * (Pace)) seconds
+                    else
+                        set [Smoke X] to (x position)
+                        set [Smoke Y] to ([-75] + [40])
+                        broadcast [smoke]
+                        set [ghost] effect to [100]
+                        wait ([0.35] * (Pace)) seconds
+                        set x to ((Hero X) - ([70] * (Facing)))
+                        if <(x position) < [-205]> then
+                            set x to [-205]
+                        end
+                        if <(x position) > [205]> then
+                            set x to [205]
+                        end
+                        if <(Hero X) < (x position)> then
+                            point in direction [-90]
+                            set [Enemy Facing] to [-1]
+                        else
+                            point in direction [90]
+                            set [Enemy Facing] to [1]
+                        end
+                        set [ghost] effect to [0]
+                        set [Smoke X] to (x position)
+                        set [Smoke Y] to ([-75] + [40])
+                        broadcast [smoke]
+                        switch costume to (join (Enemy Name) [ windup])
+                        wait ([0.18] * (Pace)) seconds
+                        switch costume to (join (Enemy Name) [ attack])
+                        set [Enemy Swing Until] to ((timer) + [0.3])
+                        broadcast [swing sfx]
+                        if <<(abs of ((Hero X) - (x position))) < ([42] + (Enemy Body))> and <((Hero Y) - [-75]) < [70]>> then
+                            set [Enemy Swing Until] to ((timer) + [0.3])
+                            set [Hurt Power] to (Enemy Power)
+                            broadcast [enemy hits hero]
+                        end
+                        wait ([0.35] * (Pace)) seconds
+                        switch costume to (join (Enemy Name) [ idle])
+                    end
+                else
+                    switch costume to (join (Enemy Name) [ windup])
+                    say [High!] for ([0.3] * (Pace)) seconds
+                    set [Shot Y] to [50]
+                    set [Shot Dir] to (Enemy Facing)
+                    switch costume to (join (Enemy Name) [ attack])
+                    broadcast [enemy shot] and wait
+                    switch costume to (join (Enemy Name) [ idle])
+                    wait ([0.3] * (Pace)) seconds
+                end
+            end
+        end
+        if <(Enemy Type) = [7]> then
+            if <<(Power Level) > [2]> and <(pick random [1] to [4]) = [1]>> then
+                switch costume to (join (Enemy Name) [ windup])
+                say [LIGHTNING!] for ([0.5] * (Pace)) seconds
+                switch costume to (join (Enemy Name) [ attack])
+                set [Enemy Swing Until] to ((timer) + [0.3])
+                repeat (Power Level)
+                    set [Bolt X] to (Hero X)
+                    set [Bolt Y] to [-75]
+                    set [Bolt Owner] to [enemy]
+                    set [Bolt Power] to (Enemy Power)
+                    set [Bolt Size] to [100]
+                    broadcast [bolt]
+                    wait ([0.45] * (Pace)) seconds
+                end
+                switch costume to (join (Enemy Name) [ idle])
+                wait ([0.7] * (Pace)) seconds
+            else
+                set [Pick] to (pick random [1] to [5])
+                if <(Pick) = [1]> then
+                    switch costume to (join (Enemy Name) [ windup])
+                    say [Shuriken!] for ([0.3] * (Pace)) seconds
+                    set [Shot Y] to [-57]
+                    set [Shot Dir] to (Enemy Facing)
+                    switch costume to (join (Enemy Name) [ attack])
+                    broadcast [enemy shot] and wait
+                    switch costume to (join (Enemy Name) [ idle])
+                    switch costume to (join (Enemy Name) [ windup])
+                    say [High!] for ([0.3] * (Pace)) seconds
+                    set [Shot Y] to [50]
+                    set [Shot Dir] to (Enemy Facing)
+                    switch costume to (join (Enemy Name) [ attack])
+                    broadcast [enemy shot] and wait
+                    switch costume to (join (Enemy Name) [ idle])
+                    switch costume to (join (Enemy Name) [ windup])
+                    say [Shuriken!] for ([0.3] * (Pace)) seconds
+                    set [Shot Y] to [-57]
+                    set [Shot Dir] to (Enemy Facing)
+                    switch costume to (join (Enemy Name) [ attack])
+                    broadcast [enemy shot] and wait
+                    switch costume to (join (Enemy Name) [ idle])
+                    wait ([0.4] * (Pace)) seconds
+                end
+                if <(Pick) = [2]> then
+                    set [Smoke X] to (x position)
+                    set [Smoke Y] to ([-75] + [40])
+                    broadcast [smoke]
+                    set [ghost] effect to [100]
+                    wait ([0.35] * (Pace)) seconds
+                    set x to ((Hero X) - ([70] * (Facing)))
+                    if <(x position) < [-205]> then
+                        set x to [-205]
+                    end
+                    if <(x position) > [205]> then
+                        set x to [205]
+                    end
+                    if <(Hero X) < (x position)> then
+                        point in direction [-90]
+                        set [Enemy Facing] to [-1]
+                    else
+                        point in direction [90]
+                        set [Enemy Facing] to [1]
+                    end
+                    set [ghost] effect to [0]
+                    set [Smoke X] to (x position)
+                    set [Smoke Y] to ([-75] + [40])
+                    broadcast [smoke]
+                    switch costume to (join (Enemy Name) [ windup])
+                    wait ([0.18] * (Pace)) seconds
+                    switch costume to (join (Enemy Name) [ attack])
+                    set [Enemy Swing Until] to ((timer) + [0.3])
+                    broadcast [swing sfx]
+                    if <<(abs of ((Hero X) - (x position))) < ([42] + (Enemy Body))> and <((Hero Y) - [-75]) < [70]>> then
+                        set [Enemy Swing Until] to ((timer) + [0.3])
+                        set [Hurt Power] to (Enemy Power)
+                        broadcast [enemy hits hero]
+                    end
+                    wait ([0.35] * (Pace)) seconds
+                    switch costume to (join (Enemy Name) [ idle])
+                    set [Smoke X] to (x position)
+                    set [Smoke Y] to ([-75] + [40])
+                    broadcast [smoke]
+                    set [ghost] effect to [100]
+                    wait ([0.35] * (Pace)) seconds
+                    set x to ((Hero X) - ([70] * (Facing)))
+                    if <(x position) < [-205]> then
+                        set x to [-205]
+                    end
+                    if <(x position) > [205]> then
+                        set x to [205]
+                    end
+                    if <(Hero X) < (x position)> then
+                        point in direction [-90]
+                        set [Enemy Facing] to [-1]
+                    else
+                        point in direction [90]
+                        set [Enemy Facing] to [1]
+                    end
+                    set [ghost] effect to [0]
+                    set [Smoke X] to (x position)
+                    set [Smoke Y] to ([-75] + [40])
+                    broadcast [smoke]
+                    switch costume to (join (Enemy Name) [ windup])
+                    wait ([0.18] * (Pace)) seconds
+                    switch costume to (join (Enemy Name) [ attack])
+                    set [Enemy Swing Until] to ((timer) + [0.3])
+                    broadcast [swing sfx]
+                    if <<(abs of ((Hero X) - (x position))) < ([42] + (Enemy Body))> and <((Hero Y) - [-75]) < [70]>> then
+                        set [Enemy Swing Until] to ((timer) + [0.3])
+                        set [Hurt Power] to (Enemy Power)
+                        broadcast [enemy hits hero]
+                    end
+                    wait ([0.35] * (Pace)) seconds
+                    switch costume to (join (Enemy Name) [ idle])
+                end
+                if <(Pick) = [3]> then
+                    switch costume to (join (Enemy Name) [ windup])
+                    say [Hyah!] for ([0.35] * (Pace)) seconds
+                    switch costume to (join (Enemy Name) [ attack])
+                    set [Enemy Swing Until] to ((timer) + [0.3])
+                    broadcast [swing sfx]
+                    set [Pick] to (Hero X)
+                    glide ([0.22] * (Pace)) secs to x: (Pick) y: [-75]
+                    if <<(abs of ((Hero X) - (x position))) < ([42] + (Enemy Body))> and <((Hero Y) - [-75]) < [70]>> then
+                        set [Enemy Swing Until] to ((timer) + [0.3])
+                        set [Hurt Power] to (Enemy Power)
+                        broadcast [enemy hits hero]
+                    end
+                    glide [0.3] secs to x: ((x position) + ([-80] * (Enemy Facing))) y: [-75]
+                    if <(x position) < [-205]> then
+                        set x to [-205]
+                    end
+                    if <(x position) > [205]> then
+                        set x to [205]
+                    end
+                    switch costume to (join (Enemy Name) [ idle])
+                    wait ([0.35] * (Pace)) seconds
+                end
+                if <(Pick) = [4]> then
+                    if <(Enemy Phase) = [2]> then
+                        if <(Minions) < [3]> then
+                            switch costume to (join (Enemy Name) [ windup])
+                            say [NINJA SQUAD!] for ([0.6] * (Pace)) seconds
+                            set [Summon Count] to [3]
+                            broadcast [ninja summon]
+                            switch costume to (join (Enemy Name) [ idle])
+                            wait ([0.5] * (Pace)) seconds
+                        else
+                            set [Smoke X] to (x position)
+                            set [Smoke Y] to ([-75] + [40])
+                            broadcast [smoke]
+                            set [ghost] effect to [100]
+                            wait ([0.35] * (Pace)) seconds
+                            set x to ((Hero X) - ([70] * (Facing)))
+                            if <(x position) < [-205]> then
+                                set x to [-205]
+                            end
+                            if <(x position) > [205]> then
+                                set x to [205]
+                            end
+                            if <(Hero X) < (x position)> then
+                                point in direction [-90]
+                                set [Enemy Facing] to [-1]
+                            else
+                                point in direction [90]
+                                set [Enemy Facing] to [1]
+                            end
+                            set [ghost] effect to [0]
+                            set [Smoke X] to (x position)
+                            set [Smoke Y] to ([-75] + [40])
+                            broadcast [smoke]
+                            switch costume to (join (Enemy Name) [ windup])
+                            wait ([0.18] * (Pace)) seconds
+                            switch costume to (join (Enemy Name) [ attack])
+                            set [Enemy Swing Until] to ((timer) + [0.3])
+                            broadcast [swing sfx]
+                            if <<(abs of ((Hero X) - (x position))) < ([42] + (Enemy Body))> and <((Hero Y) - [-75]) < [70]>> then
+                                set [Enemy Swing Until] to ((timer) + [0.3])
+                                set [Hurt Power] to (Enemy Power)
+                                broadcast [enemy hits hero]
+                            end
+                            wait ([0.35] * (Pace)) seconds
+                            switch costume to (join (Enemy Name) [ idle])
+                        end
+                    else
+                        if <(Minions) < [3]> then
+                            switch costume to (join (Enemy Name) [ windup])
+                            say [NINJA SQUAD!] for ([0.6] * (Pace)) seconds
+                            set [Summon Count] to [2]
+                            broadcast [ninja summon]
+                            switch costume to (join (Enemy Name) [ idle])
+                            wait ([0.5] * (Pace)) seconds
+                        else
+                            set [Smoke X] to (x position)
+                            set [Smoke Y] to ([-75] + [40])
+                            broadcast [smoke]
+                            set [ghost] effect to [100]
+                            wait ([0.35] * (Pace)) seconds
+                            set x to ((Hero X) - ([70] * (Facing)))
+                            if <(x position) < [-205]> then
+                                set x to [-205]
+                            end
+                            if <(x position) > [205]> then
+                                set x to [205]
+                            end
+                            if <(Hero X) < (x position)> then
+                                point in direction [-90]
+                                set [Enemy Facing] to [-1]
+                            else
+                                point in direction [90]
+                                set [Enemy Facing] to [1]
+                            end
+                            set [ghost] effect to [0]
+                            set [Smoke X] to (x position)
+                            set [Smoke Y] to ([-75] + [40])
+                            broadcast [smoke]
+                            switch costume to (join (Enemy Name) [ windup])
+                            wait ([0.18] * (Pace)) seconds
+                            switch costume to (join (Enemy Name) [ attack])
+                            set [Enemy Swing Until] to ((timer) + [0.3])
+                            broadcast [swing sfx]
+                            if <<(abs of ((Hero X) - (x position))) < ([42] + (Enemy Body))> and <((Hero Y) - [-75]) < [70]>> then
+                                set [Enemy Swing Until] to ((timer) + [0.3])
+                                set [Hurt Power] to (Enemy Power)
+                                broadcast [enemy hits hero]
+                            end
+                            wait ([0.35] * (Pace)) seconds
+                            switch costume to (join (Enemy Name) [ idle])
+                        end
+                    end
+                end
+                if <(Pick) = [5]> then
+                    set [Smoke X] to (x position)
+                    set [Smoke Y] to ([-75] + [40])
+                    broadcast [smoke]
+                    set [ghost] effect to [100]
+                    wait ([0.35] * (Pace)) seconds
+                    set x to ((Hero X) - ([70] * (Facing)))
+                    if <(x position) < [-205]> then
+                        set x to [-205]
+                    end
+                    if <(x position) > [205]> then
+                        set x to [205]
+                    end
+                    if <(Hero X) < (x position)> then
+                        point in direction [-90]
+                        set [Enemy Facing] to [-1]
+                    else
+                        point in direction [90]
+                        set [Enemy Facing] to [1]
+                    end
+                    set [ghost] effect to [0]
+                    set [Smoke X] to (x position)
+                    set [Smoke Y] to ([-75] + [40])
+                    broadcast [smoke]
+                    switch costume to (join (Enemy Name) [ windup])
+                    wait ([0.18] * (Pace)) seconds
+                    switch costume to (join (Enemy Name) [ attack])
+                    set [Enemy Swing Until] to ((timer) + [0.3])
+                    broadcast [swing sfx]
+                    if <<(abs of ((Hero X) - (x position))) < ([42] + (Enemy Body))> and <((Hero Y) - [-75]) < [70]>> then
+                        set [Enemy Swing Until] to ((timer) + [0.3])
+                        set [Hurt Power] to (Enemy Power)
+                        broadcast [enemy hits hero]
+                    end
+                    wait ([0.35] * (Pace)) seconds
+                    switch costume to (join (Enemy Name) [ idle])
+                    switch costume to (join (Enemy Name) [ windup])
+                    say [Shuriken!] for ([0.3] * (Pace)) seconds
+                    set [Shot Y] to [-57]
+                    set [Shot Dir] to (Enemy Facing)
+                    switch costume to (join (Enemy Name) [ attack])
+                    broadcast [enemy shot] and wait
+                    switch costume to (join (Enemy Name) [ idle])
+                end
+            end
+        end
+        if <(Enemy Type) = [8]> then
             switch costume to (join (Enemy Name) [ windup])
             say [STOMP!] for ([0.6] * (Pace)) seconds
             switch costume to (join (Enemy Name) [ attack])
@@ -1814,7 +2399,7 @@ repeat until <(Fight On) = [0]>
                 end
             end
         end
-        if <(Enemy Type) = [7]> then
+        if <(Enemy Type) = [9]> then
             if <<(Power Level) > [2]> and <(pick random [1] to [4]) = [1]>> then
                 switch costume to (join (Enemy Name) [ windup])
                 say [LIGHTNING!] for ([0.5] * (Pace)) seconds
@@ -1973,7 +2558,11 @@ end
 
 ```
 when I receive [enemy hurt]
-switch costume to (join (Enemy Name) [ hurt])
+if <(pick random [1] to [2]) = [1]> then
+    switch costume to (join (Enemy Name) [ hurt])
+else
+    switch costume to (join (Enemy Name) [ hurt high])
+end
 move [-12] steps
 if <(x position) < [-210]> then
     set x to [-210]
@@ -1989,13 +2578,20 @@ set [brightness] effect to [0]
 ```
 when I receive [king angry]
 if <(Enemy Type) = [7]> then
+    say [Shadow clones... ATTACK!] for [1.4] seconds
+    set [Summon Count] to [2]
+    broadcast [ninja summon]
+end
+if <(Enemy Type) = [9]> then
     switch costume to (shadow angry)
     say [You're strong... but I'm STRONGER!] for [1.6] seconds
     switch costume to (shadow idle)
 else
-    switch costume to (megaspike attack)
-    say [OVERDRIVE!!] for [1.2] seconds
-    switch costume to (megaspike idle)
+    if <(Enemy Type) = [5]> then
+        switch costume to (megaspike attack)
+        say [OVERDRIVE!!] for [1.2] seconds
+        switch costume to (megaspike idle)
+    end
 end
 ```
 
@@ -2056,7 +2652,7 @@ repeat [10]
     change [ghost] effect by [10]
     wait [0.03] seconds
 end
-if <not <<(Mode) = [story]> and <(Chapter) = [7]>>> then
+if <not <<(Mode) = [story]> and <(Chapter) = [9]>>> then
     hide
 end
 set [ghost] effect to [0]
@@ -2079,8 +2675,8 @@ switch costume to (shadow down)
 
 ## Enemy Shot
 
-Costumes: ball, spike
-Sprite-only variables: Hit
+Costumes: ball, spike, shuriken
+Sprite-only variables: Hit, Spin
 
 ```
 when green flag clicked
@@ -2089,10 +2685,19 @@ hide
 
 ```
 when I receive [enemy shot]
+set [Spin] to [0]
+set rotation style [left-right]
 if <(Enemy Name) = [megaspike]> then
     switch costume to (spike)
 else
-    switch costume to (ball)
+    if <<(Enemy Name) = [ninja]> or <(Enemy Name) = [kage]>> then
+        switch costume to (shuriken)
+        set [Spin] to [1]
+        set rotation style [all around]
+        broadcast [shuriken sfx]
+    else
+        switch costume to (ball)
+    end
 end
 point in direction ([90] * (Shot Dir))
 go to x: ((Enemy X) + ([30] * (Shot Dir))) y: (Shot Y)
@@ -2104,6 +2709,9 @@ set [Shot Live] to [1]
 repeat until <<<<(abs of (x position)) > [235]> or <(Hit) = [1]>> or <(Fight On) = [0]>> or <(Shot Cancel) = [1]>>
     change x by ([12] * (Shot Dir))
     set [Shot X] to (x position)
+    if <(Spin) = [1]> then
+        turn right [40] degrees
+    end
     if <<<(abs of ((x position) - (Hero X))) < [18]> and <((Shot Y) - (Hero Y)) > [-10]>> and <((Shot Y) - (Hero Y)) < [108]>> then
         set [Hit] to [1]
         set [Hurt Power] to (Enemy Power)
@@ -2438,6 +3046,276 @@ hide
 set [Boomerang Out] to [0]
 ```
 
+## Smoke
+
+Costumes: puff
+Sprite-only variables: Is Clone
+
+```
+when green flag clicked
+hide
+set [Is Clone] to [0]
+```
+
+```
+when I receive [smoke]
+if <(Is Clone) = [0]> then
+    go to x: (Smoke X) y: (Smoke Y)
+    create clone of (myself)
+end
+```
+
+> A puff of smoke when a ninja vanishes or appears. Only the original makes clones.
+
+```
+when I start as a clone
+set [Is Clone] to [1]
+set size to [50] %
+set [ghost] effect to [0]
+show
+go to [front] layer
+broadcast [poof sfx]
+repeat [10]
+    change size by [9]
+    change [ghost] effect by [10]
+    change y by [1]
+    wait [0.03] seconds
+end
+delete this clone
+```
+
+```
+when I receive [show title]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [choose hero]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [story scene]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [brawl clear]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+## Ninja Minion
+
+Costumes: idle, run 1, run 2, slash, hurt, hurt high, flip, down
+Sprite-only variables: Is Clone, HP, Hit Until, Was Hit, Atk Until, Dir, D, Side, Gap
+
+```
+when green flag clicked
+hide
+set [Is Clone] to [0]
+set [Minions] to [0]
+```
+
+```
+when I receive [ninja summon]
+if <(Is Clone) = [0]> then
+    repeat (Summon Count)
+        if <<(Minions) < [3]> and <(Fight On) = [1]>> then
+            change [Minions] by [1]
+            if <(pick random [1] to [2]) = [1]> then
+                set [Side] to [-1]
+            else
+                set [Side] to [1]
+            end
+            go to x: ((Side) * (pick random [150] to [215])) y: [-75]
+            set [Smoke X] to (x position)
+            set [Smoke Y] to ([-75] + [40])
+            broadcast [smoke]
+            create clone of (myself)
+            wait [0.25] seconds
+        end
+    end
+end
+```
+
+> MASTER KAGE and the ninjas call a NINJA SQUAD: up to 3 small ninjas that fight you at the same time.
+
+```
+when I start as a clone
+set [Is Clone] to [1]
+set [Gap] to (pick random [26] to [58])
+set [HP] to ([7] + (Difficulty))
+set [Was Hit] to [0]
+set [Atk Until] to ((timer) + [0.6])
+switch costume to (flip)
+set size to [70] %
+show
+go to [front] layer
+wait [0.15] seconds
+repeat until <<(HP) < [1]> or <(Fight On) = [0]>>
+    if <(Was Hit) = [1]> then
+        set [Was Hit] to [0]
+        if <(pick random [1] to [2]) = [1]> then
+            switch costume to (hurt)
+        else
+            switch costume to (hurt high)
+        end
+        set [brightness] effect to [60]
+        move [-14] steps
+        if <(x position) < [-220]> then
+            set x to [-220]
+        end
+        if <(x position) > [220]> then
+            set x to [220]
+        end
+        wait [0.15] seconds
+        set [brightness] effect to [0]
+    else
+        set [D] to ((Hero X) - (x position))
+        if <(D) > [0]> then
+            point in direction [90]
+        else
+            point in direction [-90]
+        end
+        if <(abs of (D)) > (Gap)> then
+            move ([3] + ([0.5] * (Difficulty))) steps
+            if <((round ((timer) * [9])) mod [2]) = [0]> then
+                switch costume to (run 1)
+            else
+                switch costume to (run 2)
+            end
+        else
+            if <<(timer) > (Atk Until)> and <(abs of (D)) < [45]>> then
+                switch costume to (slash)
+                broadcast [swing sfx]
+                if <((Hero Y) - [-75]) < [50]> then
+                    set [Hurt Power] to ([3] + (Power Level))
+                    broadcast [enemy hits hero]
+                end
+                set [Atk Until] to ((timer) + ([1.1] - ([0.1] * (Difficulty))))
+                wait [0.18] seconds
+            else
+                switch costume to (idle)
+                if <<(timer) > (Atk Until)> and <(pick random [1] to [20]) = [1]>> then
+                    set [Gap] to (pick random [26] to [40])
+                end
+            end
+        end
+    end
+end
+if <(HP) < [1]> then
+    switch costume to (down)
+    change [Score] by [50]
+    wait [0.35] seconds
+end
+set [Smoke X] to (x position)
+set [Smoke Y] to ([-75] + [30])
+broadcast [smoke]
+change [Minions] by [-1]
+if <(Minions) < [0]> then
+    set [Minions] to [0]
+end
+delete this clone
+```
+
+> One ninja: runs at you, slashes when close, flinches when hit, vanishes in smoke when beaten.
+
+```
+when I receive [area hit]
+if <<<<(Is Clone) = [1]> and <(HP) > [0]>> and <(timer) > (Hit Until)>> and <(abs of ((x position) - (Area X))) < ((Area R) + [14])>> then
+    change [HP] by ([0] - (Area Power))
+    set [Hit Until] to ((timer) + [0.18])
+    set [Was Hit] to [1]
+    broadcast [brawl hit]
+    if <(Area Kind) = [fire]> then
+        set [Fire Stop] to [1]
+    end
+end
+```
+
+> Your punches, kicks, fireballs, lightning and SUPER moves also hit ninjas near them.
+
+```
+when I receive [show title]
+if <(Is Clone) = [1]> then
+    delete this clone
+else
+    hide
+    set [Minions] to [0]
+end
+```
+
+```
+when I receive [choose hero]
+if <(Is Clone) = [1]> then
+    delete this clone
+else
+    hide
+    set [Minions] to [0]
+end
+```
+
+```
+when I receive [story scene]
+if <(Is Clone) = [1]> then
+    delete this clone
+else
+    hide
+    set [Minions] to [0]
+end
+```
+
+## Hero Shadow
+
+Costumes: shadow
+
+```
+when green flag clicked
+hide
+forever
+    if <<(State) = [fight]> or <(State) = [over]>> then
+        go to x: (Hero X) y: ([-75] + [1])
+        set size to ([75] - (((Hero Y) - [-75]) * [0.3])) %
+        set [ghost] effect to ([10] + (((Hero Y) - [-75]) * [0.5]))
+        go to [back] layer
+        show
+    else
+        hide
+    end
+end
+```
+
+> A shadow on the floor gives depth: it shrinks and fades when you jump.
+
+## Enemy Shadow
+
+Costumes: shadow
+
+```
+when green flag clicked
+hide
+forever
+    if <<(State) = [fight]> and <(Enemy HP) > [0]>> then
+        go to x: (Enemy X) y: ([-75] + [1])
+        set size to ((Enemy Size) * [0.95]) %
+        go to [back] layer
+        show
+    else
+        hide
+    end
+end
+```
+
+> A shadow on the floor gives depth: it shrinks and fades when you jump.
+
 ## Spike Rain
 
 Costumes: warning, spike
@@ -2588,6 +3466,17 @@ repeat until <<<(abs of (x position)) > [235]> or <(Done) = [1]>> or <(Fight On)
         set [Pop Text] to [BLOCKED!]
         broadcast [popup]
         if <(Power) < [100]> then
+            set [Done] to [1]
+        end
+    end
+    if <(Minions) > [0]> then
+        set [Fire Stop] to [0]
+        set [Area X] to (x position)
+        set [Area R] to ([14] + ((Power) / [8]))
+        set [Area Power] to ([3] + (round ((Power) / [12])))
+        set [Area Kind] to [fire]
+        broadcast [area hit]
+        if <<(Fire Stop) = [1]> and <(Power) < [100]>> then
             set [Done] to [1]
         end
     end
@@ -2781,6 +3670,13 @@ broadcast [bolt strike]
 if <<(Who) = [hero]> and <(Fight On) = [1]>> then
     set [Hit Power] to (Pw)
     broadcast [hero hits]
+    if <(Minions) > [0]> then
+        set [Area X] to (Bx)
+        set [Area R] to [40]
+        set [Area Power] to (Pw)
+        set [Area Kind] to [bolt]
+        broadcast [area hit]
+    end
 end
 if <<<(Who) = [enemy]> and <(Fight On) = [1]>> and <(abs of ((Hero X) - (Bx))) < [30]>> then
     set [Hurt Power] to (Pw)
@@ -2860,7 +3756,7 @@ end
 
 ## Boss Weapon
 
-Costumes: club, mace, hammer, dark sword
+Costumes: club, mace, hammer, dark sword, katana
 
 ```
 when green flag clicked
@@ -2882,7 +3778,7 @@ forever
 end
 ```
 
-> Bosses carry weapons: Brute a club, MEGA SPIKE a spiked mace, Quake a hammer, the Shadow King a dark sword. Each adds 3 to their hits. It swings when they attack.
+> Bosses carry weapons: Brute a club, MEGA SPIKE a spiked mace, ninjas and MASTER KAGE a katana, Quake a hammer, the Shadow King a dark sword. Each adds 3 to their hits. It swings when they attack.
 
 ```
 when I receive [enemy down]
@@ -3108,7 +4004,7 @@ end
 
 ## Enemy Tag
 
-Costumes: rival, ivy, brute, spikebot, megaspike, quake, shadow
+Costumes: rival, ivy, brute, spikebot, megaspike, ninja, kage, quake, shadow
 
 ```
 when green flag clicked
@@ -3258,7 +4154,7 @@ hide
 
 ## Story Card
 
-Costumes: prologue, chapter 1, chapter 2, chapter 3, chapter 4, chapter 5, chapter 6, chapter 7, game over, arcade over, brawl win, brawl lose, the end, angry, overdrive
+Costumes: prologue, chapter 1, chapter 2, chapter 3, chapter 4, chapter 5, chapter 6, chapter 7, chapter 8, chapter 9, game over, arcade over, brawl win, brawl lose, the end, angry, kage angry, overdrive
 Sprite-only variables: Until
 
 ```
@@ -3396,6 +4292,48 @@ if <(Chapter) = [6]> then
     hide
     broadcast [scene setup] and wait
     if <(Skip) = [0]> then
+        set [Line] to [You will never see us coming...]
+        set [Line Secs] to [2.2]
+        broadcast [enemy line] and wait
+    end
+    if <(Skip) = [0]> then
+        set [Line] to [I can see you right now!]
+        set [Line Secs] to [2.2]
+        broadcast [hero line] and wait
+    end
+end
+if <(Chapter) = [7]> then
+    switch costume to (chapter 7)
+    set size to [100] %
+    go to x: [0] y: [30]
+    show
+    go to [front] layer
+    set [Until] to ((timer) + [2.6])
+    wait until <<(timer) > (Until)> or <(Skip) = [1]>>
+    hide
+    broadcast [scene setup] and wait
+    if <(Skip) = [0]> then
+        set [Line] to [I am MASTER KAGE. My ninjas are everywhere!]
+        set [Line Secs] to [2.2]
+        broadcast [enemy line] and wait
+    end
+    if <(Skip) = [0]> then
+        set [Line] to [Then I'll beat every one of them!]
+        set [Line Secs] to [2.2]
+        broadcast [hero line] and wait
+    end
+end
+if <(Chapter) = [8]> then
+    switch costume to (chapter 8)
+    set size to [100] %
+    go to x: [0] y: [30]
+    show
+    go to [front] layer
+    set [Until] to ((timer) + [2.6])
+    wait until <<(timer) > (Until)> or <(Skip) = [1]>>
+    hide
+    broadcast [scene setup] and wait
+    if <(Skip) = [0]> then
         set [Line] to [Feel the ground shake!]
         set [Line Secs] to [2.2]
         broadcast [enemy line] and wait
@@ -3406,8 +4344,8 @@ if <(Chapter) = [6]> then
         broadcast [hero line] and wait
     end
 end
-if <(Chapter) = [7]> then
-    switch costume to (chapter 7)
+if <(Chapter) = [9]> then
+    switch costume to (chapter 9)
     set size to [100] %
     go to x: [0] y: [30]
     show
@@ -3468,10 +4406,14 @@ broadcast [show home]
 
 ```
 when I receive [king angry]
-if <(Enemy Type) = [7]> then
+if <(Enemy Type) = [9]> then
     switch costume to (angry)
 else
-    switch costume to (overdrive)
+    if <(Enemy Type) = [7]> then
+        switch costume to (kage angry)
+    else
+        switch costume to (overdrive)
+    end
 end
 set size to [80] %
 go to x: [0] y: [60]
@@ -4530,7 +5472,7 @@ broadcast [show title]
 
 ## Brawler
 
-Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur special, nova idle, nova punch, nova kick, nova jump, nova hurt, nova special, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko special, rival idle, rival punch, rival kick, rival jump, rival hurt, rival special, ivy idle, ivy punch, ivy kick, ivy jump, ivy hurt, ivy special, brute idle, brute punch, brute kick, brute jump, brute hurt, brute special, quake idle, quake punch, quake kick, quake jump, quake hurt, quake special, shadow idle, shadow punch, shadow kick, shadow jump, shadow hurt, shadow special
+Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur special, arthur idle b, arthur walk 1, arthur walk 2, arthur walk 3, arthur walk 4, arthur fall, arthur hurt high, nova idle, nova punch, nova kick, nova jump, nova hurt, nova special, nova idle b, nova walk 1, nova walk 2, nova walk 3, nova walk 4, nova fall, nova hurt high, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko special, rocko idle b, rocko walk 1, rocko walk 2, rocko walk 3, rocko walk 4, rocko fall, rocko hurt high, rival idle, rival punch, rival kick, rival jump, rival hurt, rival special, rival idle b, rival walk 1, rival walk 2, rival walk 3, rival walk 4, rival fall, rival hurt high, ivy idle, ivy punch, ivy kick, ivy jump, ivy hurt, ivy special, ivy idle b, ivy walk 1, ivy walk 2, ivy walk 3, ivy walk 4, ivy fall, ivy hurt high, brute idle, brute punch, brute kick, brute jump, brute hurt, brute special, brute idle b, brute walk 1, brute walk 2, brute walk 3, brute walk 4, brute fall, brute hurt high, quake idle, quake punch, quake kick, quake jump, quake hurt, quake special, quake idle b, quake walk 1, quake walk 2, quake walk 3, quake walk 4, quake fall, quake hurt high, shadow idle, shadow punch, shadow kick, shadow jump, shadow hurt, shadow special, shadow idle b, shadow walk 1, shadow walk 2, shadow walk 3, shadow walk 4, shadow fall, shadow hurt high, ninja idle, ninja punch, ninja kick, ninja jump, ninja hurt, ninja special, ninja idle b, ninja walk 1, ninja walk 2, ninja walk 3, ninja walk 4, ninja fall, ninja hurt high
 Sprite-only variables: Is Clone, My Id, Kind, X, Y, VX, VY, Ground, Was Ground, Jumps, Stun, Atk CD, Pose Until, Speed, Punch, Kick, Weight, Face, Inv Until, Tgt, Think, Dir, Want Atk, Want Hop, J, Surf, NX, NY, Reach, Power, KB, Move Dir, Move Until, Smash, Dash, Best D, D, On Plat, Drop
 
 ```
@@ -4545,7 +5487,11 @@ if <(item (My Id) of [B Hit]) > [0]> then
         set [VY] to ((item (My Id) of [B KY]) / (Weight))
         set [Stun] to ([8] + ((abs of (VX)) * [1.6]))
         set [Ground] to [0]
-        switch costume to (join (Kind) [ hurt])
+        if <(VY) > [8]> then
+            switch costume to (join (Kind) [ hurt high])
+        else
+            switch costume to (join (Kind) [ hurt])
+        end
         set [brightness] effect to [50]
     end
 end
@@ -4913,17 +5859,38 @@ if <<<(abs of (X)) > [560]> or <(Y) < [-360]>> or <(Y) > [470]>> then
         hide
     end
 end
-if <(timer) > (Pose Until)> then
-    if <(Stun) > [0]> then
-        switch costume to (join (Kind) [ hurt])
-    else
-        if <(Ground) = [1]> then
-            switch costume to (join (Kind) [ idle])
+if <<(timer) > (Pose Until)> and <not <(Stun) > [0]>>> then
+    if <(Ground) = [1]> then
+        if <(abs of (VX)) > [0.6]> then
+            switch costume to (join (Kind) (join [ walk ] ((floor of ((((X) + [1000]) / [13]) mod [4])) + [1])))
         else
+            if <((round ((timer) * [1.6])) mod [2]) = [0]> then
+                switch costume to (join (Kind) [ idle])
+            else
+                switch costume to (join (Kind) [ idle b])
+            end
+        end
+    else
+        if <(VY) > [0]> then
             switch costume to (join (Kind) [ jump])
+        else
+            switch costume to (join (Kind) [ fall])
         end
     end
 end
+set [Surf] to [-9999]
+set [NX] to (X)
+set [J] to [0]
+repeat (Plat Count)
+    change [J] by [1]
+    if <<not <(NX) < (item (J) of [Plat X1])>> and <not <(NX) > (item (J) of [Plat X2])>>> then
+        set [D] to ((item (J) of [Plat Y1]) + (((NX) - (item (J) of [Plat X1])) * (((item (J) of [Plat Y2]) - (item (J) of [Plat Y1])) / ((item (J) of [Plat X2]) - (item (J) of [Plat X1])))))
+        if <<not <(D) > ((Y) + [1])>> and <(D) > (Surf)>> then
+            set [Surf] to (D)
+        end
+    end
+end
+replace item (My Id) of [B SY] with (Surf)
 if <(Face) = [1]> then
     point in direction [90]
 else
@@ -5015,6 +5982,12 @@ if <(Kind) = [shadow]> then
     set [Punch] to [5]
     set [Kick] to [8]
     set [Weight] to [1.1]
+end
+if <(Kind) = [ninja]> then
+    set [Speed] to [4.8]
+    set [Punch] to [4]
+    set [Kick] to [6]
+    set [Weight] to [0.8]
 end
 if <(Difficulty) = [1]> then
     set [Think] to [0.05]
@@ -5157,7 +6130,7 @@ set [BF Power] to [0]
 
 ## Brawl Platform
 
-Costumes: sky 1, sky 2, sky 3, sky 4, ramps 1, ramps 2, ramps 3, ramps 4, ramps 5, ramps 6, towers 1, towers 2, towers 3, towers 4, towers 5, towers 6, towers 7, towers 8
+Costumes: sky 1, sky 2, sky 3, sky 4, ramps 1, ramps 2, ramps 3, ramps 4, ramps 5, ramps 6, pagoda 1, pagoda 2, pagoda 3, pagoda 4, pagoda 5, pagoda 6, towers 1, towers 2, towers 3, towers 4, towers 5, towers 6, towers 7, towers 8
 Sprite-only variables: Is Clone, My Id, Stage Key
 
 ```
@@ -5176,6 +6149,9 @@ if <(Is Clone) = [0]> then
         set [Stage Key] to [ramps]
     end
     if <(Brawl Stage) = [3]> then
+        set [Stage Key] to [pagoda]
+    end
+    if <(Brawl Stage) = [4]> then
         set [Stage Key] to [towers]
     end
     set [My Id] to [0]
@@ -5223,7 +6199,7 @@ end
 
 ## Brawl HUD
 
-Costumes: arthur 0, arthur 1, arthur 2, arthur 3, nova 0, nova 1, nova 2, nova 3, rocko 0, rocko 1, rocko 2, rocko 3, rival 0, rival 1, rival 2, rival 3, ivy 0, ivy 1, ivy 2, ivy 3, brute 0, brute 1, brute 2, brute 3, quake 0, quake 1, quake 2, quake 3, shadow 0, shadow 1, shadow 2, shadow 3
+Costumes: arthur 0, arthur 1, arthur 2, arthur 3, nova 0, nova 1, nova 2, nova 3, rocko 0, rocko 1, rocko 2, rocko 3, rival 0, rival 1, rival 2, rival 3, ivy 0, ivy 1, ivy 2, ivy 3, brute 0, brute 1, brute 2, brute 3, quake 0, quake 1, quake 2, quake 3, shadow 0, shadow 1, shadow 2, shadow 3, ninja 0, ninja 1, ninja 2, ninja 3
 Sprite-only variables: Is Clone, My Id
 
 ```
@@ -5267,6 +6243,68 @@ delete this clone
 ```
 
 > Name and lives (dots) for each fighter. The big number next to it is their damage %.
+
+```
+when I receive [brawl clear]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [show title]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [choose hero]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+## Brawl Shadow
+
+Costumes: shadow
+Sprite-only variables: Is Clone, My Id, H
+
+```
+when green flag clicked
+hide
+set [Is Clone] to [0]
+```
+
+```
+when I receive [brawl go]
+if <(Is Clone) = [0]> then
+    set [My Id] to [0]
+    repeat [4]
+        change [My Id] by [1]
+        create clone of (myself)
+    end
+end
+```
+
+```
+when I start as a clone
+set [Is Clone] to [1]
+repeat until <(Brawl Live) = [0]>
+    if <<(item (My Id) of [B Alive]) = [1]> and <(item (My Id) of [B SY]) > [-9000]>> then
+        set [H] to ((item (My Id) of [B Y]) - (item (My Id) of [B SY]))
+        set size to (((Zoom) * [52]) * ([1] - ((H) / [300]))) %
+        set [ghost] effect to ([15] + ((H) / [3]))
+        go to x: (((item (My Id) of [B X]) - (Cam X)) * (Zoom)) y: (((item (My Id) of [B SY]) - (Cam Y)) * (Zoom))
+        show
+    else
+        hide
+    end
+end
+delete this clone
+```
+
+> Each fighter's shadow sits on the platform under them, smaller and fainter the higher they jump.
 
 ```
 when I receive [brawl clear]
