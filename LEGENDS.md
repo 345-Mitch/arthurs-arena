@@ -261,7 +261,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v2.8` in the bottom corner of the title.
+- **Version line:** `v2.9` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).
