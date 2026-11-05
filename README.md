@@ -17,6 +17,8 @@ Arthur's stickman fighting game, built in Scratch, with an Android tablet in min
 
 Open it in the [Scratch editor](https://scratch.mit.edu/projects/editor/) with **File → Load from your computer**, then click the green flag.
 
+**On Android:** install `dist/arthurs-arena.apk`. `ANDROID.md` shows how. `dist/arthurs-arena.html` is the same game as a web page for any browser.
+
 ## The boss arena
 
 `projects/arthurs-arena-bosses.sb3` is the earlier, smaller game with Brute, Ivy and Quake. `BOSSES.md` explains it, and `projects/BLOCK_LISTING.md` lists every block.
