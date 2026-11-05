@@ -98,7 +98,7 @@ BOOMERANG_HIT = 7
 
 PUNCH_REACH = 70
 KICK_REACH = 82
-SUPER_PER_HIT = 6
+SUPER_PER_HIT = 4
 SUPER_PER_HURT = 8
 SUPER_PER_PERFECT = 25
 COMBO_WINDOW = 1.2
@@ -108,6 +108,15 @@ COMBO_BONUS = 3
 ARCADE_HEAL = 30
 SPIKE_OUCH = 5       # what bare hands take from punching spikes
 RAIN_SPIKES = 5      # spikes in one Spike Rain
+# Difficulty: name, enemy health x, enemy power x, enemy speed (Pace) x. Normal makes fights longer than before.
+DIFFICULTIES = [
+    ("easy", "EASY", "#16a34a", 1.2, 0.75, 1.2),
+    ("normal", "NORMAL", "#2563eb", 2.0, 1.0, 1.0),
+    ("hard", "HARD", "#ea580c", 2.8, 1.25, 0.85),
+    ("champion", "CHAMPION", "#7c3aed", 3.6, 1.5, 0.72),
+]
+BOSS_WEAPONS = {"brute": "club", "megaspike": "mace", "quake": "hammer", "shadow": "dark sword"}
+BOSS_WEAPON_POWER = 3
 RAIN_HURT = 8
 CHARGE_RATE = 3.5    # charge per frame: full (100) in about one second
 FIRE_FULL_BONUS = 4  # extra damage for a fully charged fireball
@@ -296,6 +305,49 @@ def hero_card_svg(hero):
         + "".join(rows)
     )
     return svg_doc(140, 256, body)
+
+
+def boss_weapon_svg(kind):
+    if kind == "club":
+        art = ('<path d="M26 72 L22 30 Q20 6 32 4 Q44 6 40 30 L34 72 Z" fill="#92400e" stroke="#451a03" stroke-width="2.5"/>'
+               + "".join(f'<circle cx="{x}" cy="{y}" r="2.5" fill="#d6d3d1"/>' for x, y in ((26, 16), (37, 20), (30, 28), (34, 10))))
+    elif kind == "mace":
+        spikes = "".join(
+            f'<polygon points="{30 + 13 * math.cos(a) - 4 * math.sin(a):.1f},{18 + 13 * math.sin(a) + 4 * math.cos(a):.1f} '
+            f'{30 + 24 * math.cos(a):.1f},{18 + 24 * math.sin(a):.1f} '
+            f'{30 + 13 * math.cos(a) + 4 * math.sin(a):.1f},{18 + 13 * math.sin(a) - 4 * math.cos(a):.1f}" fill="#e5e7eb" stroke="#1f2937" stroke-width="2"/>'
+            for a in [k * math.pi / 4 for k in range(8)])
+        art = ('<rect x="27" y="28" width="6" height="46" rx="2" fill="#57534e" stroke="#1c1917" stroke-width="2"/>'
+               + spikes + '<circle cx="30" cy="18" r="14" fill="#78716c" stroke="#1c1917" stroke-width="2.5"/>')
+    elif kind == "dark sword":
+        art = ('<path d="M27 2 L33 2 L35 54 L25 54 Z" fill="#a855f7" stroke="#3b0764" stroke-width="2"/>'
+               '<path d="M29 6 L30 50" stroke="#e9d5ff" stroke-width="2"/>'
+               '<rect x="14" y="54" width="32" height="6" rx="3" fill="#facc15" stroke="#713f12" stroke-width="1.5"/>'
+               '<rect x="27" y="60" width="6" height="14" rx="2" fill="#1e1b4b"/>')
+    else:
+        return weapon_svg(kind)
+    return svg_doc(60, 76, art)
+
+
+def aura_svg(frame):
+    """Red fire around a powered-up fighter (100 x 180 box, feet at 168)."""
+    flames = []
+    for k in range(14):
+        a = k * 2 * math.pi / 14 + (0.22 if frame else 0)
+        cx, cy = 50 + 40 * math.cos(a), 98 + 76 * math.sin(a)
+        tx, ty = 50 + (60 + 8 * (k % 2)) * math.cos(a - 0.25), 98 + (96 + 8 * (k % 2)) * math.sin(a - 0.25)
+        flames.append(f'<path d="M{cx - 9 * math.sin(a):.1f} {cy + 9 * math.cos(a):.1f} Q{tx:.1f} {ty:.1f} '
+                      f'{cx + 9 * math.sin(a):.1f} {cy - 9 * math.cos(a):.1f} Z" fill="{"#ef4444" if k % 2 else "#f97316"}"/>')
+    return svg_doc(140, 220, (
+        '<g transform="translate(20,20)">'
+        '<ellipse cx="50" cy="98" rx="46" ry="84" fill="#ef4444" opacity="0.35"/>'
+        + "".join(flames) +
+        '<ellipse cx="50" cy="98" rx="34" ry="70" fill="#fca5a5" opacity="0.25"/></g>'))
+
+
+def difficulty_svg(word, fill):
+    return svg_doc(190, 40, f'<rect x="2" y="2" width="186" height="36" rx="12" fill="#0f172a" stroke="{fill}" stroke-width="4"/>'
+                   + text_el("LEVEL:", 52, 26, 13, "#cbd5e1") + text_el(word, 126, 26, 15, fill))
 
 
 def weapon_svg(kind, sparkle=False):
@@ -651,6 +703,14 @@ def join(a, b):
     return ("operator_join", a, b)
 
 
+def item(lst, i):
+    return ("item", lst, i)
+
+
+def listlen(lst):
+    return ("listlen", lst)
+
+
 def round_(a):
     return ("operator_round", a)
 
@@ -729,6 +789,11 @@ class Game:
     def var(self, name, value=0):
         self.globals[name] = ("var_" + name.replace(" ", "_"), value)
 
+    def list(self, name):
+        if not hasattr(self, "lists"):
+            self.lists = {}
+        self.lists[name] = "list_" + name.replace(" ", "_")
+
     def msg(self, name):
         if name not in self.broadcasts:
             self.broadcasts[name] = "msg_" + name.replace(" ", "_")
@@ -777,6 +842,25 @@ class Target:
 
     def local(self, name, value=0):
         self.locals[name] = (f"var_{self.prefix}{name.replace(' ', '_')}", value)
+
+    def lookup_list(self, name):
+        lists = getattr(self.game, "lists", {})
+        if name not in lists:
+            raise KeyError(f"{self.name}: no list {name!r}")
+        return lists[name]
+
+    def list_add(self, name, value):
+        return self.blk("data_addtolist", {"ITEM": ("text", value)}, {"LIST": [name, self.lookup_list(name)]})
+
+    def list_clear(self, name):
+        return self.blk("data_deletealloflist", fields={"LIST": [name, self.lookup_list(name)]})
+
+    def list_delete(self, name, index):
+        return self.blk("data_deleteoflist", {"INDEX": ("int", index)}, {"LIST": [name, self.lookup_list(name)]})
+
+    def list_set(self, name, index, value):
+        return self.blk("data_replaceitemoflist", {"INDEX": ("int", index), "ITEM": ("text", value)},
+                        {"LIST": [name, self.lookup_list(name)]})
 
     def lookup(self, name):
         if name in self.locals:
@@ -852,6 +936,11 @@ class Target:
         elif op == "mathop":
             bid = self.blk("operator_mathop", fields={"OPERATOR": [e[1], None]})
             self.set_input(bid, "NUM", ("num", e[2]))
+        elif op == "item":
+            bid = self.blk("data_itemoflist", fields={"LIST": [e[1], self.lookup_list(e[1])]})
+            self.set_input(bid, "INDEX", ("int", e[2]))
+        elif op == "listlen":
+            bid = self.blk("data_lengthoflist", fields={"LIST": [e[1], self.lookup_list(e[1])]})
         elif op == "keypressed":
             bid = self.blk("sensing_keypressed")
             menu = self.blk("sensing_keyoptions", fields={"KEY_OPTION": [e[1], None]}, shadow=True)
@@ -896,6 +985,20 @@ class Target:
 
     def on_key(self, key, *body, note=None):
         return self.script(self.blk("event_whenkeypressed", fields={"KEY_OPTION": [key, None]}, top=True), list(body), note)
+
+    def define(self, name, *body, note=None):
+        """A custom block that runs without screen refresh (Scratch's "run without screen refresh").
+        Loops inside it finish in one frame instead of pausing a frame on every turn."""
+        hat = self.blk("procedures_definition", top=True)
+        proto = self.blk("procedures_prototype", shadow=True, mutation={
+            "tagName": "mutation", "children": [], "proccode": name, "argumentids": "[]",
+            "argumentnames": "[]", "argumentdefaults": "[]", "warp": "true"})
+        self.set_input(hat, "custom_block", [1, proto])
+        return self.script(hat, list(body), note)
+
+    def call(self, name):
+        return self.blk("procedures_call", mutation={"tagName": "mutation", "children": [], "proccode": name,
+                                                     "argumentids": "[]", "warp": "true"})
 
     def on_clone(self, *body, note=None):
         return self.script(self.blk("control_start_as_clone", top=True), list(body), note)
@@ -1068,7 +1171,8 @@ class Target:
         if self.is_stage:
             variables.update({vid: [name, value] for name, (vid, value) in self.game.globals.items()})
             return {
-                "isStage": True, "name": "Stage", "variables": variables, "lists": {},
+                "isStage": True, "name": "Stage", "variables": variables,
+                "lists": {lid: [name, []] for name, lid in getattr(self.game, "lists", {}).items()},
                 "broadcasts": {bid: name for name, bid in self.game.broadcasts.items()},
                 "blocks": self.blocks, "comments": self.comments, "currentCostume": 0,
                 "costumes": self.costumes, "sounds": self.sounds, "volume": 100, "layerOrder": 0,
@@ -1088,6 +1192,546 @@ class Target:
 FIGHT_HIDE = ("show title", "choose hero", "story scene", "hero down", "enemy down", "ending")
 
 
+# ------------------------------------------------------------------ brawl --
+# Smash-style BRAWL: four fighters, platforms and ramps, a camera that follows
+# and zooms, damage %, knockback and ring-outs. Everything lives in "world"
+# coordinates; each sprite turns world -> screen with Cam X, Cam Y and Zoom.
+
+BRAWL_SIZE = 45          # fighters are drawn small, like a platform fighter
+GRAV = 1.0
+JUMP_V = 13.5
+DJUMP_V = 12
+MAX_FALL = -15
+BLAST_X = 560
+BLAST_LOW = -360
+BLAST_HIGH = 470
+STOCKS = 3
+BRAWL_KINDS = [
+    # key, tag, color, gear, run speed, punch, kick, weight
+    dict(key="arthur", tag="ARTHUR", color="#2563eb", gear="headband", speed=3.4, punch=4, kick=7, weight=1.0),
+    dict(key="nova", tag="NOVA", color="#c026d3", gear="star", speed=4.4, punch=3, kick=6, weight=0.85),
+    dict(key="rocko", tag="ROCKO", color="#15803d", gear="spikes", speed=2.7, punch=5, kick=9, weight=1.3),
+    dict(key="rival", tag="RIVAL", color="#64748b", gear="none", speed=3.3, punch=4, kick=7, weight=1.0),
+    dict(key="ivy", tag="IVY", color="#7c3aed", gear="leaf", speed=3.6, punch=3, kick=6, weight=0.9),
+    dict(key="brute", tag="BRUTE", color="#dc2626", gear="horns", speed=2.6, punch=5, kick=9, weight=1.35),
+    dict(key="quake", tag="QUAKE", color="#ea580c", gear="spikes", speed=2.5, punch=5, kick=10, weight=1.4),
+    dict(key="shadow", tag="SHADOW KING", color="#1e1b4b", gear="crown", speed=3.5, punch=5, kick=8, weight=1.1),
+]
+CPU_POOL = ["rival", "ivy", "brute", "quake", "shadow"]
+# per level: chance a CPU attacks each frame when in reach, CPU hit power x
+BRAWL_AI = [(0.05, 0.75), (0.11, 1.0), (0.2, 1.15), (0.3, 1.3)]
+BRAWL_STAGES = [
+    # solid = how many of the first platforms are floors you cannot drop through
+    dict(key="sky", name="SKY RUINS", sky=("#7dd3fc", "#e0f2fe"), solid=1,
+         plats=[(-290, -100, 290, -100), (-235, -10, -105, -10), (105, -10, 235, -10), (-65, 78, 65, 78)]),
+    dict(key="ramps", name="RAMP VALLEY", sky=("#fdba74", "#fef3c7"), solid=3,
+         plats=[(-340, -150, -135, -65), (-135, -65, 135, -65), (135, -65, 340, -150),
+                (-215, 35, -95, 35), (95, 35, 215, 35), (-45, 115, 45, 115)]),
+    dict(key="towers", name="TOWER STEPS", sky=("#312e81", "#a5b4fc"), solid=5,
+         plats=[(-330, -130, -185, -130), (-185, -130, -95, -60), (-95, -60, 95, -60), (95, -60, 185, -130),
+                (185, -130, 330, -130), (-300, 5, -200, 5), (200, 5, 300, 5), (-60, 60, 60, 60)]),
+]
+THICK = 18
+
+
+def platform_svg(stage, x1, y1, x2, y2):
+    w = x2 - x1
+    top = max(y1, y2)
+    h = abs(y2 - y1) + THICK + 4
+    ty1, ty2 = top - y1 + 2, top - y2 + 2
+    colors = {"sky": ("#a8a29e", "#57534e", "#86efac"), "ramps": ("#b45309", "#78350f", "#fcd34d"),
+              "towers": ("#6366f1", "#312e81", "#c4b5fd")}[stage]
+    body = (f'<polygon points="0,{ty1} {w},{ty2} {w},{ty2 + THICK} 0,{ty1 + THICK}" fill="{colors[0]}" '
+            f'stroke="{colors[1]}" stroke-width="3" stroke-linejoin="round"/>'
+            f'<polyline points="0,{ty1 + 1.5} {w},{ty2 + 1.5}" stroke="{colors[2]}" stroke-width="5" fill="none"/>')
+    return svg_doc(w, h, body), ty1
+
+
+def brawl_sky_svg(stage):
+    top, bottom = stage["sky"]
+    deco = {
+        "sky": "".join(f'<ellipse cx="{x}" cy="{y}" rx="{r * 2}" ry="{r}" fill="#ffffff" opacity="0.8"/>'
+                       for x, y, r in ((80, 70, 18), (300, 50, 24), (420, 120, 14), (180, 150, 12))),
+        "ramps": '<circle cx="380" cy="80" r="40" fill="#fde047"/>'
+                 '<path d="M0 260 L90 170 L190 240 L300 150 L480 250 L480 360 L0 360 Z" fill="#c2410c" opacity="0.45"/>',
+        "towers": "".join(f'<circle cx="{x}" cy="{y}" r="2" fill="#ffffff"/>' for x, y in ((40, 40), (130, 80), (260, 30), (390, 60), (450, 140)))
+                  + '<circle cx="90" cy="70" r="26" fill="#e0e7ff"/>',
+    }[stage["key"]]
+    body = (f'<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="{top}"/>'
+            f'<stop offset="1" stop-color="{bottom}"/></linearGradient></defs><rect width="480" height="360" fill="url(#g)"/>' + deco)
+    return svg_doc(480, 360, body)
+
+
+def hud_svg(kind, stocks):
+    width, height = 104, 34
+    dots = "".join(f'<circle cx="{58 + 13 * i}" cy="25" r="5" fill="{kind["color"] if i < stocks else "#334155"}" '
+                   'stroke="#ffffff" stroke-width="1.5"/>' for i in range(STOCKS))
+    name = kind["tag"] if len(kind["tag"]) <= 7 else kind["tag"].split()[0]
+    return svg_doc(width, height, f'<rect x="1" y="1" width="{width - 2}" height="{height - 2}" rx="8" fill="#0f172a" '
+                   f'opacity="0.85" stroke="{kind["color"]}" stroke-width="2"/>'
+                   + text_el(name, 76, 14, 10, "#ffffff") + dots)
+
+
+def marker_svg():
+    return svg_doc(30, 26, '<path d="M3 2 L27 2 L15 22 Z" fill="#facc15" stroke="#0f172a" stroke-width="2.5"/>'
+                   + text_el("P1", 15, 13, 9, "#0f172a"))
+
+
+def declare_brawl(game):
+    for name in ("B X", "B Y", "B Dmg", "B Stock", "B Alive", "B Hit", "B KX", "B KY", "B Kind", "B Pool",
+                 "Plat X1", "Plat Y1", "Plat X2", "Plat Y2"):
+        game.list(name)
+    for name, value in (("Brawl On", 0), ("Brawl Live", 0), ("Brawl Stage", 0), ("Cam X", 0), ("Cam Y", 0), ("Zoom", 1),
+                        ("P1 Screen X", 0), ("P1 Screen Y", 0), ("P1 Screen Size", BRAWL_SIZE), ("Brawl Winner", 0),
+                        ("BF X", 0), ("BF Y", 0), ("BF Dir", 1), ("BF Power", 0), ("Plat Count", 0),
+                        ("Solid Count", 1), ("Joy Y", 0), ("Want Drop", 0),
+                        ("P1 %", 0), ("P2 %", 0), ("P3 %", 0), ("P4 %", 0)):
+        game.var(name, value)
+
+
+def build_brawl(game, s, button, FIGHT_HIDE_):
+    declare_brawl(game)
+    for st in BRAWL_STAGES:
+        s.costume(f"brawl {st['key']}", brawl_sky_svg(st), 240, 180)
+    N = 4
+
+    # ---------------------------------------------------- stage: set up --
+    s.local("K", 0)
+    s.local("Pick", 0)
+    load_stage = []
+    for i, st in enumerate(BRAWL_STAGES, start=1):
+        rows = []
+        for x1, y1, x2, y2 in st["plats"]:
+            rows += [s.list_add("Plat X1", x1), s.list_add("Plat Y1", y1), s.list_add("Plat X2", x2), s.list_add("Plat Y2", y2)]
+        load_stage.append(s.if_(eq(V("Brawl Stage"), i), [s.backdrop(f"brawl {st['key']}"), *rows,
+                                                          s.set("Plat Count", len(st["plats"])), s.set("Solid Count", st["solid"]),
+                                                          s.set("Pop Text", st["name"]), s.broadcast("popup")]))
+    s.on_msg(
+        "brawl start",
+        s.set("State", "brawl"), s.set("Brawl On", 0), s.set("Brawl Live", 0), s.set("Fight On", 0),
+        s.broadcast("brawl clear", wait=True),
+        s.set("Brawl Stage", add(mod(V("Brawl Stage"), len(BRAWL_STAGES)), 1)),
+        *[s.list_clear(n) for n in ("Plat X1", "Plat Y1", "Plat X2", "Plat Y2", "B X", "B Y", "B Dmg", "B Stock",
+                                    "B Alive", "B Hit", "B KX", "B KY", "B Kind", "B Pool")],
+        *load_stage,
+        *[s.list_add("B Pool", k) for k in CPU_POOL],
+        s.list_add("B Kind", V("Hero Name")),
+        s.repeat(N - 1, [s.set("Pick", rnd(1, listlen("B Pool"))), s.list_add("B Kind", item("B Pool", V("Pick"))),
+                         s.list_delete("B Pool", V("Pick"))]),
+        s.repeat(N, [s.list_add("B X", 0), s.list_add("B Y", 0), s.list_add("B Dmg", 0), s.list_add("B Stock", STOCKS),
+                     s.list_add("B Alive", 1), s.list_add("B Hit", 0), s.list_add("B KX", 0), s.list_add("B KY", 0)]),
+        s.set("Cam X", 0), s.set("Cam Y", 0), s.set("Zoom", 0.8), s.set("Super", 0), s.set("Brawl Winner", 0),
+        s.hide_var("Score"), s.hide_var("Wave"), s.hide_var("Best"),
+        *[s.show_var(f"P{i} %") for i in range(1, N + 1)],
+        s.if_(not_(eq(V("State"), "brawl")), [s.stop()]),
+        s.set("Brawl Live", 1), s.broadcast("brawl go"),
+        s.wait(0.8), s.if_(not_(eq(V("State"), "brawl")), [s.stop()]),
+        s.set("Banner", "ready"), s.broadcast("banner"), s.wait(1.1),
+        s.if_(not_(eq(V("State"), "brawl")), [s.stop()]),
+        s.set("Banner", "fight"), s.broadcast("banner"), s.wait(0.3),
+        s.if_(not_(eq(V("State"), "brawl")), [s.stop()]),
+        s.set("Want Punch", 0), s.set("Want Kick", 0), s.set("Want Jump", 0), s.set("Want Dodge", 0), s.set("Want Super", 0),
+        s.set("Brawl On", 1),
+        note="BRAWL: picks the next stage, loads its platforms and ramps into lists, and picks 3 CPU fighters at random. "
+             "Each fighter is a clone of Brawler and keeps its own place in the B lists (1 is you).",
+    )
+
+    # ---------------------------------------------- stage: camera + rules --
+    s.local("Min X", 0)
+    s.local("Max X", 0)
+    s.local("Min Y", 0)
+    s.local("Max Y", 0)
+    s.local("Alive", 0)
+    s.local("Zoom To", 1)
+    s.define(
+        "camera frame",
+                s.set("Min X", 9999), s.set("Max X", -9999), s.set("Min Y", 9999), s.set("Max Y", -9999), s.set("Alive", 0),
+                s.set("K", 0),
+                s.repeat(N, [
+                    s.change("K", 1),
+                    s.if_(eq(item("B Alive", V("K")), 1), [
+                        s.change("Alive", 1),
+                        s.if_(lt(item("B X", V("K")), V("Min X")), [s.set("Min X", item("B X", V("K")))]),
+                        s.if_(gt(item("B X", V("K")), V("Max X")), [s.set("Max X", item("B X", V("K")))]),
+                        s.if_(lt(item("B Y", V("K")), V("Min Y")), [s.set("Min Y", item("B Y", V("K")))]),
+                        s.if_(gt(item("B Y", V("K")), V("Max Y")), [s.set("Max Y", item("B Y", V("K")))]),
+                    ]),
+                ]),
+                *[s.set(f"P{i} %", join(round_(item("B Dmg", i)), "%")) for i in range(1, N + 1)],
+                s.if_(gt(V("Alive"), 0), [
+                    # keep the view inside the stage area so the camera never chases a fighter flying off
+                    s.if_(lt(V("Min X"), -420), [s.set("Min X", -420)]), s.if_(gt(V("Max X"), 420), [s.set("Max X", 420)]),
+                    s.if_(lt(V("Min Y"), -200), [s.set("Min Y", -200)]), s.if_(gt(V("Max Y"), 260), [s.set("Max Y", 260)]),
+                    s.set("Zoom To", div(420, add(sub(V("Max X"), V("Min X")), 200))),
+                    s.if_(gt(V("Zoom To"), div(250, add(sub(V("Max Y"), V("Min Y")), 190))),
+                          [s.set("Zoom To", div(250, add(sub(V("Max Y"), V("Min Y")), 190)))]),
+                    s.if_(gt(V("Zoom To"), 1.15), [s.set("Zoom To", 1.15)]),
+                    s.if_(lt(V("Zoom To"), 0.5), [s.set("Zoom To", 0.5)]),
+                    s.change("Zoom", mul(sub(V("Zoom To"), V("Zoom")), 0.06)),
+                    s.change("Cam X", mul(sub(div(add(V("Min X"), V("Max X")), 2), V("Cam X")), 0.1)),
+                    s.change("Cam Y", mul(sub(add(div(add(V("Min Y"), V("Max Y")), 2), 35), V("Cam Y")), 0.1)),
+                ]),
+                s.if_(and_(eq(V("Brawl On"), 1), or_(eq(item("B Alive", 1), 0), lt(V("Alive"), 2))), [
+                    s.set("Brawl On", 0),
+                    s.if_(eq(item("B Alive", 1), 1), [s.set("Brawl Winner", 1)], [s.set("Brawl Winner", 0)]),
+                    s.broadcast("brawl end"),
+                ]),
+    )
+    s.on_flag(
+        s.forever([
+            s.if_(eq(V("Brawl Live"), 1), [s.call("camera frame")]),
+        ]),
+        note="The camera: finds the box around every fighter still in the game, then slides and zooms to fit it, "
+             "like a platform fighter. Also copies everyone's damage into P1 % to P4 %, and ends the match when "
+             "you are out or only one fighter is left.",
+    )
+    s.on_msg(
+        "brawl end",
+        s.play("ko"), s.set("Banner", "game"), s.broadcast("banner"), s.wait(1.8),
+        s.if_(not_(eq(V("State"), "brawl")), [s.stop()]),
+        s.if_(eq(V("Brawl Winner"), 1), [
+            s.play("win"), s.change("Score", mul(1000, V("Difficulty"))),
+            s.if_(gt(V("Score"), V("Best")), [s.set("Best", V("Score"))]),
+        ]),
+        s.set("Brawl Live", 0), s.set("State", "over"),
+        s.broadcast("brawl clear", wait=True),
+        *[s.hide_var(f"P{i} %") for i in range(1, N + 1)],
+        s.broadcast("game over"),
+    )
+    s.on_msg("brawl clear", s.set("Fire Held", 0))
+    s.on_msg("brawl hit", s.play("hit"))
+    s.on_msg("brawl smash", s.play("big hit"))
+    s.on_msg("brawl ko", s.play("boom"))
+    for m in ("show title", "choose hero"):
+        s.on_msg(m, s.set("Brawl Live", 0), s.set("Brawl On", 0), *[s.hide_var(f"P{i} %") for i in range(1, N + 1)])
+
+    # ---------------------------------------------------------- fighters --
+    br = game.sprite("Brawler", size=BRAWL_SIZE, rotation="left-right")
+    for k in BRAWL_KINDS:
+        for pose in ("idle", "punch", "kick", "jump", "hurt", "special"):
+            br.costume(f"{k['key']} {pose}", fighter_svg(k["color"], pose, k["gear"], "hurt" if pose == "hurt" else "smile",
+                                                         glow="#ef4444" if pose == "special" else None), 50, 168)
+    B = br
+    for name, value in (("Is Clone", 0), ("My Id", 0), ("Kind", ""), ("X", 0), ("Y", 0), ("VX", 0), ("VY", 0),
+                        ("Ground", 0), ("Was Ground", 0), ("Jumps", 0), ("Stun", 0), ("Atk CD", 0), ("Pose Until", 0),
+                        ("Speed", 3), ("Punch", 4), ("Kick", 7), ("Weight", 1), ("Face", 1), ("Inv Until", 0),
+                        ("Tgt", 0), ("Think", 0), ("Dir", 0), ("Want Atk", 0), ("Want Hop", 0), ("J", 0),
+                        ("Surf", 0), ("NX", 0), ("NY", 0), ("Reach", 50), ("Power", 4), ("KB", 0), ("Move Dir", 0),
+                        ("Move Until", 0), ("Smash", 0), ("Best D", 0), ("D", 0), ("On Plat", 0), ("Drop", 0)):
+        B.local(name, value)
+
+    stats = []
+    for k in BRAWL_KINDS:
+        stats.append(B.if_(eq(V("Kind"), k["key"]), [B.set("Speed", k["speed"]), B.set("Punch", k["punch"]),
+                                                    B.set("Kick", k["kick"]), B.set("Weight", k["weight"])]))
+    ai_chance = [B.if_(eq(V("Difficulty"), i), [B.set("Think", ch)]) for i, (ch, _p) in enumerate(BRAWL_AI, start=1)]
+    def cpu_power():
+        return [B.if_(eq(V("Difficulty"), i), [B.set("Power", mul(V("Power"), p))]) for i, (_c, p) in enumerate(BRAWL_AI, start=1)]
+
+    def pose(name):
+        return B.wear(join(V("Kind"), " " + name))
+
+    def attack(reach, base_key, smash=False):
+        """Hit every other fighter in reach in front of me."""
+        hit = [
+            # knockback grows with the target's damage %, like a platform fighter
+            B.set("KB", add(add(3, mul(V("Power"), 0.5)), mul(mul(add(item("B Dmg", V("J")), V("Power")), V("Power")), 0.019))),
+            B.list_set("B Hit", V("J"), add(item("B Hit", V("J")), V("Power"))),
+            B.list_set("B KX", V("J"), mul(V("Face"), V("KB"))),
+            B.list_set("B KY", V("J"), add(mul(V("KB"), 0.6), 3)),
+            B.if_(eq(V("My Id"), 1), [B.if_(lt(V("Super"), 100), [B.change("Super", 5)]),
+                                       B.if_(gt(V("Super"), 100), [B.set("Super", 100)])]),
+            B.broadcast("brawl smash" if smash else "brawl hit"),
+        ]
+        return [
+            B.set("Reach", reach), B.set("Power", V(base_key)),
+            *([] if smash else [B.if_(gt(V("My Id"), 1), cpu_power())]),
+            B.set("J", 0),
+            B.repeat(N, [
+                B.change("J", 1),
+                B.if_(and_(not_(eq(V("J"), V("My Id"))), eq(item("B Alive", V("J")), 1),
+                           lt(abs_(sub(item("B X", V("J")), V("X"))), V("Reach")),
+                           lt(abs_(sub(item("B Y", V("J")), V("Y"))), 50),
+                           gt(mul(sub(item("B X", V("J")), V("X")), V("Face")), -12)), hit),
+            ]),
+        ]
+
+    on_plat = and_(not_(lt(V("NX"), item("Plat X1", V("J")))), not_(gt(V("NX"), item("Plat X2", V("J")))))
+    surf = add(item("Plat Y1", V("J")), mul(sub(V("NX"), item("Plat X1", V("J"))),
+                                             div(sub(item("Plat Y2", V("J")), item("Plat Y1", V("J"))),
+                                                 sub(item("Plat X2", V("J")), item("Plat X1", V("J"))))))
+
+    player_input = [
+        B.if_(gt(abs_(V("Joy X")), 0.2), [B.set("Dir", V("Joy X"))],
+              [B.if_(lt(TIMER, V("Move Until")), [B.set("Dir", V("Move Dir"))], [B.set("Dir", 0)])]),
+        B.if_(eq(V("Want Jump"), 1), [B.set("Want Jump", 0), B.set("Want Hop", 1)]),
+        # push the stick down (or the down arrow) to drop through a thin platform
+        B.if_(or_(lt(V("Joy Y"), -0.6), eq(V("Want Drop"), 1)), [B.set("Want Drop", 0), B.if_(and_(eq(V("Ground"), 1), gt(V("On Plat"), V("Solid Count"))), [B.set("Drop", 8), B.set("Ground", 0)])]),
+        B.if_(eq(V("Want Punch"), 1), [B.set("Want Punch", 0), B.set("Want Atk", 1)]),
+        B.if_(eq(V("Want Kick"), 1), [B.set("Want Kick", 0), B.set("Want Atk", 2)]),
+        B.if_(eq(V("Want Super"), 1), [B.set("Want Super", 0), B.if_(eq(V("Super"), 100), [B.set("Want Atk", 3)])]),
+        B.if_(eq(V("Want Dodge"), 1), [B.set("Want Dodge", 0), B.set("Inv Until", add(TIMER, 0.45)),
+                                       B.set("VX", mul(V("Face"), -6))]),
+        # fireball: hold FIRE, let go to shoot
+        B.if_(or_(eq(V("Fire Held"), 1), ("keypressed", "f")), [
+            B.if_(lt(V("Charge"), 100), [B.change("Charge", 3.5)]),
+            B.if_(gt(V("Charge"), 99), [B.set("Charge", 100)]),
+            B.set("Dir", mul(V("Dir"), 0.4)),
+        ], [
+            B.if_(and_(gt(V("Charge"), 0), eq(V("BF Power"), 0)), [
+                B.set("BF X", add(V("X"), mul(20, V("Face")))), B.set("BF Y", add(V("Y"), 40)),
+                B.set("BF Dir", V("Face")), B.set("BF Power", add(V("Charge"), 1)), B.broadcast("brawl fire"),
+                B.set("Fire Power", V("Charge")), B.broadcast("fire"),
+            ]),
+            B.set("Charge", 0),
+        ]),
+    ]
+    cpu_input = [
+        # pick the closest fighter now and then
+        B.if_(or_(eq(V("Tgt"), 0), eq(rnd(1, 20), 1), eq(item("B Alive", V("Tgt")), 0)), [
+            B.set("Best D", 99999), B.set("J", 0),
+            B.repeat(N, [B.change("J", 1),
+                         B.if_(and_(not_(eq(V("J"), V("My Id"))), eq(item("B Alive", V("J")), 1)), [
+                             B.set("D", add(abs_(sub(item("B X", V("J")), V("X"))), abs_(sub(item("B Y", V("J")), V("Y"))))),
+                             B.if_(lt(V("D"), V("Best D")), [B.set("Best D", V("D")), B.set("Tgt", V("J"))]),
+                         ])]),
+        ]),
+        B.set("Dir", 0),
+        # off the stage? head back to the middle and jump
+        B.if_(or_(lt(V("X"), -300), gt(V("X"), 300), lt(V("Y"), -150)), [
+            B.if_(gt(V("X"), 0), [B.set("Dir", -1)], [B.set("Dir", 1)]),
+            B.if_(and_(lt(V("VY"), 0), lt(V("Jumps"), 2)), [B.set("Want Hop", 1)]),
+        ], [
+            B.if_(gt(V("Tgt"), 0), [
+                B.set("D", sub(item("B X", V("Tgt")), V("X"))),
+                B.if_(gt(abs_(V("D")), 38), [B.if_(gt(V("D"), 0), [B.set("Dir", 1)], [B.set("Dir", -1)])]),
+                # higher up: jump, then double jump while still below
+                B.if_(gt(sub(item("B Y", V("Tgt")), V("Y")), 45), [
+                    B.if_(and_(eq(V("Ground"), 1), eq(rnd(1, 6), 1)), [B.set("Want Hop", 1)]),
+                    B.if_(and_(eq(V("Ground"), 0), eq(V("Jumps"), 1), lt(V("VY"), 1)), [B.set("Want Hop", 1)]),
+                ]),
+                # lower down: drop through a thin platform
+                B.if_(and_(lt(sub(item("B Y", V("Tgt")), V("Y")), -50), eq(rnd(1, 15), 1)), [B.if_(and_(eq(V("Ground"), 1), gt(V("On Plat"), V("Solid Count"))), [B.set("Drop", 8), B.set("Ground", 0)])]),
+                B.if_(and_(lt(abs_(V("D")), 48), lt(abs_(sub(item("B Y", V("Tgt")), V("Y"))), 45),
+                           lt(rnd("0.0", "1.0"), V("Think"))), [B.set("Want Atk", rnd(1, 2))]),
+            ]),
+        ]),
+    ]
+
+    physics = [
+        # 1. take any hits that landed on me
+        B.if_(gt(item("B Hit", V("My Id")), 0), [
+            B.if_(gt(V("Inv Until"), TIMER), [B.list_set("B Hit", V("My Id"), 0)], [
+                B.list_set("B Dmg", V("My Id"), add(item("B Dmg", V("My Id")), item("B Hit", V("My Id")))),
+                B.list_set("B Hit", V("My Id"), 0),
+                B.set("VX", div(item("B KX", V("My Id")), V("Weight"))),
+                B.set("VY", div(item("B KY", V("My Id")), V("Weight"))),
+                B.set("Stun", add(8, mul(abs_(V("VX")), 1.6))), B.set("Ground", 0), pose("hurt"),
+                B.effect("BRIGHTNESS", 50),
+            ]),
+        ]),
+        # 2. controls (player buttons or CPU brain); none while knocked back
+        B.set("Want Atk", 0), B.set("Want Hop", 0), B.set("Dir", 0),
+        B.if_(and_(eq(V("Brawl On"), 1), not_(gt(V("Stun"), 0))),
+              [B.if_(eq(V("My Id"), 1), player_input, cpu_input)]),
+        B.if_(gt(V("Stun"), 0), [B.change("Stun", -1), B.set("VX", mul(V("VX"), 0.96)),
+                                 B.if_(lt(V("Stun"), 1), [B.effect("BRIGHTNESS", 0)])], [
+            B.if_(eq(V("Ground"), 1), [B.change("VX", mul(sub(mul(V("Dir"), V("Speed")), V("VX")), 0.45))],
+                  [B.change("VX", mul(sub(mul(V("Dir"), V("Speed")), V("VX")), 0.12))]),
+            B.if_(gt(V("Dir"), 0.1), [B.set("Face", 1)]), B.if_(lt(V("Dir"), -0.1), [B.set("Face", -1)]),
+        ]),
+        B.if_(and_(eq(V("Want Hop"), 1), lt(V("Jumps"), 2)), [
+            B.if_(eq(V("Jumps"), 0), [B.set("VY", JUMP_V)], [B.set("VY", DJUMP_V)]),
+            B.change("Jumps", 1), B.set("Ground", 0), B.broadcast("jump sfx"),
+        ]),
+        # 3. attacks
+        B.if_(gt(V("Atk CD"), 0), [B.change("Atk CD", -1)]),
+        B.if_(and_(gt(V("Want Atk"), 0), not_(gt(V("Atk CD"), 0))), [
+            B.if_(eq(V("Want Atk"), 1), [pose("punch"), *attack(46, "Punch"), B.set("Atk CD", 9)]),
+            B.if_(eq(V("Want Atk"), 2), [pose("kick"), *attack(56, "Kick"), B.set("Atk CD", 16)]),
+            B.if_(eq(V("Want Atk"), 3), [pose("special"), B.set("Super", 0), B.set("Smash", 16),
+                                         *attack(70, "Smash", smash=True), B.set("Atk CD", 20),
+                                         B.set("Pop Text", "SMASH!"), B.broadcast("popup")]),
+            B.set("Pose Until", add(TIMER, 0.18)),
+        ]),
+        # 4. move and land on platforms and ramps
+        B.if_(gt(V("Drop"), 0), [B.change("Drop", -1)]),
+        B.change("VY", -GRAV), B.if_(lt(V("VY"), MAX_FALL), [B.set("VY", MAX_FALL)]),
+        B.set("NX", add(V("X"), V("VX"))), B.set("NY", add(V("Y"), V("VY"))),
+        B.set("Was Ground", V("Ground")), B.set("Ground", 0),
+        B.if_(not_(gt(V("VY"), 0)), [
+            B.set("J", 0),
+            B.repeat(V("Plat Count"), [
+                B.change("J", 1),
+                B.if_(and_(eq(V("Ground"), 0), on_plat, or_(not_(gt(V("Drop"), 0)), not_(gt(V("J"), V("Solid Count"))))), [
+                    B.set("Surf", surf),
+                    # land if I was above it (12 lets you walk up a ramp), or stick to it walking down
+                    B.if_(and_(not_(gt(V("NY"), V("Surf"))), not_(lt(add(V("Y"), 12), V("Surf")))),
+                          [B.set("NY", V("Surf")), B.set("VY", 0), B.set("Ground", 1), B.set("Jumps", 0), B.set("On Plat", V("J"))],
+                          [B.if_(and_(eq(V("Was Ground"), 1), gt(V("NY"), V("Surf")), lt(sub(V("NY"), V("Surf")), 10),
+                                      not_(gt(V("Stun"), 0))),
+                                 [B.set("NY", V("Surf")), B.set("VY", 0), B.set("Ground", 1), B.set("Jumps", 0), B.set("On Plat", V("J"))])]),
+                ]),
+            ]),
+        ]),
+        B.set("X", V("NX")), B.set("Y", V("NY")),
+        B.list_set("B X", V("My Id"), V("X")), B.list_set("B Y", V("My Id"), V("Y")),
+        # 5. flew past the edge of the screen: lose a life
+        B.if_(or_(gt(abs_(V("X")), BLAST_X), lt(V("Y"), BLAST_LOW), gt(V("Y"), BLAST_HIGH)), [
+            B.set("Pop Text", "K.O.!"),
+            B.broadcast("popup"), B.broadcast("brawl ko"),
+            B.list_set("B Stock", V("My Id"), sub(item("B Stock", V("My Id")), 1)),
+            B.if_(gt(item("B Stock", V("My Id")), 0), [
+                B.set("X", rnd(-80, 80)), B.set("Y", 230), B.set("VX", 0), B.set("VY", 0), B.set("Stun", 0),
+                B.list_set("B Dmg", V("My Id"), 0), B.set("Inv Until", add(TIMER, 2.5)),
+                B.list_set("B X", V("My Id"), V("X")), B.list_set("B Y", V("My Id"), V("Y")),
+            ], [
+                B.list_set("B Alive", V("My Id"), 0), B.hide(),
+            ]),
+        ]),
+        # 6. draw: world -> screen
+        B.if_(gt(TIMER, V("Pose Until")), [B.if_(gt(V("Stun"), 0), [pose("hurt")],
+                                                 [B.if_(eq(V("Ground"), 1), [pose("idle")], [pose("jump")])])]),
+        B.if_(eq(V("Face"), 1), [B.point(90)], [B.point(-90)]),
+        B.if_(gt(V("Inv Until"), TIMER), [B.effect("GHOST", mul(40, mod(round_(mul(TIMER, 10)), 2)))], [B.effect("GHOST", 0)]),
+        B.size_to(mul(BRAWL_SIZE, V("Zoom"))),
+        B.goto(mul(sub(V("X"), V("Cam X")), V("Zoom")), mul(sub(V("Y"), V("Cam Y")), V("Zoom"))),
+        B.if_(eq(V("My Id"), 1), [B.set("P1 Screen X", XPOS), B.set("P1 Screen Y", YPOS), B.set("P1 Screen Size", SIZE)]),
+    ]
+
+    B.define("fighter frame", *physics,
+             note="Everything one fighter does in one frame. It is a custom block with \"run without screen refresh\" "
+                  "so its loops over fighters and platforms finish in one frame.")
+    B.on_flag(B.hide(), B.set("Is Clone", 0))
+    B.on_msg(
+        "brawl go",
+        B.if_(eq(V("Is Clone"), 0), [
+            B.set("My Id", 0),
+            B.repeat(N, [B.change("My Id", 1), B.clone()]),
+        ]),
+        note="Makes the four fighters. Clone 1 is you; 2, 3 and 4 are CPU fighters.",
+    )
+    B.on_clone(
+        B.set("Is Clone", 1), B.set("Kind", item("B Kind", V("My Id"))), *stats, *ai_chance,
+        B.set("X", sub(mul(V("My Id"), 110), 275)), B.set("Y", 220), B.set("VX", 0), B.set("VY", 0),
+        B.set("Face", 1), B.if_(gt(V("X"), 0), [B.set("Face", -1)]), B.set("Smash", 16),
+        B.set("Stun", 0), B.set("Jumps", 0), B.if_(eq(V("My Id"), 1), [B.set("Charge", 0)]), B.clear_fx(), pose("jump"), B.show(), B.front(),
+        B.until(eq(V("Brawl Live"), 0), [
+            B.if_(eq(item("B Alive", V("My Id")), 1), [B.call("fighter frame")]),
+        ]),
+        B.delete_clone(),
+        note="One fighter, every frame: 1 take hits (damage % goes up, knockback grows with it), 2 controls or the CPU brain, "
+             "3 attacks, 4 gravity and landing on platforms and ramps, 5 flying off the screen loses a life, "
+             "6 draw it where the camera sees it.",
+    )
+    for d, sign in (("left", -1), ("right", 1)):
+        B.on_msg(f"move {d}", B.if_(and_(eq(V("Is Clone"), 1), eq(V("My Id"), 1)),
+                                    [B.set("Move Dir", sign), B.set("Move Until", add(TIMER, 0.16))]))
+    for m in ("brawl clear", "show title", "choose hero"):
+        B.on_msg(m, B.if_(eq(V("Is Clone"), 1), [B.delete_clone()]))
+
+    # ---------------------------------------------------------- fireball --
+    bf = game.sprite("Brawl Fireball", size=40, rotation="left-right")
+    bf.costume("flame", fireball_svg(0), 54, 26)
+    BF = bf
+    BF.local("J", 0)
+    BF.local("Done", 0)
+    BF.local("Power", 0)
+    BF.on_flag(BF.hide(), BF.set("BF Power", 0))
+    BF.on_msg(
+        "brawl fire",
+        BF.set("Power", sub(V("BF Power"), 1)), BF.set("Done", 0), BF.point(mul(90, V("BF Dir"))), BF.show(), BF.front(),
+        BF.until(or_(eq(V("Done"), 1), gt(abs_(V("BF X")), BLAST_X), eq(V("Brawl Live"), 0)), [BF.call("fireball frame")]),
+        BF.hide(), BF.set("BF Power", 0),
+        note="Your fireball in BRAWL. Bigger charge = more damage and more knockback.",
+    )
+    BF.define(
+        "fireball frame",
+            BF.change("BF X", mul(add(8, div(V("Power"), 25)), V("BF Dir"))),
+            BF.size_to(mul(add(30, mul(V("Power"), 0.7)), V("Zoom"))),
+            BF.goto(mul(sub(V("BF X"), V("Cam X")), V("Zoom")), mul(sub(V("BF Y"), V("Cam Y")), V("Zoom"))),
+            BF.set("J", 1),
+            BF.repeat(N - 1, [
+                BF.change("J", 1),
+                BF.if_(and_(eq(V("Done"), 0), eq(item("B Alive", V("J")), 1), lt(abs_(sub(item("B X", V("J")), V("BF X"))), 24),
+                            lt(abs_(sub(add(item("B Y", V("J")), 38), V("BF Y"))), 44)), [
+                    BF.set("Done", 1),
+                    BF.list_set("B Hit", V("J"), add(item("B Hit", V("J")), add(3, round_(div(V("Power"), 10))))),
+                    BF.list_set("B KX", V("J"), mul(V("BF Dir"), add(4, div(mul(V("Power"), add(item("B Dmg", V("J")), 20)), 500)))),
+                    BF.list_set("B KY", V("J"), add(4, div(mul(V("Power"), add(item("B Dmg", V("J")), 20)), 800))),
+                    BF.if_(gt(V("Power"), 99), [BF.broadcast("brawl ko")], [BF.broadcast("brawl hit")]),
+                ]),
+            ]),
+    )
+    for m in ("brawl clear", "show title"):
+        BF.on_msg(m, BF.hide(), BF.set("BF Power", 0))
+
+    # ---------------------------------------------------------- platforms --
+    pl = game.sprite("Brawl Platform", size=100, rotation="don't rotate")
+    for st in BRAWL_STAGES:
+        for i, (x1, y1, x2, y2) in enumerate(st["plats"], start=1):
+            svg, cy = platform_svg(st["key"], x1, y1, x2, y2)
+            pl.costume(f"{st['key']} {i}", svg, 0, cy)
+    PL = pl
+    PL.local("Is Clone", 0)
+    PL.local("My Id", 0)
+    PL.local("Stage Key", "")
+    keys = [PL.if_(eq(V("Brawl Stage"), i), [PL.set("Stage Key", st["key"])]) for i, st in enumerate(BRAWL_STAGES, start=1)]
+    PL.on_flag(PL.hide(), PL.set("Is Clone", 0))
+    PL.on_msg("brawl go", PL.if_(eq(V("Is Clone"), 0), [
+        *keys, PL.set("My Id", 0), PL.repeat(V("Plat Count"), [PL.change("My Id", 1), PL.clone()]),
+    ]))
+    PL.on_clone(
+        PL.set("Is Clone", 1), PL.wear(join(V("Stage Key"), join(" ", V("My Id")))), PL.show(),
+        PL.until(eq(V("Brawl Live"), 0), [
+            PL.size_to(mul(100, V("Zoom"))),
+            PL.goto(mul(sub(item("Plat X1", V("My Id")), V("Cam X")), V("Zoom")),
+                    mul(sub(item("Plat Y1", V("My Id")), V("Cam Y")), V("Zoom"))),
+        ]),
+        PL.delete_clone(),
+        note="Each platform or ramp is a clone that redraws itself where the camera sees it.",
+    )
+    for m in ("brawl clear", "show title", "choose hero"):
+        PL.on_msg(m, PL.if_(eq(V("Is Clone"), 1), [PL.delete_clone()]))
+
+    # ------------------------------------------------------------- HUD --
+    slots = [4, 110, 262, 368]
+    hud = game.sprite("Brawl HUD", size=100, rotation="don't rotate")
+    for k in BRAWL_KINDS:
+        for n in range(STOCKS + 1):
+            hud.costume(f"{k['key']} {n}", hud_svg(k, n), 52, 17)
+    HD = hud
+    HD.local("Is Clone", 0)
+    HD.local("My Id", 0)
+    HD.on_flag(HD.hide(), HD.set("Is Clone", 0))
+    HD.on_msg("brawl go", HD.if_(eq(V("Is Clone"), 0), [
+        HD.set("My Id", 0),
+        *[x for i, sx in enumerate(slots, start=1) for x in (HD.change("My Id", 1), HD.goto(sx + 52 - 240, 180 - 21), HD.clone())],
+    ]))
+    HD.on_clone(
+        HD.set("Is Clone", 1), HD.show(),
+        HD.until(eq(V("Brawl Live"), 0), [
+            HD.wear(join(item("B Kind", V("My Id")), join(" ", item("B Stock", V("My Id"))))),
+            HD.if_(eq(item("B Alive", V("My Id")), 1), [HD.effect("GHOST", 0)], [HD.effect("GHOST", 60)]),
+        ]),
+        HD.delete_clone(),
+        note="Name and lives (dots) for each fighter. The big number next to it is their damage %.",
+    )
+    for m in ("brawl clear", "show title", "choose hero"):
+        HD.on_msg(m, HD.if_(eq(V("Is Clone"), 1), [HD.delete_clone()]))
+
+    mk = game.sprite("P1 Marker", size=80, rotation="don't rotate")
+    mk.costume("arrow", marker_svg(), 15, 26)
+    MK = mk
+    MK.on_flag(MK.hide(), MK.forever([
+        MK.if_(and_(eq(V("Brawl Live"), 1), eq(item("B Alive", 1), 1)), [
+            MK.goto(V("P1 Screen X"), add(V("P1 Screen Y"), mul(V("P1 Screen Size"), 2.05))), MK.show(), MK.front(),
+        ], [MK.hide()]),
+    ]), note="The yellow P1 arrow shows which fighter is you.")
+
+    return slots
+
+
 def build():
     game = Game()
     G = game.var
@@ -1105,12 +1749,13 @@ def build():
         ("Chapter", 1), ("Wave", 1), ("Score", 0), ("Best", 0), ("Crown", 0), ("Fight On", 0),
         ("Hit Power", 5), ("Hurt Power", 6), ("Shot Y", GROUND + 18), ("Shot Dir", -1), ("Wave Dir", -1),
         ("Line", ""), ("Line Secs", 2), ("Skip", 0), ("Pop Text", ""), ("Banner", "fight"),
-        ("Joy X", 0), ("Touch Pad", 0), ("Spikes", 0),
+        ("Joy X", 0), ("Touch Pad", 0), ("Spikes", 0), ("Difficulty", 2), ("Enemy Weapon", "none"), ("Enemy Swing Until", 0),
         ("Fire Held", 0), ("Charge", 0), ("Fire Power", 0), ("Fireball Out", 0),
         ("Shot X", 999), ("Shot Live", 0), ("Shot Cancel", 0), ("Boom X", 0),
     ]:
         G(name, value)
 
+    declare_brawl(game)
     stage = Target(game, "Stage", is_stage=True)
     game.stage = stage
     for kind in ("Title", "Select", "Yard", "Woods", "Pass", "Factory", "Fortress", "Volcano", "Castle", "Arcade", "Ending"):
@@ -1143,7 +1788,8 @@ def build():
         s.set("Hero HP", V("Hero Max")), s.set("Score", 0), s.set("Super", 0),
         s.if_(eq(V("Mode"), "story"),
               [s.set("Chapter", 1), s.broadcast("story scene")],
-              [s.set("Wave", 1), s.broadcast("start fight")]),
+              [s.if_(eq(V("Mode"), "brawl"), [s.set("Score", 0), s.broadcast("brawl start")],
+                     [s.set("Wave", 1), s.broadcast("start fight")])]),
         note="Each fighter has different health, speed, punch, kick and super.",
     )
 
@@ -1153,7 +1799,7 @@ def build():
         loads.append(s.if_(eq(V("Enemy Type"), e["n"]), [
             s.set("Enemy Name", e["key"]), s.set("Enemy Title", e["tag"]), s.set("Enemy Max", e["hp"]),
             s.set("Enemy Power", e["pow"]), s.set("Enemy Speed", e["speed"]), s.set("Enemy Body", e["body"]),
-            s.set("Enemy Size", e["size"]),
+            s.set("Enemy Size", e["size"]), s.set("Enemy Weapon", BOSS_WEAPONS.get(e["key"], "none")),
         ]))
     chapter_backdrops = [s.if_(eq(V("Chapter"), i), [s.backdrop(c["backdrop"])]) for i, c in enumerate(CHAPTERS, start=1)]
     s.on_msg(
@@ -1170,6 +1816,12 @@ def build():
             s.change("Enemy Max", mul(8, sub(V("Wave"), 1))),
             s.change("Enemy Power", floor_(div(sub(V("Wave"), 1), 2))),
         ]),
+        s.if_(not_(eq(V("Enemy Weapon"), "none")), [s.change("Enemy Power", BOSS_WEAPON_POWER)]),
+        *[s.if_(eq(V("Difficulty"), i), [
+            s.set("Enemy Max", round_(mul(V("Enemy Max"), hp))),
+            s.set("Enemy Power", round_(mul(V("Enemy Power"), pw_))),
+            s.set("Pace", mul(V("Pace"), pace)),
+        ]) for i, (_k, _w, _c, hp, pw_, pace) in enumerate(DIFFICULTIES, start=1)],
         s.set("Enemy HP", V("Enemy Max")), s.set("Enemy Phase", 1),
         note="Story: the chapter picks the enemy. Arcade: waves 1-6 cycle (wave 5 is the MEGA SPIKE boss), every 7th wave is the Shadow King, and each wave is tougher and faster.",
     )
@@ -1314,12 +1966,16 @@ def build():
     s.on_key("x", s.set("Want Kick", 1))
     s.on_key("c", s.set("Want Dodge", 1))
     s.on_key("v", s.set("Want Super", 1))
+    s.on_key("down arrow", s.set("Want Drop", 1), note="BRAWL: down arrow drops through a thin platform.")
 
 
     # ------------------------------------------------------------ floor --
     floor = game.sprite("Ground Shake", x=0, y=GROUND - 5, visible=True, rotation="don't rotate")
     floor.costume("shadow", floor_svg(), 240, 5)
     floor.on_flag(floor.goto(0, GROUND - 5), floor.show())
+    floor.on_msg("brawl start", floor.hide())
+    floor.on_msg("start fight", floor.show())
+    floor.on_msg("show title", floor.show())
     floor.on_msg("shake", floor.repeat(3, [floor.goto(0, GROUND - 1), floor.wait(0.04), floor.goto(0, GROUND - 9), floor.wait(0.04)]),
                  floor.goto(0, GROUND - 5))
 
@@ -1431,7 +2087,8 @@ def build():
                     H.set("Want Dodge", 0), H.if_(eq(V("Hero Air"), 0), dodge),
                 ]),
             ], [
-                H.set("Want Punch", 0), H.set("Want Kick", 0), H.set("Want Dodge", 0), H.set("Want Super", 0),
+                H.if_(not_(eq(V("State"), "brawl")), [
+                    H.set("Want Punch", 0), H.set("Want Kick", 0), H.set("Want Dodge", 0), H.set("Want Super", 0)]),
             ]),
         ]),
         note="The action loop. Buttons only set Want Punch, Want Kick and so on; this loop does one move at a time. "
@@ -1439,7 +2096,7 @@ def build():
     )
     H.on_flag(
         H.forever([
-            H.if_(eq(V("Want Jump"), 1), [
+            H.if_(and_(eq(V("Want Jump"), 1), not_(eq(V("State"), "brawl"))), [
                 H.set("Want Jump", 0),
                 H.if_(and_(eq(V("Fight On"), 1), eq(V("Hero Air"), 0), eq(V("Hero Lock"), 0)), [
                     H.set("Hero Air", 1), pose("jump"), H.broadcast("jump sfx"),
@@ -1490,7 +2147,7 @@ def build():
     H.on_msg("hero hurt", H.if_(eq(V("Hero Lock"), 0), [pose("hurt"), H.move(-12), *H.clamp_x(-215, 215)]),
              H.effect("COLOR", 60), H.wait(0.15), H.effect("COLOR", 0), H.if_(eq(V("Hero Lock"), 0), [rest_pose()]))
     H.on_msg("show title", H.show(), H.clear_fx(), H.point(90), H.set("Hero Name", "arthur"), H.wear("arthur idle"),
-             H.goto(-195, GROUND), H.size_to(90), H.front(), H.say("I'm Arthur!", 2))
+             H.goto(-205, GROUND), H.size_to(90), H.front(), H.say("I'm Arthur!", 2))
     H.on_msg("choose hero", H.hide())
     H.on_msg("story scene", H.hide())
     H.on_msg("fighters ready", H.show(), H.clear_fx(), H.point(90), H.set("Facing", 1), pose("idle"),
@@ -1529,8 +2186,11 @@ def build():
     def epose(name):
         return E.wear(join(V("Enemy Name"), " " + name))
 
+    def swing():
+        return E.set("Enemy Swing Until", add(TIMER, 0.3))
+
     def hit_hero():
-        return [E.set("Hurt Power", V("Enemy Power")), E.broadcast("enemy hits hero")]
+        return [swing(), E.set("Hurt Power", V("Enemy Power")), E.broadcast("enemy hits hero")]
 
     def face_hero():
         return E.if_(lt(V("Hero X"), XPOS), [E.point(-90), E.set("Enemy Facing", -1)], [E.point(90), E.set("Enemy Facing", 1)])
@@ -1567,7 +2227,7 @@ def build():
     def charger():
         return [
             epose("windup"), E.say("Ready?", pw(0.75)),
-            E.set("Pick", V("Hero X")), epose("attack"), E.broadcast("swing sfx"),
+            E.set("Pick", V("Hero X")), epose("attack"), E.broadcast("swing sfx"), swing(),
             E.glide(pw(0.4), V("Pick"), GROUND),
             E.if_(and_(lt(abs_(sub(V("Hero X"), XPOS)), add(34, V("Enemy Body"))), lt(sub(V("Hero Y"), GROUND), 50)),
                   [*hit_hero(), E.broadcast("shake")]),
@@ -1578,7 +2238,7 @@ def build():
 
     def stomper():
         return [
-            epose("windup"), E.say("STOMP!", pw(0.6)), epose("attack"),
+            epose("windup"), E.say("STOMP!", pw(0.6)), epose("attack"), swing(),
             E.dy(10), E.wait(0.05), E.set_y(GROUND), E.broadcast("shake"),
             E.set("Wave Dir", V("Enemy Facing")), E.broadcast("ground wave", wait=True),
             epose("idle"), E.wait(pw(0.5)),
@@ -1880,6 +2540,11 @@ def build():
     CG.on_flag(
         CG.hide(),
         CG.forever([
+            CG.if_(and_(gt(V("Charge"), 0), eq(V("State"), "brawl")), [
+                CG.goto(add(V("P1 Screen X"), mul(mul(V("P1 Screen Size"), 0.5), V("Facing"))),
+                        add(V("P1 Screen Y"), mul(V("P1 Screen Size"), 0.9))),
+                CG.size_to(mul(add(25, mul(V("Charge"), 0.9)), div(V("P1 Screen Size"), 75))), CG.show(), CG.front(),
+            ]),
             CG.if_(and_(gt(V("Charge"), 0), eq(V("State"), "fight")), [
                 CG.goto(add(V("Hero X"), mul(36, V("Facing"))), add(V("Hero Y"), 66)),
                 CG.size_to(add(25, mul(V("Charge"), 0.9))),
@@ -1935,6 +2600,54 @@ def build():
     BX.on_msg("boom", BX.goto(V("Boom X"), add(GROUND, 70)), BX.size_to(60), BX.effect("GHOST", 0), BX.show(), BX.front(),
               BX.repeat(8, [BX.size_by(25), BX.turn(15), BX.effect_by("GHOST", 12), BX.wait(0.02)]), BX.hide())
 
+    # ------------------------------------------------------- power aura --
+    aura = game.sprite("Power Aura", size=75, rotation="don't rotate")
+    aura.costume("fire 1", aura_svg(0), 70, 188)
+    aura.costume("fire 2", aura_svg(1), 70, 188)
+    AU = aura
+    powered = or_(eq(V("Super"), 100), eq(V("Hero Safe"), 2), eq(V("Charge"), 100))
+    AU.on_flag(
+        AU.hide(), AU.effect("GHOST", 20),
+        AU.forever([
+            AU.if_(and_(eq(V("State"), "fight"), powered), [
+                AU.goto(V("Hero X"), V("Hero Y")), AU.size_to(75),
+                AU.if_(eq(mod(round_(mul(TIMER, 10)), 2), 0), [AU.wear("fire 1")], [AU.wear("fire 2")]),
+                AU.show(),
+            ], [
+                AU.if_(and_(eq(V("State"), "brawl"), eq(V("Super"), 100), eq(V("Brawl On"), 1)), [
+                    AU.goto(V("P1 Screen X"), V("P1 Screen Y")), AU.size_to(mul(V("P1 Screen Size"), 1)),
+                    AU.if_(eq(mod(round_(mul(TIMER, 10)), 2), 0), [AU.wear("fire 1")], [AU.wear("fire 2")]),
+                    AU.show(),
+                ], [AU.hide()]),
+            ]),
+        ]),
+        note="Red fire around your fighter when powered up: SUPER is full, during a SUPER move, or a full-power fireball charge.",
+    )
+
+    bw = game.sprite("Boss Weapon", size=80, rotation="all around")
+    for kind in ("club", "mace", "hammer", "dark sword"):
+        bw.costume(kind, boss_weapon_svg(kind), 30, 66)
+    BW = bw
+    BW.on_flag(
+        BW.hide(),
+        BW.forever([
+            BW.if_(and_(eq(V("State"), "fight"), not_(eq(V("Enemy Weapon"), "none")), gt(V("Enemy HP"), 0),
+                        or_(eq(V("Fight On"), 1), gt(V("Enemy X"), -300))), [
+                BW.wear(V("Enemy Weapon")),
+                BW.size_to(mul(V("Enemy Size"), 0.8)),
+                BW.goto(add(V("Enemy X"), mul(mul(V("Enemy Facing"), 0.24), V("Enemy Size"))),
+                        add(GROUND, mul(V("Enemy Size"), 0.62))),
+                BW.if_(lt(TIMER, V("Enemy Swing Until")), [BW.point(add(90, mul(110, V("Enemy Facing"))))],
+                       [BW.point(add(90, mul(-20, V("Enemy Facing"))))]),
+                BW.show(),
+            ], [BW.hide()]),
+        ]),
+        note="Bosses carry weapons: Brute a club, MEGA SPIKE a spiked mace, Quake a hammer, the Shadow King a dark sword. "
+             "Each adds 3 to their hits. It swings when they attack.",
+    )
+    for m in ("enemy down", "show title", "choose hero", "story scene"):
+        BW.on_msg(m, BW.hide())
+
     # ------------------------------------------------------------ crown --
     crown = game.sprite("Crown", size=80, rotation="don't rotate")
     crown.costume("crown", crown_svg(), 22, 30)
@@ -1942,9 +2655,14 @@ def build():
     C.on_flag(
         C.hide(),
         C.forever([
-            C.if_(and_(eq(V("Crown"), 1), or_(eq(V("State"), "fight"), eq(V("State"), "over"))), [
-                C.goto(V("Hero X"), add(V("Hero Y"), 104)), C.show(), C.front(),
-            ], [C.if_(not_(eq(V("State"), "ending")), [C.hide()])]),
+            C.if_(and_(eq(V("Crown"), 1), or_(eq(V("State"), "fight"), and_(eq(V("State"), "over"), not_(eq(V("Mode"), "brawl"))))), [
+                C.goto(V("Hero X"), add(V("Hero Y"), 104)), C.size_to(80), C.show(), C.front(),
+            ], [
+                C.if_(and_(eq(V("Crown"), 1), eq(V("State"), "brawl"), eq(item("B Alive", 1), 1)), [
+                    C.goto(V("P1 Screen X"), add(V("P1 Screen Y"), mul(V("P1 Screen Size"), 1.4))),
+                    C.size_to(mul(V("P1 Screen Size"), 1.05)), C.show(), C.front(),
+                ], [C.if_(not_(eq(V("State"), "ending")), [C.hide()])]),
+            ]),
         ]),
         note="Beat Story mode once and every fighter wears the Golden Crown.",
     )
@@ -2012,7 +2730,10 @@ def build():
     P.on_flag(P.hide())
     P.local("Is Clone", 0)
     P.on_msg("popup", P.if_(eq(V("Is Clone"), 0), [
-        P.set("My Text", V("Pop Text")), P.goto(add(V("Hero X"), 10), add(V("Hero Y"), 125)), P.clone()]),
+        P.set("My Text", V("Pop Text")),
+        P.if_(eq(V("State"), "brawl"), [P.goto(V("P1 Screen X"), add(V("P1 Screen Y"), 70))],
+              [P.goto(add(V("Hero X"), 10), add(V("Hero Y"), 125))]),
+        P.clone()]),
              note="Copies Pop Text into a clone so two pop-ups in a row both show. Clones hear messages too, "
                   "so only the original (Is Clone = 0) makes new clones.")
     P.on_clone(P.set("Is Clone", 1), P.show(), P.say(V("My Text")), P.repeat(14, [P.dy(2), P.wait(0.06)]), P.delete_clone())
@@ -2032,7 +2753,7 @@ def build():
 
     banner = game.sprite("Banner", x=0, y=40, rotation="don't rotate")
     for key, word, fill in (("ready", "READY...", "#facc15"), ("fight", "FIGHT!", "#ef4444"), ("ko", "K.O.!", "#f97316"),
-                            ("clear", "CHAPTER CLEAR!", "#22c55e"), ("wave clear", "WAVE CLEAR!", "#22d3ee"), ("boss", "BOSS FIGHT!", "#ef4444")):
+                            ("clear", "CHAPTER CLEAR!", "#22c55e"), ("wave clear", "WAVE CLEAR!", "#22d3ee"), ("boss", "BOSS FIGHT!", "#ef4444"), ("game", "GAME!", "#facc15")):
         banner.costume(key, banner_svg(word, fill), banner_size(word)[1] / 2, 45)
     BN = banner
     BN.on_flag(BN.hide())
@@ -2049,6 +2770,8 @@ def build():
         card.costume(f"chapter {i}", card_svg(c["title"], c["lines"], ["#2563eb", "#16a34a", "#dc2626", "#475569", "#991b1b", "#ea580c", "#4c1d95"][i - 1]), 210, 120)
     card.costume("game over", card_svg("GAME OVER", ["Tap RETRY to fight again", "or HOME for the title."], "#475569"), 210, 120)
     card.costume("arcade over", card_svg("GAME OVER", ["How far did you get?", "Check Score and Best.", "Tap RETRY or HOME."], "#db2777"), 210, 120)
+    card.costume("brawl win", card_svg("YOU WIN!", ["Last fighter standing!", "Tap RETRY for the next stage", "or HOME."], "#16a34a"), 210, 120)
+    card.costume("brawl lose", card_svg("KNOCKED OUT", ["You ran out of lives.", "Tap RETRY to try again", "or HOME."], "#475569"), 210, 120)
     card.costume("the end", card_svg("THE END", ["The Golden Crown is back!", "You are the CHAMPION.", "Now try ARCADE mode!"], "#ca8a04"), 210, 120)
     card.costume("angry", card_svg("HE'S ANGRY!", ["Faster, double shots,", "and SPIKE ARMOR!"], "#b91c1c"), 210, 120)
     card.costume("overdrive", card_svg("OVERDRIVE!", ["MEGA SPIKE is faster", "and shoots more spikes!"], "#b91c1c"), 210, 120)
@@ -2097,8 +2820,9 @@ def build():
     )
     K.on_msg("king angry", K.if_(eq(V("Enemy Type"), KING), [K.wear("angry")], [K.wear("overdrive")]), K.size_to(80), K.goto(0, 60), K.show(), K.front(), K.wait(1.4), K.hide())
     K.on_msg("game over", K.if_(eq(V("Mode"), "arcade"), [K.wear("arcade over")], [K.wear("game over")]),
+             K.if_(eq(V("Mode"), "brawl"), [K.if_(eq(V("Brawl Winner"), 1), [K.wear("brawl win")], [K.wear("brawl lose")])]),
              K.size_to(85), K.goto(0, -5), K.show(), K.front())
-    for m in ("show title", "choose hero", "start fight", "fight on"):
+    for m in ("show title", "choose hero", "start fight", "fight on", "brawl start"):
         K.on_msg(m, K.hide(), K.size_to(100))
 
     C.on_msg("crown fall", C.goto(V("Hero X"), 190), C.show(), C.front(),
@@ -2141,9 +2865,23 @@ def build():
             b.costume("ready", button_svg("SUPER!", "#facc15", "#7c2d12", 56, 44, 11), 28, 22)
             b.on_flag(b.forever([b.if_(eq(V("Super"), 100), [b.wear("ready")], [b.wear("button")])]))
 
-    story_btn = button("Story Button", "STORY", "#2563eb", -75, -20, width=120, height=52, size=20)
-    arcade_btn = button("Arcade Button", "ARCADE", "#db2777", 75, -20, width=120, height=52, size=20)
-    for b, mode in ((story_btn, "story"), (arcade_btn, "arcade")):
+    diff_btn = game.sprite("Level Button", x=18, y=-90, rotation="don't rotate")
+    for key, word, fill, *_ in DIFFICULTIES:
+        diff_btn.costume(key, difficulty_svg(word, fill), 95, 20)
+    DB = diff_btn
+    def show_level():
+        return [DB.if_(eq(V("Difficulty"), i), [DB.wear(k)]) for i, (k, *_r) in enumerate(DIFFICULTIES, start=1)]
+    DB.on_flag(DB.hide())
+    DB.on_msg("show title", DB.goto(18, -90), *show_level(), DB.show(), DB.front())
+    DB.on_msg("choose hero", DB.hide())
+    DB.on_click(DB.change("Difficulty", 1), DB.if_(gt(V("Difficulty"), len(DIFFICULTIES)), [DB.set("Difficulty", 1)]),
+                *show_level(), DB.broadcast("swing sfx"),
+                note="Tap to change the level: EASY, NORMAL, HARD, CHAMPION. Higher levels give enemies more health "
+                     "(longer fights), harder hits and faster attacks.")
+    story_btn = button("Story Button", "STORY", "#2563eb", -100, -25, width=112, height=52, size=19)
+    arcade_btn = button("Arcade Button", "ARCADE", "#db2777", 18, -25, width=112, height=52, size=19)
+    brawl_btn = button("Brawl Button", "BRAWL", "#ea580c", 136, -25, width=112, height=52, size=19)
+    for b, mode in ((story_btn, "story"), (arcade_btn, "arcade"), (brawl_btn, "brawl")):
         b.on_msg("show title", b.show(), b.front())
         b.on_msg("choose hero", b.hide())
         b.on_click(b.set("Mode", mode), b.broadcast("choose hero"))
@@ -2167,31 +2905,34 @@ def build():
 
     retry = button("Retry Button", "RETRY", "#16a34a", -70, -150, width=100, height=48, size=16)
     retry.on_msg("game over", retry.goto(-70, -150), retry.show(), retry.front())
-    for m in ("show title", "start fight"):
+    for m in ("show title", "start fight", "brawl start"):
         retry.on_msg(m, retry.hide())
     retry.on_click(
         retry.hide(),
         retry.if_(eq(V("Mode"), "arcade"), [retry.set("Wave", 1), retry.set("Score", 0), retry.set("Hero HP", V("Hero Max"))]),
         retry.set("Super", 0),
-        retry.broadcast("start fight"),
+        retry.if_(eq(V("Mode"), "brawl"), [retry.set("Score", 0), retry.broadcast("brawl start")], [retry.broadcast("start fight")]),
         note="Story: try the same chapter again (no talking). Arcade: a new run from wave 1.",
     )
 
     home = button("Home Button", "HOME", "#475569", 70, -150, width=100, height=48, size=16)
     home.on_msg("game over", home.goto(70, -150), home.show(), home.front())
     home.on_msg("show home", home.goto(0, -150), home.show(), home.front())
-    for m in ("show title", "start fight"):
+    for m in ("show title", "start fight", "brawl start"):
         home.on_msg(m, home.hide())
     home.on_click(home.hide(), home.broadcast("show title"))
 
     quit_btn = button("Quit Button", "✕", "#334155", 0, 165, width=30, height=26, size=14)
     quit_btn.on_msg("fight on", quit_btn.goto(0, 165), quit_btn.show(), quit_btn.front())
+    quit_btn.on_msg("brawl go", quit_btn.goto(0, 165), quit_btn.show(), quit_btn.front())
+    quit_btn.on_msg("brawl end", quit_btn.hide())
     quit_btn.on_msg("choose hero", quit_btn.goto(-218, -160), quit_btn.show(), quit_btn.front())
     for m in ("show title", "hero down", "enemy down", "story scene", "hero picked"):
         quit_btn.on_msg(m, quit_btn.hide())
     quit_btn.on_click(quit_btn.hide(), quit_btn.set("Fight On", 0), quit_btn.broadcast("show title"),
                       note="Back to the title at any time.")
 
+    game.brawl_slots = build_brawl(game, s, button, FIGHT_HIDE)
     return game
 
 
@@ -2216,6 +2957,8 @@ def validate(game):
                 errors.append(f"{t.name}: backdrop {b['fields']['BACKDROP'][0]}")
             if op == "sound_sounds_menu" and b["fields"]["SOUND_MENU"][0] not in sounds:
                 errors.append(f"{t.name}: sound {b['fields']['SOUND_MENU'][0]}")
+            if "LIST" in b["fields"] and b["fields"]["LIST"][1] not in getattr(game, "lists", {}).values():
+                errors.append(f"{t.name}: list {b['fields']['LIST']}")
             if "VARIABLE" in b["fields"] and b["fields"]["VARIABLE"][1] not in known:
                 errors.append(f"{t.name}: variable {b['fields']['VARIABLE']}")
             if b["next"] and t.blocks[b["next"]]["parent"] != bid:
@@ -2273,7 +3016,9 @@ def write_sb3(game):
 
     project = {
         "targets": targets,
-        "monitors": [monitor("Score", 196, 28), monitor("Wave", 205, 54), monitor("Best", 200, 310)],
+        "monitors": [monitor("Score", 196, 28), monitor("Wave", 205, 54), monitor("Best", 200, 310)]
+        + [dict(monitor(f"P{i} %", sx + 4, 6), mode="large")
+           for i, sx in enumerate(getattr(game, "brawl_slots", []), start=1)],
         "extensions": [],
         "meta": {"semver": "3.0.0", "vm": "2.3.0", "agent": "arthurs-arena legends builder"},
     }
@@ -2331,6 +3076,10 @@ def listing(game):
             return f"(round {f('NUM')})"
         if op == "operator_mathop":
             return f"({b['fields']['OPERATOR'][0]} of {f('NUM')})"
+        if op == "data_itemoflist":
+            return f"(item {f('INDEX')} of [{b['fields']['LIST'][0]}])"
+        if op == "data_lengthoflist":
+            return f"(length of [{b['fields']['LIST'][0]}])"
         if op == "sensing_keypressed":
             return f"<key {f('KEY_OPTION')} pressed?>"
         if op in ("looks_costume", "looks_backdrops", "sound_sounds_menu", "control_create_clone_of_menu", "sensing_keyoptions"):
@@ -2381,11 +3130,20 @@ def listing(game):
                 "motion_pointindirection": f"point in direction {f('DIRECTION')}",
                 "sound_play": f"start sound {f('SOUND_MENU')}",
                 "sound_stopallsounds": "stop all sounds",
+                "data_addtolist": f"add {f('ITEM')} to [{b['fields'].get('LIST', [''])[0]}]",
+                "data_deletealloflist": f"delete all of [{b['fields'].get('LIST', [''])[0]}]",
+                "data_deleteoflist": f"delete {f('INDEX')} of [{b['fields'].get('LIST', [''])[0]}]",
+                "data_replaceitemoflist": f"replace item {f('INDEX')} of [{b['fields'].get('LIST', [''])[0]}] with {f('ITEM')}",
                 "control_create_clone_of": "create clone of (myself)",
                 "control_delete_this_clone": "delete this clone",
                 "control_stop": f"stop [{b['fields'].get('STOP_OPTION', [''])[0]}]",
             }.get(op)
-            if op == "event_whenbroadcastreceived":
+            if op == "procedures_definition":
+                proto = t.blocks[b["inputs"]["custom_block"][1]]
+                text = f"define ({proto['mutation']['proccode']})   [run without screen refresh]"
+            elif op == "procedures_call":
+                text = f"({b['mutation']['proccode']})"
+            elif op == "event_whenbroadcastreceived":
                 text = f"when I receive [{b['fields']['BROADCAST_OPTION'][0]}]"
             elif op == "event_whenkeypressed":
                 text = f"when [{b['fields']['KEY_OPTION'][0]}] key pressed"

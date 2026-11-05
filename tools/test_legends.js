@@ -521,7 +521,8 @@ async function bossTest () {
     T.send('spike rain');
     await T.step(5);
     const spikes = T.clones('Spike Rain').length;
-    if (spikes > 10) fail(`boss: two Spike Rains made ${spikes} spikes (clones copying clones)`);
+    // 2 rains = 10 spikes, plus maybe one MEGA SPIKE casts itself; clones copying clones would make 30+
+    if (spikes > 15) fail(`boss: two Spike Rains made ${spikes} spikes (clones copying clones)`);
     // half health starts OVERDRIVE
     T.set('Enemy Max', 80);
     T.set('Enemy HP', 41);
@@ -569,16 +570,109 @@ async function spikeTest () {
     return {spikeDamageToHero: hurt};
 }
 
+async function brawlTest () {
+    const {vm, errors} = await boot();
+    const T = tools(vm);
+    const list = name => vm.runtime.getTargetForStage().lookupVariableByNameAndType(name, 'list').value.map(Number);
+    await T.step(10);
+    T.click('Brawl Button');
+    await T.step(3);
+    if (T.get('State') !== 'select') return fail('brawl: BRAWL did not open fighter select');
+    T.click('Pick Rocko');
+    const out = {stages: [], matches: 0, wins: 0, kos: 0, maxDmg: 0, zoom: [9, 0], landed: false, rampOk: false};
+    for (let match = 0; match < 3; match++) {
+        let frames = 0;
+        let checked = false;
+        while (T.get('Brawl On') !== 1 && frames < 300) {
+            await T.step();
+            frames++;
+            if (!checked && T.get('Banner') === 'fight') {
+                // FIGHT! is showing: everyone has dropped onto a platform or ramp
+                checked = true;
+                const X = list('B X'), Y = list('B Y');
+                const x1 = list('Plat X1'), y1 = list('Plat Y1'), x2 = list('Plat X2'), y2 = list('Plat Y2');
+                const onSome = (x, y) => x1.some((_, k) => x >= x1[k] && x <= x2[k] &&
+                    Math.abs(y - (y1[k] + (x - x1[k]) * (y2[k] - y1[k]) / (x2[k] - x1[k]))) < 1.5);
+                if (!X.every((x, k) => onSome(x, Y[k]))) fail(`brawl: someone is not standing on the stage at FIGHT!: ${JSON.stringify([X, Y])}`);
+                out.landed = true;
+                if (T.get('Brawl Stage') !== 1) out.rampOk = out.rampOk || X.some((x, k) => onSome(x, Y[k]) && x1.some((_, j) => y1[j] !== y2[j] && x >= x1[j] && x <= x2[j]));
+            }
+        }
+        if (T.get('Brawl On') !== 1) return fail('brawl: match never started');
+        out.stages.push(T.get('Brawl Stage'));
+        if (T.clones('Brawler').length !== 4) fail(`brawl: ${T.clones('Brawler').length} fighters, expected 4`);
+        if (T.clones('Brawl Platform').length !== T.get('Plat Count')) fail('brawl: platform clones do not match the stage');
+        if (T.sprite('Punch Button').visible && T.get('Touch Pad') === 0) { /* computer buttons may show */ }
+        let lastStocks = list('B Stock').reduce((a, b) => a + b, 0);
+        frames = 0;
+        while (T.get('State') === 'brawl' && frames < 30 * 60 * 4) {
+            await T.step();
+            frames++;
+            // a simple player: walk to the nearest fighter and attack; jump when they are higher
+            const X = list('B X'), Y = list('B Y'), alive = list('B Alive'), dmg = list('B Dmg');
+            let best = -1, bd = 1e9;
+            for (let j = 1; j < 4; j++) {
+                if (alive[j] !== 1) continue;
+                const d = Math.abs(X[j] - X[0]) + Math.abs(Y[j] - Y[0]);
+                if (d < bd) { bd = d; best = j; }
+            }
+            T.set('Joy X', 0);
+            if (best >= 0 && alive[0] === 1) {
+                const dx = X[best] - X[0], dy = Y[best] - Y[0];
+                if (Math.abs(X[0]) > 280) T.set('Joy X', X[0] > 0 ? -1 : 1); // stay on the stage
+                else if (Math.abs(dx) > 40) T.set('Joy X', dx > 0 ? 1 : -1);
+                if ((dy > 50 || Y[0] < -140) && frames % 12 === 0) T.set('Want Jump', 1);
+                if (dy < -60 && frames % 30 === 0) T.set('Want Drop', 1);
+                if (Math.abs(dx) < 50 && Math.abs(dy) < 45 && frames % 6 === 0) T.set(frames % 18 ? 'Want Punch' : 'Want Kick', 1);
+                if (T.get('Super') === 100 && Math.abs(dx) < 60) T.set('Want Super', 1);
+            }
+            out.maxDmg = Math.max(out.maxDmg, ...dmg);
+            const z = T.get('Zoom');
+            out.zoom = [Math.min(out.zoom[0], z), Math.max(out.zoom[1], z)];
+            const stocks = list('B Stock').reduce((a, b) => a + b, 0);
+            if (stocks < lastStocks) out.kos += lastStocks - stocks;
+            lastStocks = stocks;
+            if (process.env.DEBUG_BRAWL && frames % 300 === 0) {
+                process.stdout.write(`t${frames / 30}s X ${X.map(Math.round)} Y ${Y.map(Math.round)} dmg ${dmg.map(Math.round)} stocks ${list('B Stock')} alive ${alive} zoom ${T.get('Zoom').toFixed(2)}\n`);
+            }
+            if (T.clones('Brawler').length > 4 || T.clones('Popup').length > 20) fail('brawl: too many clones');
+        }
+        if (T.get('State') !== 'over') return fail(`brawl: match ${match + 1} did not finish in 4 minutes`);
+        out.matches++;
+        if (T.get('Brawl Winner') === 1) out.wins++;
+        await T.step(10);
+        if (T.clones('Brawler').length !== 0 || T.clones('Brawl Platform').length !== 0) fail('brawl: clones left after the match');
+        if (!T.sprite('Retry Button').visible) fail('brawl: no RETRY after the match');
+        T.click('Retry Button');
+        await T.step(3);
+    }
+    if (out.kos < 3) fail(`brawl: only ${out.kos} K.O.s in three matches`);
+    if (out.zoom[0] < 0.49 || out.zoom[1] > 1.16 || out.zoom[1] - out.zoom[0] < 0.05) fail(`brawl: camera zoom ${out.zoom}`);
+    if (new Set(out.stages).size < 3) fail(`brawl: stages did not change: ${out.stages}`);
+    T.click('Quit Button');
+    await T.step(10);
+    if (T.get('State') !== 'title' || T.clones('Brawler').length || T.get('Brawl Live') !== 0) {
+        fail(`brawl: Quit did not clean up (state ${T.get('State')}, fighters ${T.clones('Brawler').length}, live ${T.get('Brawl Live')})`);
+    }
+    await T.step(120); // the countdown must not start the match again after quitting
+    if (T.get('Brawl On') === 1 || T.get('State') !== 'title') fail('brawl: the match came back after Quit');
+    if (errors.length) fail(`brawl: engine errors ${errors.slice(0, 2)}`);
+    return out;
+}
+
 (async () => {
     const t0 = Date.now();
     const results = {};
-    for (const hero of [1, 2, 3]) results[`story ${hero}`] = await storyRun(hero);
-    results.arcade = await arcadeRun(1);
-    results.fire = await fireTest();
-    results.spikes = await spikeTest();
-    results.boss = await bossTest();
-    await mashTest();
-    await weaponTest();
+    const only = process.env.ONLY; // e.g. ONLY=brawl runs just that part
+    const want = name => !only || only.split(',').includes(name);
+    if (want('story')) for (const hero of [1, 2, 3]) results[`story ${hero}`] = await storyRun(hero);
+    if (want('arcade')) results.arcade = await arcadeRun(1);
+    if (want('fire')) results.fire = await fireTest();
+    if (want('spikes')) results.spikes = await spikeTest();
+    if (want('boss')) results.boss = await bossTest();
+    if (want('brawl')) results.brawl = await brawlTest();
+    if (want('mash')) await mashTest();
+    if (want('weapons')) await weaponTest();
     const show = r => JSON.stringify(r, (k, v) => (v instanceof Set ? [...v] : v));
     for (const [k, v] of Object.entries(results)) process.stdout.write(`${k}: ${show(v)}\n`);
     if (problems.length) {

@@ -2,7 +2,7 @@
 
 Written 2026-11-05 for Arthur.
 
-This is the big version of Arthur's Arena. It has a **Story** with seven chapters, an **Arcade** mode that never ends, three fighters to pick from, a charge-up **fireball**, spiky robots and spiky bosses, falling weapons, combos, and a SUPER move.
+This is the big version of Arthur's Arena. It has a **Story** with seven chapters, an **Arcade** mode that never ends, a Smash-style **BRAWL** mode, four difficulty levels, three fighters to pick from, a charge-up **fireball**, spiky robots and spiky bosses, falling weapons, combos, and a SUPER move.
 
 The playable file is `projects/arthurs-arena-legends.sb3`. The boss game from before (`projects/arthurs-arena-bosses.sb3`, see `BOSSES.md`) is still there.
 
@@ -14,6 +14,19 @@ The playable file is `projects/arthurs-arena-legends.sb3`. The boss game from be
 4. Click the green flag.
 
 On the tablet, the file has to be on the Scratch website first. Sign in, load the file, and save it. Then open that project's link in the tablet browser.
+
+## Level (difficulty)
+
+Tap **LEVEL** on the title screen to change it. The game remembers your choice.
+
+| Level | Enemy health | Enemy hits | Enemy speed |
+| --- | --- | --- | --- |
+| EASY | a bit more than before | softer | slower |
+| NORMAL | 2× (fights last about twice as long as before) | normal | normal |
+| HARD | 2.8× | harder | faster |
+| CHAMPION | 3.6× | much harder | much faster |
+
+In BRAWL, higher levels make the CPU fighters attack more often and hit harder.
 
 ## The story
 
@@ -34,6 +47,24 @@ Before each fight there is a chapter card, and then the hero and the enemy talk.
 Win chapter 7 and the Golden Crown drops onto your fighter's head. After that, **every fighter wears the crown** in every fight. Save the project to keep it.
 
 If you get knocked out, tap **RETRY** to try the same chapter again. You get full health, and the talking is skipped.
+
+## BRAWL (like a platform fighter)
+
+Tap **BRAWL**, pick your fighter, and fight three CPU fighters at once, everyone against everyone. Fighters are smaller and the **camera follows the action**, zooming out when fighters are far apart and in when they're close.
+
+- **Stages:** each match moves to the next one:
+  - **Sky Ruins:** floating platforms
+  - **Ramp Valley:** a hill with ramps up and down, plus ledges
+  - **Tower Steps:** ramps, steps and high towers
+- **Damage %:** the number at the top shows each fighter's damage. The higher it is, the further they fly when hit.
+- **Lives:** the dots show lives (3 each). Get knocked off the screen and you lose one, then drop back in from the sky.
+- **Win:** be the last fighter standing. The match ends if you lose all three lives.
+- **Moves:**
+  - **Walking and jumping:** walk, jump, and **double jump** in the air.
+  - **Drop down:** push the stick **down** (or the down arrow) to drop through a thin platform.
+  - **Attacks:** PUNCH is quick, KICK hits harder, DODGE makes you safe for a moment, and FIRE charges a fireball.
+  - **SMASH:** when SUPER is full you glow with red fire. SUPER then does a SMASH that sends fighters flying.
+- The yellow **P1** arrow shows which fighter is you.
 
 ## Arcade
 
@@ -67,6 +98,7 @@ The buttons are along the bottom of the screen.
 | PUNCH | Z | Quick hit. With a boomerang, PUNCH throws it. |
 | KICK | X | Steps in and hits harder. |
 | FIRE | F (hold) | **Hold** to charge a fireball, **let go** to shoot it. See below. |
+| (BRAWL) drop down | down arrow | Push the joystick down to drop through a thin platform. |
 | SUPER | V | Your fighter's SUPER move. It works when the button is gold and you are on the ground. |
 | ✕ (top middle) | | Go back to the title. |
 
@@ -75,6 +107,8 @@ You always turn to face the enemy, so you can fight from either side.
 In the Android app these buttons are replaced by a thumb joystick and game-pad buttons, so you can walk and punch at the same time (see `ANDROID.md`).
 
 ## Cool moves
+
+- **Fire aura.** When your SUPER is full, during a SUPER move, and when a fireball is fully charged, your fighter glows in **red fire**.
 
 - **Combos.** Hit again within about a second to keep a combo going. Every 3rd hit in a row shows **COMBO x3!** (then x6, x9 ...) and does 3 extra damage.
 - **SUPER meter.** The thin bar under your health fills when you land hits or get hurt. When it is full it flashes, the SUPER button turns gold, and you see **SUPER READY!** You can't be hurt during your SUPER.
@@ -91,6 +125,17 @@ Hold **FIRE** and a glowing ball grows in your hand, with a rising sound. Let go
 - One fireball at a time: you can charge the next one when the last one is gone.
 
 On the Android app, the FIRE button fills up gold as it charges.
+
+## Boss weapons
+
+The big fighters carry weapons and hit 3 harder with them. Watch for the swing!
+
+| Who | Weapon |
+| --- | --- |
+| Brute | Wooden club |
+| MEGA SPIKE | Spiked mace |
+| Quake | Hammer |
+| Shadow King | Dark sword |
 
 ## Weapons
 
@@ -135,6 +180,8 @@ How it is built:
 
 - **Buttons never start long scripts.** In Scratch, a broadcast restarts a script that is already running. Two quick taps could leave a "busy" flag stuck on for the rest of the fight. So the buttons only set `Want Punch`, `Want Kick` and so on, and two loops in the Hero sprite act on them. LEFT and RIGHT still broadcast, because a step has no wait in it.
 - **Hits use distance, not "touching".** Every hit checks how far apart the two fighters are. That works the same on every device, and it can be tested without a screen.
+- **BRAWL's per-frame work is in custom blocks set to "run without screen refresh"** (`fighter frame`, `camera frame`, `fireball frame`). A normal Scratch `repeat` pauses for a frame on every turn, so looping over 4 fighters and 8 platforms would make everything move in slow motion.
+- **Clones hear every message too.** Any sprite that makes clones checks `Is Clone` first, or each clone would make more clones; the build script refuses to build a sprite that forgets.
 - **Hurt and stun use timestamps, not waits.** `Enemy Stun Until` and `Hero Safe Until` hold a `timer` value, so a hit that arrives mid-wait cannot break anything.
 - Sounds are small beeps and thumps made by the build script, so there are no outside files.
 - The main scripts have comments in the editor that explain what they do.

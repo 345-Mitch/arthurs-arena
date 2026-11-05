@@ -5,8 +5,9 @@ Made by `tools/build_legends_sb3.py` from the same blocks that are inside
 
 ## Stage
 
-Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Volcano, Castle, Arcade, Ending
+Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Volcano, Castle, Arcade, Ending, brawl sky, brawl ramps, brawl towers
 Sounds: hit, big hit, hurt, jump, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, alarm, spike fall, win
+Sprite-only variables: K, Pick, Min X, Max X, Min Y, Max Y, Alive, Zoom To
 
 ```
 when green flag clicked
@@ -79,8 +80,13 @@ if <(Mode) = [story]> then
     set [Chapter] to [1]
     broadcast [story scene]
 else
-    set [Wave] to [1]
-    broadcast [start fight]
+    if <(Mode) = [brawl]> then
+        set [Score] to [0]
+        broadcast [brawl start]
+    else
+        set [Wave] to [1]
+        broadcast [start fight]
+    end
 end
 ```
 
@@ -129,6 +135,7 @@ if <(Enemy Type) = [1]> then
     set [Enemy Speed] to [4]
     set [Enemy Body] to [10]
     set [Enemy Size] to [78]
+    set [Enemy Weapon] to [none]
 end
 if <(Enemy Type) = [2]> then
     set [Enemy Name] to [ivy]
@@ -138,6 +145,7 @@ if <(Enemy Type) = [2]> then
     set [Enemy Speed] to [1]
     set [Enemy Body] to [10]
     set [Enemy Size] to [82]
+    set [Enemy Weapon] to [none]
 end
 if <(Enemy Type) = [3]> then
     set [Enemy Name] to [brute]
@@ -147,6 +155,7 @@ if <(Enemy Type) = [3]> then
     set [Enemy Speed] to [1]
     set [Enemy Body] to [22]
     set [Enemy Size] to [110]
+    set [Enemy Weapon] to [club]
 end
 if <(Enemy Type) = [4]> then
     set [Enemy Name] to [spikebot]
@@ -156,6 +165,7 @@ if <(Enemy Type) = [4]> then
     set [Enemy Speed] to [3]
     set [Enemy Body] to [22]
     set [Enemy Size] to [100]
+    set [Enemy Weapon] to [none]
 end
 if <(Enemy Type) = [5]> then
     set [Enemy Name] to [megaspike]
@@ -165,6 +175,7 @@ if <(Enemy Type) = [5]> then
     set [Enemy Speed] to [4]
     set [Enemy Body] to [34]
     set [Enemy Size] to [125]
+    set [Enemy Weapon] to [mace]
 end
 if <(Enemy Type) = [6]> then
     set [Enemy Name] to [quake]
@@ -174,6 +185,7 @@ if <(Enemy Type) = [6]> then
     set [Enemy Speed] to [4]
     set [Enemy Body] to [26]
     set [Enemy Size] to [120]
+    set [Enemy Weapon] to [hammer]
 end
 if <(Enemy Type) = [7]> then
     set [Enemy Name] to [shadow]
@@ -183,10 +195,34 @@ if <(Enemy Type) = [7]> then
     set [Enemy Speed] to [4]
     set [Enemy Body] to [26]
     set [Enemy Size] to [125]
+    set [Enemy Weapon] to [dark sword]
 end
 if <(Mode) = [arcade]> then
     change [Enemy Max] by ([8] * ((Wave) - [1]))
     change [Enemy Power] by (floor of (((Wave) - [1]) / [2]))
+end
+if <not <(Enemy Weapon) = [none]>> then
+    change [Enemy Power] by [3]
+end
+if <(Difficulty) = [1]> then
+    set [Enemy Max] to (round ((Enemy Max) * [1.2]))
+    set [Enemy Power] to (round ((Enemy Power) * [0.75]))
+    set [Pace] to ((Pace) * [1.2])
+end
+if <(Difficulty) = [2]> then
+    set [Enemy Max] to (round ((Enemy Max) * [2]))
+    set [Enemy Power] to (round ((Enemy Power) * [1]))
+    set [Pace] to ((Pace) * [1])
+end
+if <(Difficulty) = [3]> then
+    set [Enemy Max] to (round ((Enemy Max) * [2.8]))
+    set [Enemy Power] to (round ((Enemy Power) * [1.25]))
+    set [Pace] to ((Pace) * [0.85])
+end
+if <(Difficulty) = [4]> then
+    set [Enemy Max] to (round ((Enemy Max) * [3.6]))
+    set [Enemy Power] to (round ((Enemy Power) * [1.5]))
+    set [Pace] to ((Pace) * [0.72])
 end
 set [Enemy HP] to (Enemy Max)
 set [Enemy Phase] to [1]
@@ -261,7 +297,7 @@ if <<(Fight On) = [1]> and <(timer) > (Enemy Stun Until)>> then
     change [Enemy HP] by ([0] - (Hit Power))
     change [Score] by (((Hit Power) * [10]) + ((Combo) * [5]))
     if <(Super) < [100]> then
-        change [Super] by [6]
+        change [Super] by [4]
         if <not <(Super) < [100]>> then
             set [Super] to [100]
             broadcast [super ready]
@@ -530,6 +566,337 @@ when [v] key pressed
 set [Want Super] to [1]
 ```
 
+```
+when [down arrow] key pressed
+set [Want Drop] to [1]
+```
+
+> BRAWL: down arrow drops through a thin platform.
+
+```
+when I receive [brawl start]
+set [State] to [brawl]
+set [Brawl On] to [0]
+set [Brawl Live] to [0]
+set [Fight On] to [0]
+broadcast [brawl clear] and wait
+set [Brawl Stage] to (((Brawl Stage) mod [3]) + [1])
+delete all of [Plat X1]
+delete all of [Plat Y1]
+delete all of [Plat X2]
+delete all of [Plat Y2]
+delete all of [B X]
+delete all of [B Y]
+delete all of [B Dmg]
+delete all of [B Stock]
+delete all of [B Alive]
+delete all of [B Hit]
+delete all of [B KX]
+delete all of [B KY]
+delete all of [B Kind]
+delete all of [B Pool]
+if <(Brawl Stage) = [1]> then
+    switch backdrop to (brawl sky)
+    add [-290] to [Plat X1]
+    add [-100] to [Plat Y1]
+    add [290] to [Plat X2]
+    add [-100] to [Plat Y2]
+    add [-235] to [Plat X1]
+    add [-10] to [Plat Y1]
+    add [-105] to [Plat X2]
+    add [-10] to [Plat Y2]
+    add [105] to [Plat X1]
+    add [-10] to [Plat Y1]
+    add [235] to [Plat X2]
+    add [-10] to [Plat Y2]
+    add [-65] to [Plat X1]
+    add [78] to [Plat Y1]
+    add [65] to [Plat X2]
+    add [78] to [Plat Y2]
+    set [Plat Count] to [4]
+    set [Solid Count] to [1]
+    set [Pop Text] to [SKY RUINS]
+    broadcast [popup]
+end
+if <(Brawl Stage) = [2]> then
+    switch backdrop to (brawl ramps)
+    add [-340] to [Plat X1]
+    add [-150] to [Plat Y1]
+    add [-135] to [Plat X2]
+    add [-65] to [Plat Y2]
+    add [-135] to [Plat X1]
+    add [-65] to [Plat Y1]
+    add [135] to [Plat X2]
+    add [-65] to [Plat Y2]
+    add [135] to [Plat X1]
+    add [-65] to [Plat Y1]
+    add [340] to [Plat X2]
+    add [-150] to [Plat Y2]
+    add [-215] to [Plat X1]
+    add [35] to [Plat Y1]
+    add [-95] to [Plat X2]
+    add [35] to [Plat Y2]
+    add [95] to [Plat X1]
+    add [35] to [Plat Y1]
+    add [215] to [Plat X2]
+    add [35] to [Plat Y2]
+    add [-45] to [Plat X1]
+    add [115] to [Plat Y1]
+    add [45] to [Plat X2]
+    add [115] to [Plat Y2]
+    set [Plat Count] to [6]
+    set [Solid Count] to [3]
+    set [Pop Text] to [RAMP VALLEY]
+    broadcast [popup]
+end
+if <(Brawl Stage) = [3]> then
+    switch backdrop to (brawl towers)
+    add [-330] to [Plat X1]
+    add [-130] to [Plat Y1]
+    add [-185] to [Plat X2]
+    add [-130] to [Plat Y2]
+    add [-185] to [Plat X1]
+    add [-130] to [Plat Y1]
+    add [-95] to [Plat X2]
+    add [-60] to [Plat Y2]
+    add [-95] to [Plat X1]
+    add [-60] to [Plat Y1]
+    add [95] to [Plat X2]
+    add [-60] to [Plat Y2]
+    add [95] to [Plat X1]
+    add [-60] to [Plat Y1]
+    add [185] to [Plat X2]
+    add [-130] to [Plat Y2]
+    add [185] to [Plat X1]
+    add [-130] to [Plat Y1]
+    add [330] to [Plat X2]
+    add [-130] to [Plat Y2]
+    add [-300] to [Plat X1]
+    add [5] to [Plat Y1]
+    add [-200] to [Plat X2]
+    add [5] to [Plat Y2]
+    add [200] to [Plat X1]
+    add [5] to [Plat Y1]
+    add [300] to [Plat X2]
+    add [5] to [Plat Y2]
+    add [-60] to [Plat X1]
+    add [60] to [Plat Y1]
+    add [60] to [Plat X2]
+    add [60] to [Plat Y2]
+    set [Plat Count] to [8]
+    set [Solid Count] to [5]
+    set [Pop Text] to [TOWER STEPS]
+    broadcast [popup]
+end
+add [rival] to [B Pool]
+add [ivy] to [B Pool]
+add [brute] to [B Pool]
+add [quake] to [B Pool]
+add [shadow] to [B Pool]
+add (Hero Name) to [B Kind]
+repeat [3]
+    set [Pick] to (pick random [1] to (length of [B Pool]))
+    add (item (Pick) of [B Pool]) to [B Kind]
+    delete (Pick) of [B Pool]
+end
+repeat [4]
+    add [0] to [B X]
+    add [0] to [B Y]
+    add [0] to [B Dmg]
+    add [3] to [B Stock]
+    add [1] to [B Alive]
+    add [0] to [B Hit]
+    add [0] to [B KX]
+    add [0] to [B KY]
+end
+set [Cam X] to [0]
+set [Cam Y] to [0]
+set [Zoom] to [0.8]
+set [Super] to [0]
+set [Brawl Winner] to [0]
+hide variable [Score]
+hide variable [Wave]
+hide variable [Best]
+show variable [P1 %]
+show variable [P2 %]
+show variable [P3 %]
+show variable [P4 %]
+if <not <(State) = [brawl]>> then
+    stop [this script]
+end
+set [Brawl Live] to [1]
+broadcast [brawl go]
+wait [0.8] seconds
+if <not <(State) = [brawl]>> then
+    stop [this script]
+end
+set [Banner] to [ready]
+broadcast [banner]
+wait [1.1] seconds
+if <not <(State) = [brawl]>> then
+    stop [this script]
+end
+set [Banner] to [fight]
+broadcast [banner]
+wait [0.3] seconds
+if <not <(State) = [brawl]>> then
+    stop [this script]
+end
+set [Want Punch] to [0]
+set [Want Kick] to [0]
+set [Want Jump] to [0]
+set [Want Dodge] to [0]
+set [Want Super] to [0]
+set [Brawl On] to [1]
+```
+
+> BRAWL: picks the next stage, loads its platforms and ramps into lists, and picks 3 CPU fighters at random. Each fighter is a clone of Brawler and keeps its own place in the B lists (1 is you).
+
+```
+define (camera frame)   [run without screen refresh]
+set [Min X] to [9999]
+set [Max X] to [-9999]
+set [Min Y] to [9999]
+set [Max Y] to [-9999]
+set [Alive] to [0]
+set [K] to [0]
+repeat [4]
+    change [K] by [1]
+    if <(item (K) of [B Alive]) = [1]> then
+        change [Alive] by [1]
+        if <(item (K) of [B X]) < (Min X)> then
+            set [Min X] to (item (K) of [B X])
+        end
+        if <(item (K) of [B X]) > (Max X)> then
+            set [Max X] to (item (K) of [B X])
+        end
+        if <(item (K) of [B Y]) < (Min Y)> then
+            set [Min Y] to (item (K) of [B Y])
+        end
+        if <(item (K) of [B Y]) > (Max Y)> then
+            set [Max Y] to (item (K) of [B Y])
+        end
+    end
+end
+set [P1 %] to (join (round (item [1] of [B Dmg])) [%])
+set [P2 %] to (join (round (item [2] of [B Dmg])) [%])
+set [P3 %] to (join (round (item [3] of [B Dmg])) [%])
+set [P4 %] to (join (round (item [4] of [B Dmg])) [%])
+if <(Alive) > [0]> then
+    if <(Min X) < [-420]> then
+        set [Min X] to [-420]
+    end
+    if <(Max X) > [420]> then
+        set [Max X] to [420]
+    end
+    if <(Min Y) < [-200]> then
+        set [Min Y] to [-200]
+    end
+    if <(Max Y) > [260]> then
+        set [Max Y] to [260]
+    end
+    set [Zoom To] to ([420] / (((Max X) - (Min X)) + [200]))
+    if <(Zoom To) > ([250] / (((Max Y) - (Min Y)) + [190]))> then
+        set [Zoom To] to ([250] / (((Max Y) - (Min Y)) + [190]))
+    end
+    if <(Zoom To) > [1.15]> then
+        set [Zoom To] to [1.15]
+    end
+    if <(Zoom To) < [0.5]> then
+        set [Zoom To] to [0.5]
+    end
+    change [Zoom] by (((Zoom To) - (Zoom)) * [0.06])
+    change [Cam X] by (((((Min X) + (Max X)) / [2]) - (Cam X)) * [0.1])
+    change [Cam Y] by ((((((Min Y) + (Max Y)) / [2]) + [35]) - (Cam Y)) * [0.1])
+end
+if <<(Brawl On) = [1]> and <<(item [1] of [B Alive]) = [0]> or <(Alive) < [2]>>> then
+    set [Brawl On] to [0]
+    if <(item [1] of [B Alive]) = [1]> then
+        set [Brawl Winner] to [1]
+    else
+        set [Brawl Winner] to [0]
+    end
+    broadcast [brawl end]
+end
+```
+
+```
+when green flag clicked
+forever
+    if <(Brawl Live) = [1]> then
+        (camera frame)
+    end
+end
+```
+
+> The camera: finds the box around every fighter still in the game, then slides and zooms to fit it, like a platform fighter. Also copies everyone's damage into P1 % to P4 %, and ends the match when you are out or only one fighter is left.
+
+```
+when I receive [brawl end]
+start sound (ko)
+set [Banner] to [game]
+broadcast [banner]
+wait [1.8] seconds
+if <not <(State) = [brawl]>> then
+    stop [this script]
+end
+if <(Brawl Winner) = [1]> then
+    start sound (win)
+    change [Score] by ([1000] * (Difficulty))
+    if <(Score) > (Best)> then
+        set [Best] to (Score)
+    end
+end
+set [Brawl Live] to [0]
+set [State] to [over]
+broadcast [brawl clear] and wait
+hide variable [P1 %]
+hide variable [P2 %]
+hide variable [P3 %]
+hide variable [P4 %]
+broadcast [game over]
+```
+
+```
+when I receive [brawl clear]
+set [Fire Held] to [0]
+```
+
+```
+when I receive [brawl hit]
+start sound (hit)
+```
+
+```
+when I receive [brawl smash]
+start sound (big hit)
+```
+
+```
+when I receive [brawl ko]
+start sound (boom)
+```
+
+```
+when I receive [show title]
+set [Brawl Live] to [0]
+set [Brawl On] to [0]
+hide variable [P1 %]
+hide variable [P2 %]
+hide variable [P3 %]
+hide variable [P4 %]
+```
+
+```
+when I receive [choose hero]
+set [Brawl Live] to [0]
+set [Brawl On] to [0]
+hide variable [P1 %]
+hide variable [P2 %]
+hide variable [P3 %]
+hide variable [P4 %]
+```
+
 ## Ground Shake
 
 Costumes: shadow
@@ -537,6 +904,21 @@ Costumes: shadow
 ```
 when green flag clicked
 go to x: [0] y: [-80]
+show
+```
+
+```
+when I receive [brawl start]
+hide
+```
+
+```
+when I receive [start fight]
+show
+```
+
+```
+when I receive [show title]
 show
 ```
 
@@ -749,10 +1131,12 @@ forever
             end
         end
     else
-        set [Want Punch] to [0]
-        set [Want Kick] to [0]
-        set [Want Dodge] to [0]
-        set [Want Super] to [0]
+        if <not <(State) = [brawl]>> then
+            set [Want Punch] to [0]
+            set [Want Kick] to [0]
+            set [Want Dodge] to [0]
+            set [Want Super] to [0]
+        end
     end
 end
 ```
@@ -762,7 +1146,7 @@ end
 ```
 when green flag clicked
 forever
-    if <(Want Jump) = [1]> then
+    if <<(Want Jump) = [1]> and <not <(State) = [brawl]>>> then
         set [Want Jump] to [0]
         if <<<(Fight On) = [1]> and <(Hero Air) = [0]>> and <(Hero Lock) = [0]>> then
             set [Hero Air] to [1]
@@ -898,7 +1282,7 @@ clear graphic effects
 point in direction [90]
 set [Hero Name] to [arthur]
 switch costume to (arthur idle)
-go to x: [-195] y: [-75]
+go to x: [-205] y: [-75]
 set size to [90] %
 go to [front] layer
 say [I'm Arthur!] for [2] seconds
@@ -1014,6 +1398,7 @@ repeat until <(Fight On) = [0]>
         if <(Enemy Type) = [1]> then
             if <<(abs of ((Hero X) - (x position))) < ([38] + (Enemy Body))> and <((Hero Y) - [-75]) < [60]>> then
                 switch costume to (join (Enemy Name) [ attack])
+                set [Enemy Swing Until] to ((timer) + [0.3])
                 set [Hurt Power] to (Enemy Power)
                 broadcast [enemy hits hero]
                 wait ([0.3] * (Pace)) seconds
@@ -1073,8 +1458,10 @@ repeat until <(Fight On) = [0]>
             set [Pick] to (Hero X)
             switch costume to (join (Enemy Name) [ attack])
             broadcast [swing sfx]
+            set [Enemy Swing Until] to ((timer) + [0.3])
             glide ([0.4] * (Pace)) secs to x: (Pick) y: [-75]
             if <<(abs of ((Hero X) - (x position))) < ([34] + (Enemy Body))> and <((Hero Y) - [-75]) < [50]>> then
+                set [Enemy Swing Until] to ((timer) + [0.3])
                 set [Hurt Power] to (Enemy Power)
                 broadcast [enemy hits hero]
                 broadcast [shake]
@@ -1110,6 +1497,7 @@ repeat until <(Fight On) = [0]>
                     set [Pick] to [99]
                 end
                 if <<(abs of ((Hero X) - (x position))) < ([30] + (Enemy Body))> and <((Hero Y) - [-75]) < [55]>> then
+                    set [Enemy Swing Until] to ((timer) + [0.3])
                     set [Hurt Power] to (Enemy Power)
                     broadcast [enemy hits hero]
                     broadcast [shake]
@@ -1143,6 +1531,7 @@ repeat until <(Fight On) = [0]>
                         set [Pick] to [999]
                     end
                     if <<(abs of ((Hero X) - (x position))) < ([30] + (Enemy Body))> and <((Hero Y) - [-75]) < [70]>> then
+                        set [Enemy Swing Until] to ((timer) + [0.3])
                         set [Hurt Power] to (Enemy Power)
                         broadcast [enemy hits hero]
                         broadcast [shake]
@@ -1189,6 +1578,7 @@ repeat until <(Fight On) = [0]>
             switch costume to (join (Enemy Name) [ windup])
             say [STOMP!] for ([0.6] * (Pace)) seconds
             switch costume to (join (Enemy Name) [ attack])
+            set [Enemy Swing Until] to ((timer) + [0.3])
             change y by [10]
             wait [0.05] seconds
             set y to [-75]
@@ -1229,6 +1619,7 @@ repeat until <(Fight On) = [0]>
                         set x to [205]
                     end
                     if <<(abs of ((Hero X) - (x position))) < ([30] + (Enemy Body))> and <((Hero Y) - [-75]) < [60]>> then
+                        set [Enemy Swing Until] to ((timer) + [0.3])
                         set [Hurt Power] to (Enemy Power)
                         broadcast [enemy hits hero]
                     end
@@ -1244,8 +1635,10 @@ repeat until <(Fight On) = [0]>
                 set [Pick] to (Hero X)
                 switch costume to (join (Enemy Name) [ attack])
                 broadcast [swing sfx]
+                set [Enemy Swing Until] to ((timer) + [0.3])
                 glide ([0.4] * (Pace)) secs to x: (Pick) y: [-75]
                 if <<(abs of ((Hero X) - (x position))) < ([34] + (Enemy Body))> and <((Hero Y) - [-75]) < [50]>> then
+                    set [Enemy Swing Until] to ((timer) + [0.3])
                     set [Hurt Power] to (Enemy Power)
                     broadcast [enemy hits hero]
                     broadcast [shake]
@@ -1285,6 +1678,7 @@ repeat until <(Fight On) = [0]>
                 switch costume to (join (Enemy Name) [ windup])
                 say [STOMP!] for ([0.6] * (Pace)) seconds
                 switch costume to (join (Enemy Name) [ attack])
+                set [Enemy Swing Until] to ((timer) + [0.3])
                 change y by [10]
                 wait [0.05] seconds
                 set y to [-75]
@@ -1317,6 +1711,7 @@ repeat until <(Fight On) = [0]>
                 end
                 if <<(abs of ((Hero X) - (x position))) < ([38] + (Enemy Body))> and <((Hero Y) - [-75]) < [60]>> then
                     switch costume to (join (Enemy Name) [ attack])
+                    set [Enemy Swing Until] to ((timer) + [0.3])
                     set [Hurt Power] to (Enemy Power)
                     broadcast [enemy hits hero]
                     wait ([0.3] * (Pace)) seconds
@@ -1903,6 +2298,12 @@ Costumes: glow
 when green flag clicked
 hide
 forever
+    if <<(Charge) > [0]> and <(State) = [brawl]>> then
+        go to x: ((P1 Screen X) + (((P1 Screen Size) * [0.5]) * (Facing))) y: ((P1 Screen Y) + ((P1 Screen Size) * [0.9]))
+        set size to (([25] + ((Charge) * [0.9])) * ((P1 Screen Size) / [75])) %
+        show
+        go to [front] layer
+    end
     if <<(Charge) > [0]> and <(State) = [fight]>> then
         go to x: ((Hero X) + ([36] * (Facing))) y: ((Hero Y) + [66])
         set size to ([25] + ((Charge) * [0.9])) %
@@ -2036,6 +2437,89 @@ end
 hide
 ```
 
+## Power Aura
+
+Costumes: fire 1, fire 2
+
+```
+when green flag clicked
+hide
+set [ghost] effect to [20]
+forever
+    if <<(State) = [fight]> and <<<(Super) = [100]> or <(Hero Safe) = [2]>> or <(Charge) = [100]>>> then
+        go to x: (Hero X) y: (Hero Y)
+        set size to [75] %
+        if <((round ((timer) * [10])) mod [2]) = [0]> then
+            switch costume to (fire 1)
+        else
+            switch costume to (fire 2)
+        end
+        show
+    else
+        if <<<(State) = [brawl]> and <(Super) = [100]>> and <(Brawl On) = [1]>> then
+            go to x: (P1 Screen X) y: (P1 Screen Y)
+            set size to ((P1 Screen Size) * [1]) %
+            if <((round ((timer) * [10])) mod [2]) = [0]> then
+                switch costume to (fire 1)
+            else
+                switch costume to (fire 2)
+            end
+            show
+        else
+            hide
+        end
+    end
+end
+```
+
+> Red fire around your fighter when powered up: SUPER is full, during a SUPER move, or a full-power fireball charge.
+
+## Boss Weapon
+
+Costumes: club, mace, hammer, dark sword
+
+```
+when green flag clicked
+hide
+forever
+    if <<<<(State) = [fight]> and <not <(Enemy Weapon) = [none]>>> and <(Enemy HP) > [0]>> and <<(Fight On) = [1]> or <(Enemy X) > [-300]>>> then
+        switch costume to (Enemy Weapon)
+        set size to ((Enemy Size) * [0.8]) %
+        go to x: ((Enemy X) + (((Enemy Facing) * [0.24]) * (Enemy Size))) y: ([-75] + ((Enemy Size) * [0.62]))
+        if <(timer) < (Enemy Swing Until)> then
+            point in direction ([90] + ([110] * (Enemy Facing)))
+        else
+            point in direction ([90] + ([-20] * (Enemy Facing)))
+        end
+        show
+    else
+        hide
+    end
+end
+```
+
+> Bosses carry weapons: Brute a club, MEGA SPIKE a spiked mace, Quake a hammer, the Shadow King a dark sword. Each adds 3 to their hits. It swings when they attack.
+
+```
+when I receive [enemy down]
+hide
+```
+
+```
+when I receive [show title]
+hide
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when I receive [story scene]
+hide
+```
+
 ## Crown
 
 Costumes: crown
@@ -2044,13 +2528,21 @@ Costumes: crown
 when green flag clicked
 hide
 forever
-    if <<(Crown) = [1]> and <<(State) = [fight]> or <(State) = [over]>>> then
+    if <<(Crown) = [1]> and <<(State) = [fight]> or <<(State) = [over]> and <not <(Mode) = [brawl]>>>>> then
         go to x: (Hero X) y: ((Hero Y) + [104])
+        set size to [80] %
         show
         go to [front] layer
     else
-        if <not <(State) = [ending]>> then
-            hide
+        if <<<(Crown) = [1]> and <(State) = [brawl]>> and <(item [1] of [B Alive]) = [1]>> then
+            go to x: (P1 Screen X) y: ((P1 Screen Y) + ((P1 Screen Size) * [1.4]))
+            set size to ((P1 Screen Size) * [1.05]) %
+            show
+            go to [front] layer
+        else
+            if <not <(State) = [ending]>> then
+                hide
+            end
         end
     end
 end
@@ -2262,7 +2754,11 @@ hide
 when I receive [popup]
 if <(Is Clone) = [0]> then
     set [My Text] to (Pop Text)
-    go to x: ((Hero X) + [10]) y: ((Hero Y) + [125])
+    if <(State) = [brawl]> then
+        go to x: (P1 Screen X) y: ((P1 Screen Y) + [70])
+    else
+        go to x: ((Hero X) + [10]) y: ((Hero Y) + [125])
+    end
     create clone of (myself)
 end
 ```
@@ -2335,7 +2831,7 @@ delete this clone
 
 ## Banner
 
-Costumes: ready, fight, ko, clear, wave clear, boss
+Costumes: ready, fight, ko, clear, wave clear, boss, game
 
 ```
 when green flag clicked
@@ -2378,7 +2874,7 @@ hide
 
 ## Story Card
 
-Costumes: prologue, chapter 1, chapter 2, chapter 3, chapter 4, chapter 5, chapter 6, chapter 7, game over, arcade over, the end, angry, overdrive
+Costumes: prologue, chapter 1, chapter 2, chapter 3, chapter 4, chapter 5, chapter 6, chapter 7, game over, arcade over, brawl win, brawl lose, the end, angry, overdrive
 Sprite-only variables: Until
 
 ```
@@ -2608,6 +3104,13 @@ if <(Mode) = [arcade]> then
 else
     switch costume to (game over)
 end
+if <(Mode) = [brawl]> then
+    if <(Brawl Winner) = [1]> then
+        switch costume to (brawl win)
+    else
+        switch costume to (brawl lose)
+    end
+end
 set size to [85] %
 go to x: [0] y: [-5]
 show
@@ -2634,6 +3137,12 @@ set size to [100] %
 
 ```
 when I receive [fight on]
+hide
+set size to [100] %
+```
+
+```
+when I receive [brawl start]
 hide
 set size to [100] %
 ```
@@ -3117,6 +3626,62 @@ forever
 end
 ```
 
+## Level Button
+
+Costumes: easy, normal, hard, champion
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [show title]
+go to x: [18] y: [-90]
+if <(Difficulty) = [1]> then
+    switch costume to (easy)
+end
+if <(Difficulty) = [2]> then
+    switch costume to (normal)
+end
+if <(Difficulty) = [3]> then
+    switch costume to (hard)
+end
+if <(Difficulty) = [4]> then
+    switch costume to (champion)
+end
+show
+go to [front] layer
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when this sprite clicked
+change [Difficulty] by [1]
+if <(Difficulty) > [4]> then
+    set [Difficulty] to [1]
+end
+if <(Difficulty) = [1]> then
+    switch costume to (easy)
+end
+if <(Difficulty) = [2]> then
+    switch costume to (normal)
+end
+if <(Difficulty) = [3]> then
+    switch costume to (hard)
+end
+if <(Difficulty) = [4]> then
+    switch costume to (champion)
+end
+broadcast [swing sfx]
+```
+
+> Tap to change the level: EASY, NORMAL, HARD, CHAMPION. Higher levels give enemies more health (longer fights), harder hits and faster attacks.
+
 ## Story Button
 
 Costumes: button
@@ -3166,6 +3731,32 @@ hide
 ```
 when this sprite clicked
 set [Mode] to [arcade]
+broadcast [choose hero]
+```
+
+## Brawl Button
+
+Costumes: button
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [show title]
+show
+go to [front] layer
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when this sprite clicked
+set [Mode] to [brawl]
 broadcast [choose hero]
 ```
 
@@ -3336,6 +3927,11 @@ hide
 ```
 
 ```
+when I receive [brawl start]
+hide
+```
+
+```
 when this sprite clicked
 hide
 if <(Mode) = [arcade]> then
@@ -3344,7 +3940,12 @@ if <(Mode) = [arcade]> then
     set [Hero HP] to (Hero Max)
 end
 set [Super] to [0]
-broadcast [start fight]
+if <(Mode) = [brawl]> then
+    set [Score] to [0]
+    broadcast [brawl start]
+else
+    broadcast [start fight]
+end
 ```
 
 > Story: try the same chapter again (no talking). Arcade: a new run from wave 1.
@@ -3383,6 +3984,11 @@ hide
 ```
 
 ```
+when I receive [brawl start]
+hide
+```
+
+```
 when this sprite clicked
 hide
 broadcast [show title]
@@ -3402,6 +4008,18 @@ when I receive [fight on]
 go to x: [0] y: [165]
 show
 go to [front] layer
+```
+
+```
+when I receive [brawl go]
+go to x: [0] y: [165]
+show
+go to [front] layer
+```
+
+```
+when I receive [brawl end]
+hide
 ```
 
 ```
@@ -3444,4 +4062,741 @@ broadcast [show title]
 ```
 
 > Back to the title at any time.
+
+## Brawler
+
+Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur special, nova idle, nova punch, nova kick, nova jump, nova hurt, nova special, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko special, rival idle, rival punch, rival kick, rival jump, rival hurt, rival special, ivy idle, ivy punch, ivy kick, ivy jump, ivy hurt, ivy special, brute idle, brute punch, brute kick, brute jump, brute hurt, brute special, quake idle, quake punch, quake kick, quake jump, quake hurt, quake special, shadow idle, shadow punch, shadow kick, shadow jump, shadow hurt, shadow special
+Sprite-only variables: Is Clone, My Id, Kind, X, Y, VX, VY, Ground, Was Ground, Jumps, Stun, Atk CD, Pose Until, Speed, Punch, Kick, Weight, Face, Inv Until, Tgt, Think, Dir, Want Atk, Want Hop, J, Surf, NX, NY, Reach, Power, KB, Move Dir, Move Until, Smash, Best D, D, On Plat, Drop
+
+```
+define (fighter frame)   [run without screen refresh]
+if <(item (My Id) of [B Hit]) > [0]> then
+    if <(Inv Until) > (timer)> then
+        replace item (My Id) of [B Hit] with [0]
+    else
+        replace item (My Id) of [B Dmg] with ((item (My Id) of [B Dmg]) + (item (My Id) of [B Hit]))
+        replace item (My Id) of [B Hit] with [0]
+        set [VX] to ((item (My Id) of [B KX]) / (Weight))
+        set [VY] to ((item (My Id) of [B KY]) / (Weight))
+        set [Stun] to ([8] + ((abs of (VX)) * [1.6]))
+        set [Ground] to [0]
+        switch costume to (join (Kind) [ hurt])
+        set [brightness] effect to [50]
+    end
+end
+set [Want Atk] to [0]
+set [Want Hop] to [0]
+set [Dir] to [0]
+if <<(Brawl On) = [1]> and <not <(Stun) > [0]>>> then
+    if <(My Id) = [1]> then
+        if <(abs of (Joy X)) > [0.2]> then
+            set [Dir] to (Joy X)
+        else
+            if <(timer) < (Move Until)> then
+                set [Dir] to (Move Dir)
+            else
+                set [Dir] to [0]
+            end
+        end
+        if <(Want Jump) = [1]> then
+            set [Want Jump] to [0]
+            set [Want Hop] to [1]
+        end
+        if <<(Joy Y) < [-0.6]> or <(Want Drop) = [1]>> then
+            set [Want Drop] to [0]
+            if <<(Ground) = [1]> and <(On Plat) > (Solid Count)>> then
+                set [Drop] to [8]
+                set [Ground] to [0]
+            end
+        end
+        if <(Want Punch) = [1]> then
+            set [Want Punch] to [0]
+            set [Want Atk] to [1]
+        end
+        if <(Want Kick) = [1]> then
+            set [Want Kick] to [0]
+            set [Want Atk] to [2]
+        end
+        if <(Want Super) = [1]> then
+            set [Want Super] to [0]
+            if <(Super) = [100]> then
+                set [Want Atk] to [3]
+            end
+        end
+        if <(Want Dodge) = [1]> then
+            set [Want Dodge] to [0]
+            set [Inv Until] to ((timer) + [0.45])
+            set [VX] to ((Face) * [-6])
+        end
+        if <<(Fire Held) = [1]> or <key (f) pressed?>> then
+            if <(Charge) < [100]> then
+                change [Charge] by [3.5]
+            end
+            if <(Charge) > [99]> then
+                set [Charge] to [100]
+            end
+            set [Dir] to ((Dir) * [0.4])
+        else
+            if <<(Charge) > [0]> and <(BF Power) = [0]>> then
+                set [BF X] to ((X) + ([20] * (Face)))
+                set [BF Y] to ((Y) + [40])
+                set [BF Dir] to (Face)
+                set [BF Power] to ((Charge) + [1])
+                broadcast [brawl fire]
+                set [Fire Power] to (Charge)
+                broadcast [fire]
+            end
+            set [Charge] to [0]
+        end
+    else
+        if <<<(Tgt) = [0]> or <(pick random [1] to [20]) = [1]>> or <(item (Tgt) of [B Alive]) = [0]>> then
+            set [Best D] to [99999]
+            set [J] to [0]
+            repeat [4]
+                change [J] by [1]
+                if <<not <(J) = (My Id)>> and <(item (J) of [B Alive]) = [1]>> then
+                    set [D] to ((abs of ((item (J) of [B X]) - (X))) + (abs of ((item (J) of [B Y]) - (Y))))
+                    if <(D) < (Best D)> then
+                        set [Best D] to (D)
+                        set [Tgt] to (J)
+                    end
+                end
+            end
+        end
+        set [Dir] to [0]
+        if <<<(X) < [-300]> or <(X) > [300]>> or <(Y) < [-150]>> then
+            if <(X) > [0]> then
+                set [Dir] to [-1]
+            else
+                set [Dir] to [1]
+            end
+            if <<(VY) < [0]> and <(Jumps) < [2]>> then
+                set [Want Hop] to [1]
+            end
+        else
+            if <(Tgt) > [0]> then
+                set [D] to ((item (Tgt) of [B X]) - (X))
+                if <(abs of (D)) > [38]> then
+                    if <(D) > [0]> then
+                        set [Dir] to [1]
+                    else
+                        set [Dir] to [-1]
+                    end
+                end
+                if <((item (Tgt) of [B Y]) - (Y)) > [45]> then
+                    if <<(Ground) = [1]> and <(pick random [1] to [6]) = [1]>> then
+                        set [Want Hop] to [1]
+                    end
+                    if <<<(Ground) = [0]> and <(Jumps) = [1]>> and <(VY) < [1]>> then
+                        set [Want Hop] to [1]
+                    end
+                end
+                if <<((item (Tgt) of [B Y]) - (Y)) < [-50]> and <(pick random [1] to [15]) = [1]>> then
+                    if <<(Ground) = [1]> and <(On Plat) > (Solid Count)>> then
+                        set [Drop] to [8]
+                        set [Ground] to [0]
+                    end
+                end
+                if <<<(abs of (D)) < [48]> and <(abs of ((item (Tgt) of [B Y]) - (Y))) < [45]>> and <(pick random [0.0] to [1.0]) < (Think)>> then
+                    set [Want Atk] to (pick random [1] to [2])
+                end
+            end
+        end
+    end
+end
+if <(Stun) > [0]> then
+    change [Stun] by [-1]
+    set [VX] to ((VX) * [0.96])
+    if <(Stun) < [1]> then
+        set [brightness] effect to [0]
+    end
+else
+    if <(Ground) = [1]> then
+        change [VX] by ((((Dir) * (Speed)) - (VX)) * [0.45])
+    else
+        change [VX] by ((((Dir) * (Speed)) - (VX)) * [0.12])
+    end
+    if <(Dir) > [0.1]> then
+        set [Face] to [1]
+    end
+    if <(Dir) < [-0.1]> then
+        set [Face] to [-1]
+    end
+end
+if <<(Want Hop) = [1]> and <(Jumps) < [2]>> then
+    if <(Jumps) = [0]> then
+        set [VY] to [13.5]
+    else
+        set [VY] to [12]
+    end
+    change [Jumps] by [1]
+    set [Ground] to [0]
+    broadcast [jump sfx]
+end
+if <(Atk CD) > [0]> then
+    change [Atk CD] by [-1]
+end
+if <<(Want Atk) > [0]> and <not <(Atk CD) > [0]>>> then
+    if <(Want Atk) = [1]> then
+        switch costume to (join (Kind) [ punch])
+        set [Reach] to [46]
+        set [Power] to (Punch)
+        if <(My Id) > [1]> then
+            if <(Difficulty) = [1]> then
+                set [Power] to ((Power) * [0.75])
+            end
+            if <(Difficulty) = [2]> then
+                set [Power] to ((Power) * [1])
+            end
+            if <(Difficulty) = [3]> then
+                set [Power] to ((Power) * [1.15])
+            end
+            if <(Difficulty) = [4]> then
+                set [Power] to ((Power) * [1.3])
+            end
+        end
+        set [J] to [0]
+        repeat [4]
+            change [J] by [1]
+            if <<<<<not <(J) = (My Id)>> and <(item (J) of [B Alive]) = [1]>> and <(abs of ((item (J) of [B X]) - (X))) < (Reach)>> and <(abs of ((item (J) of [B Y]) - (Y))) < [50]>> and <(((item (J) of [B X]) - (X)) * (Face)) > [-12]>> then
+                set [KB] to (([3] + ((Power) * [0.5])) + ((((item (J) of [B Dmg]) + (Power)) * (Power)) * [0.019]))
+                replace item (J) of [B Hit] with ((item (J) of [B Hit]) + (Power))
+                replace item (J) of [B KX] with ((Face) * (KB))
+                replace item (J) of [B KY] with (((KB) * [0.6]) + [3])
+                if <(My Id) = [1]> then
+                    if <(Super) < [100]> then
+                        change [Super] by [5]
+                    end
+                    if <(Super) > [100]> then
+                        set [Super] to [100]
+                    end
+                end
+                broadcast [brawl hit]
+            end
+        end
+        set [Atk CD] to [9]
+    end
+    if <(Want Atk) = [2]> then
+        switch costume to (join (Kind) [ kick])
+        set [Reach] to [56]
+        set [Power] to (Kick)
+        if <(My Id) > [1]> then
+            if <(Difficulty) = [1]> then
+                set [Power] to ((Power) * [0.75])
+            end
+            if <(Difficulty) = [2]> then
+                set [Power] to ((Power) * [1])
+            end
+            if <(Difficulty) = [3]> then
+                set [Power] to ((Power) * [1.15])
+            end
+            if <(Difficulty) = [4]> then
+                set [Power] to ((Power) * [1.3])
+            end
+        end
+        set [J] to [0]
+        repeat [4]
+            change [J] by [1]
+            if <<<<<not <(J) = (My Id)>> and <(item (J) of [B Alive]) = [1]>> and <(abs of ((item (J) of [B X]) - (X))) < (Reach)>> and <(abs of ((item (J) of [B Y]) - (Y))) < [50]>> and <(((item (J) of [B X]) - (X)) * (Face)) > [-12]>> then
+                set [KB] to (([3] + ((Power) * [0.5])) + ((((item (J) of [B Dmg]) + (Power)) * (Power)) * [0.019]))
+                replace item (J) of [B Hit] with ((item (J) of [B Hit]) + (Power))
+                replace item (J) of [B KX] with ((Face) * (KB))
+                replace item (J) of [B KY] with (((KB) * [0.6]) + [3])
+                if <(My Id) = [1]> then
+                    if <(Super) < [100]> then
+                        change [Super] by [5]
+                    end
+                    if <(Super) > [100]> then
+                        set [Super] to [100]
+                    end
+                end
+                broadcast [brawl hit]
+            end
+        end
+        set [Atk CD] to [16]
+    end
+    if <(Want Atk) = [3]> then
+        switch costume to (join (Kind) [ special])
+        set [Super] to [0]
+        set [Smash] to [16]
+        set [Reach] to [70]
+        set [Power] to (Smash)
+        set [J] to [0]
+        repeat [4]
+            change [J] by [1]
+            if <<<<<not <(J) = (My Id)>> and <(item (J) of [B Alive]) = [1]>> and <(abs of ((item (J) of [B X]) - (X))) < (Reach)>> and <(abs of ((item (J) of [B Y]) - (Y))) < [50]>> and <(((item (J) of [B X]) - (X)) * (Face)) > [-12]>> then
+                set [KB] to (([3] + ((Power) * [0.5])) + ((((item (J) of [B Dmg]) + (Power)) * (Power)) * [0.019]))
+                replace item (J) of [B Hit] with ((item (J) of [B Hit]) + (Power))
+                replace item (J) of [B KX] with ((Face) * (KB))
+                replace item (J) of [B KY] with (((KB) * [0.6]) + [3])
+                if <(My Id) = [1]> then
+                    if <(Super) < [100]> then
+                        change [Super] by [5]
+                    end
+                    if <(Super) > [100]> then
+                        set [Super] to [100]
+                    end
+                end
+                broadcast [brawl smash]
+            end
+        end
+        set [Atk CD] to [20]
+        set [Pop Text] to [SMASH!]
+        broadcast [popup]
+    end
+    set [Pose Until] to ((timer) + [0.18])
+end
+if <(Drop) > [0]> then
+    change [Drop] by [-1]
+end
+change [VY] by [-1]
+if <(VY) < [-15]> then
+    set [VY] to [-15]
+end
+set [NX] to ((X) + (VX))
+set [NY] to ((Y) + (VY))
+set [Was Ground] to (Ground)
+set [Ground] to [0]
+if <not <(VY) > [0]>> then
+    set [J] to [0]
+    repeat (Plat Count)
+        change [J] by [1]
+        if <<<(Ground) = [0]> and <<not <(NX) < (item (J) of [Plat X1])>> and <not <(NX) > (item (J) of [Plat X2])>>>> and <<not <(Drop) > [0]>> or <not <(J) > (Solid Count)>>>> then
+            set [Surf] to ((item (J) of [Plat Y1]) + (((NX) - (item (J) of [Plat X1])) * (((item (J) of [Plat Y2]) - (item (J) of [Plat Y1])) / ((item (J) of [Plat X2]) - (item (J) of [Plat X1])))))
+            if <<not <(NY) > (Surf)>> and <not <((Y) + [12]) < (Surf)>>> then
+                set [NY] to (Surf)
+                set [VY] to [0]
+                set [Ground] to [1]
+                set [Jumps] to [0]
+                set [On Plat] to (J)
+            else
+                if <<<<(Was Ground) = [1]> and <(NY) > (Surf)>> and <((NY) - (Surf)) < [10]>> and <not <(Stun) > [0]>>> then
+                    set [NY] to (Surf)
+                    set [VY] to [0]
+                    set [Ground] to [1]
+                    set [Jumps] to [0]
+                    set [On Plat] to (J)
+                end
+            end
+        end
+    end
+end
+set [X] to (NX)
+set [Y] to (NY)
+replace item (My Id) of [B X] with (X)
+replace item (My Id) of [B Y] with (Y)
+if <<<(abs of (X)) > [560]> or <(Y) < [-360]>> or <(Y) > [470]>> then
+    set [Pop Text] to [K.O.!]
+    broadcast [popup]
+    broadcast [brawl ko]
+    replace item (My Id) of [B Stock] with ((item (My Id) of [B Stock]) - [1])
+    if <(item (My Id) of [B Stock]) > [0]> then
+        set [X] to (pick random [-80] to [80])
+        set [Y] to [230]
+        set [VX] to [0]
+        set [VY] to [0]
+        set [Stun] to [0]
+        replace item (My Id) of [B Dmg] with [0]
+        set [Inv Until] to ((timer) + [2.5])
+        replace item (My Id) of [B X] with (X)
+        replace item (My Id) of [B Y] with (Y)
+    else
+        replace item (My Id) of [B Alive] with [0]
+        hide
+    end
+end
+if <(timer) > (Pose Until)> then
+    if <(Stun) > [0]> then
+        switch costume to (join (Kind) [ hurt])
+    else
+        if <(Ground) = [1]> then
+            switch costume to (join (Kind) [ idle])
+        else
+            switch costume to (join (Kind) [ jump])
+        end
+    end
+end
+if <(Face) = [1]> then
+    point in direction [90]
+else
+    point in direction [-90]
+end
+if <(Inv Until) > (timer)> then
+    set [ghost] effect to ([40] * ((round ((timer) * [10])) mod [2]))
+else
+    set [ghost] effect to [0]
+end
+set size to ([45] * (Zoom)) %
+go to x: (((X) - (Cam X)) * (Zoom)) y: (((Y) - (Cam Y)) * (Zoom))
+if <(My Id) = [1]> then
+    set [P1 Screen X] to (x position)
+    set [P1 Screen Y] to (y position)
+    set [P1 Screen Size] to (size)
+end
+```
+
+> Everything one fighter does in one frame. It is a custom block with "run without screen refresh" so its loops over fighters and platforms finish in one frame.
+
+```
+when green flag clicked
+hide
+set [Is Clone] to [0]
+```
+
+```
+when I receive [brawl go]
+if <(Is Clone) = [0]> then
+    set [My Id] to [0]
+    repeat [4]
+        change [My Id] by [1]
+        create clone of (myself)
+    end
+end
+```
+
+> Makes the four fighters. Clone 1 is you; 2, 3 and 4 are CPU fighters.
+
+```
+when I start as a clone
+set [Is Clone] to [1]
+set [Kind] to (item (My Id) of [B Kind])
+if <(Kind) = [arthur]> then
+    set [Speed] to [3.4]
+    set [Punch] to [4]
+    set [Kick] to [7]
+    set [Weight] to [1]
+end
+if <(Kind) = [nova]> then
+    set [Speed] to [4.4]
+    set [Punch] to [3]
+    set [Kick] to [6]
+    set [Weight] to [0.85]
+end
+if <(Kind) = [rocko]> then
+    set [Speed] to [2.7]
+    set [Punch] to [5]
+    set [Kick] to [9]
+    set [Weight] to [1.3]
+end
+if <(Kind) = [rival]> then
+    set [Speed] to [3.3]
+    set [Punch] to [4]
+    set [Kick] to [7]
+    set [Weight] to [1]
+end
+if <(Kind) = [ivy]> then
+    set [Speed] to [3.6]
+    set [Punch] to [3]
+    set [Kick] to [6]
+    set [Weight] to [0.9]
+end
+if <(Kind) = [brute]> then
+    set [Speed] to [2.6]
+    set [Punch] to [5]
+    set [Kick] to [9]
+    set [Weight] to [1.35]
+end
+if <(Kind) = [quake]> then
+    set [Speed] to [2.5]
+    set [Punch] to [5]
+    set [Kick] to [10]
+    set [Weight] to [1.4]
+end
+if <(Kind) = [shadow]> then
+    set [Speed] to [3.5]
+    set [Punch] to [5]
+    set [Kick] to [8]
+    set [Weight] to [1.1]
+end
+if <(Difficulty) = [1]> then
+    set [Think] to [0.05]
+end
+if <(Difficulty) = [2]> then
+    set [Think] to [0.11]
+end
+if <(Difficulty) = [3]> then
+    set [Think] to [0.2]
+end
+if <(Difficulty) = [4]> then
+    set [Think] to [0.3]
+end
+set [X] to (((My Id) * [110]) - [275])
+set [Y] to [220]
+set [VX] to [0]
+set [VY] to [0]
+set [Face] to [1]
+if <(X) > [0]> then
+    set [Face] to [-1]
+end
+set [Smash] to [16]
+set [Stun] to [0]
+set [Jumps] to [0]
+if <(My Id) = [1]> then
+    set [Charge] to [0]
+end
+clear graphic effects
+switch costume to (join (Kind) [ jump])
+show
+go to [front] layer
+repeat until <(Brawl Live) = [0]>
+    if <(item (My Id) of [B Alive]) = [1]> then
+        (fighter frame)
+    end
+end
+delete this clone
+```
+
+> One fighter, every frame: 1 take hits (damage % goes up, knockback grows with it), 2 controls or the CPU brain, 3 attacks, 4 gravity and landing on platforms and ramps, 5 flying off the screen loses a life, 6 draw it where the camera sees it.
+
+```
+when I receive [move left]
+if <<(Is Clone) = [1]> and <(My Id) = [1]>> then
+    set [Move Dir] to [-1]
+    set [Move Until] to ((timer) + [0.16])
+end
+```
+
+```
+when I receive [move right]
+if <<(Is Clone) = [1]> and <(My Id) = [1]>> then
+    set [Move Dir] to [1]
+    set [Move Until] to ((timer) + [0.16])
+end
+```
+
+```
+when I receive [brawl clear]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [show title]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [choose hero]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+## Brawl Fireball
+
+Costumes: flame
+Sprite-only variables: J, Done, Power
+
+```
+when green flag clicked
+hide
+set [BF Power] to [0]
+```
+
+```
+when I receive [brawl fire]
+set [Power] to ((BF Power) - [1])
+set [Done] to [0]
+point in direction ([90] * (BF Dir))
+show
+go to [front] layer
+repeat until <<<(Done) = [1]> or <(abs of (BF X)) > [560]>> or <(Brawl Live) = [0]>>
+    (fireball frame)
+end
+hide
+set [BF Power] to [0]
+```
+
+> Your fireball in BRAWL. Bigger charge = more damage and more knockback.
+
+```
+define (fireball frame)   [run without screen refresh]
+change [BF X] by (([8] + ((Power) / [25])) * (BF Dir))
+set size to (([30] + ((Power) * [0.7])) * (Zoom)) %
+go to x: (((BF X) - (Cam X)) * (Zoom)) y: (((BF Y) - (Cam Y)) * (Zoom))
+set [J] to [1]
+repeat [3]
+    change [J] by [1]
+    if <<<<(Done) = [0]> and <(item (J) of [B Alive]) = [1]>> and <(abs of ((item (J) of [B X]) - (BF X))) < [24]>> and <(abs of (((item (J) of [B Y]) + [38]) - (BF Y))) < [44]>> then
+        set [Done] to [1]
+        replace item (J) of [B Hit] with ((item (J) of [B Hit]) + ([3] + (round ((Power) / [10]))))
+        replace item (J) of [B KX] with ((BF Dir) * ([4] + (((Power) * ((item (J) of [B Dmg]) + [20])) / [500])))
+        replace item (J) of [B KY] with ([4] + (((Power) * ((item (J) of [B Dmg]) + [20])) / [800]))
+        if <(Power) > [99]> then
+            broadcast [brawl ko]
+        else
+            broadcast [brawl hit]
+        end
+    end
+end
+```
+
+```
+when I receive [brawl clear]
+hide
+set [BF Power] to [0]
+```
+
+```
+when I receive [show title]
+hide
+set [BF Power] to [0]
+```
+
+## Brawl Platform
+
+Costumes: sky 1, sky 2, sky 3, sky 4, ramps 1, ramps 2, ramps 3, ramps 4, ramps 5, ramps 6, towers 1, towers 2, towers 3, towers 4, towers 5, towers 6, towers 7, towers 8
+Sprite-only variables: Is Clone, My Id, Stage Key
+
+```
+when green flag clicked
+hide
+set [Is Clone] to [0]
+```
+
+```
+when I receive [brawl go]
+if <(Is Clone) = [0]> then
+    if <(Brawl Stage) = [1]> then
+        set [Stage Key] to [sky]
+    end
+    if <(Brawl Stage) = [2]> then
+        set [Stage Key] to [ramps]
+    end
+    if <(Brawl Stage) = [3]> then
+        set [Stage Key] to [towers]
+    end
+    set [My Id] to [0]
+    repeat (Plat Count)
+        change [My Id] by [1]
+        create clone of (myself)
+    end
+end
+```
+
+```
+when I start as a clone
+set [Is Clone] to [1]
+switch costume to (join (Stage Key) (join [ ] (My Id)))
+show
+repeat until <(Brawl Live) = [0]>
+    set size to ([100] * (Zoom)) %
+    go to x: (((item (My Id) of [Plat X1]) - (Cam X)) * (Zoom)) y: (((item (My Id) of [Plat Y1]) - (Cam Y)) * (Zoom))
+end
+delete this clone
+```
+
+> Each platform or ramp is a clone that redraws itself where the camera sees it.
+
+```
+when I receive [brawl clear]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [show title]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [choose hero]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+## Brawl HUD
+
+Costumes: arthur 0, arthur 1, arthur 2, arthur 3, nova 0, nova 1, nova 2, nova 3, rocko 0, rocko 1, rocko 2, rocko 3, rival 0, rival 1, rival 2, rival 3, ivy 0, ivy 1, ivy 2, ivy 3, brute 0, brute 1, brute 2, brute 3, quake 0, quake 1, quake 2, quake 3, shadow 0, shadow 1, shadow 2, shadow 3
+Sprite-only variables: Is Clone, My Id
+
+```
+when green flag clicked
+hide
+set [Is Clone] to [0]
+```
+
+```
+when I receive [brawl go]
+if <(Is Clone) = [0]> then
+    set [My Id] to [0]
+    change [My Id] by [1]
+    go to x: [-184] y: [159]
+    create clone of (myself)
+    change [My Id] by [1]
+    go to x: [-78] y: [159]
+    create clone of (myself)
+    change [My Id] by [1]
+    go to x: [74] y: [159]
+    create clone of (myself)
+    change [My Id] by [1]
+    go to x: [180] y: [159]
+    create clone of (myself)
+end
+```
+
+```
+when I start as a clone
+set [Is Clone] to [1]
+show
+repeat until <(Brawl Live) = [0]>
+    switch costume to (join (item (My Id) of [B Kind]) (join [ ] (item (My Id) of [B Stock])))
+    if <(item (My Id) of [B Alive]) = [1]> then
+        set [ghost] effect to [0]
+    else
+        set [ghost] effect to [60]
+    end
+end
+delete this clone
+```
+
+> Name and lives (dots) for each fighter. The big number next to it is their damage %.
+
+```
+when I receive [brawl clear]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [show title]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [choose hero]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+## P1 Marker
+
+Costumes: arrow
+
+```
+when green flag clicked
+hide
+forever
+    if <<(Brawl Live) = [1]> and <(item [1] of [B Alive]) = [1]>> then
+        go to x: (P1 Screen X) y: ((P1 Screen Y) + ((P1 Screen Size) * [2.05]))
+        show
+        go to [front] layer
+    else
+        hide
+    end
+end
+```
+
+> The yellow P1 arrow shows which fighter is you.
 

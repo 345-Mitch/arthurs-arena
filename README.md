@@ -6,6 +6,8 @@ Arthur's stickman fighting game, built in Scratch, with an Android tablet in min
 
 `projects/arthurs-arena-legends.sb3` is the full game:
 
+- **BRAWL mode** (like a platform fighter): four fighters at once on stages with platforms and ramps, a camera that follows and zooms, damage %, knock-outs and lives.
+- **Levels**: EASY, NORMAL, HARD and CHAMPION. NORMAL makes fights about twice as long as before.
 - **Story mode**: seven chapters to win back the Golden Crown from the Shadow King, with talking scenes you can skip.
 - **Arcade mode**: endless waves that get harder, with a score and a best score.
 - **Three fighters**: Arthur, Nova and Rocko, each with their own speed, power, health and SUPER move.

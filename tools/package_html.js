@@ -22,14 +22,15 @@ const OUT = process.argv[2] || path.join(ROOT, 'dist', 'arthurs-arena.html');
 const SAVE_JS = `
 (function () {
     var KEY = 'arthurs-arena-legends-save';
-    var KEEP = ['Best', 'Crown'];
+    var KEEP = ['Best', 'Crown'];   // keep the highest
+    var LAST = ['Difficulty'];      // keep the last choice
     function stageVars () {
         var stage = vm.runtime.getTargetForStage && vm.runtime.getTargetForStage();
         if (!stage) return null;
         var out = {};
         Object.keys(stage.variables).forEach(function (id) {
             var v = stage.variables[id];
-            if (KEEP.indexOf(v.name) !== -1) out[v.name] = v;
+            if (KEEP.indexOf(v.name) !== -1 || LAST.indexOf(v.name) !== -1) out[v.name] = v;
         });
         return out;
     }
@@ -44,12 +45,21 @@ const SAVE_JS = `
             KEEP.forEach(function (name) {
                 if (vars[name] && Number(saved[name]) > Number(vars[name].value)) vars[name].value = Number(saved[name]);
             });
+            LAST.forEach(function (name) {
+                if (vars[name] && saved[name] !== undefined) vars[name].value = saved[name];
+            });
             return;
         }
         var changed = false;
         KEEP.forEach(function (name) {
             if (vars[name] && Number(vars[name].value) > Number(saved[name] || 0)) {
                 saved[name] = Number(vars[name].value);
+                changed = true;
+            }
+        });
+        LAST.forEach(function (name) {
+            if (vars[name] && String(vars[name].value) !== String(saved[name])) {
+                saved[name] = vars[name].value;
                 changed = true;
             }
         });
@@ -166,6 +176,7 @@ const PAD_JS = `
         if (d > R) { dx = dx * R / d; dy = dy * R / d; }
         knob.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
         set('Joy X', Math.round(dx / R * 100) / 100);
+        set('Joy Y', Math.round(-up / R * 100) / 100); // BRAWL: push down to drop through a platform
         // flick the stick up to jump (measured before the knob is held to its ring,
         // so walking sideways and flicking up still jumps)
         if (up < -0.6 * R && jumpArmed) { set('Want Jump', 1); jumpArmed = false; buzz(); }
@@ -187,6 +198,7 @@ const PAD_JS = `
         if (e.pointerId !== held) return;
         held = null;
         set('Joy X', 0);
+        set('Joy Y', 0);
         jumpArmed = true;
         home();
     }
@@ -199,7 +211,7 @@ const PAD_JS = `
     (function tick () {
         if (get('State') !== null) {
             set('Touch Pad', 1);
-            var fighting = get('State') === 'fight';
+            var fighting = get('State') === 'fight' || get('State') === 'brawl';
             if (fighting !== pad.classList.contains('on')) {
                 pad.classList.toggle('on', fighting);
                 if (!fighting) { set('Joy X', 0); held = null; }
@@ -222,6 +234,7 @@ const PAD_JS = `
     const o = packager.options;
     o.autoplay = true;               // no green flag to tap: the title shows straight away
     o.framerate = 30;
+    o.fencing = false;               // BRAWL's camera moves platforms past the screen edge; don't push them back in
     o.resizeMode = 'preserve-ratio';
     o.appearance.background = '#000000';
     o.appearance.accent = '#facc15';
