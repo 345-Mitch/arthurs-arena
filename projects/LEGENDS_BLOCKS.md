@@ -1003,7 +1003,7 @@ start sound (scribble)
 ```
 when I receive [ki rise]
 start sound (ki roar)
-repeat [7]
+repeat ([5] + ([2] * (Power Level)))
     broadcast [shake]
     wait [0.17] seconds
 end
@@ -1738,7 +1738,7 @@ hide variable [P4 %]
 
 ## Debris
 
-Costumes: rock 1, rock 2
+Costumes: rock 1, rock 2, boulder
 Sprite-only variables: Is Clone, Rise
 
 ```
@@ -1750,21 +1750,21 @@ set [Is Clone] to [0]
 ```
 when I receive [ki rise]
 if <(Is Clone) = [0]> then
-    repeat [14]
-        go to x: ((Hero X) + (pick random [-95] to [95])) y: ([-75] + (pick random [-4] to [4]))
+    repeat ([6] + ([4] * (Power Level)))
+        go to x: ((Hero X) + (pick random ([-1] * ([80] + ([18] * (Power Level)))) to ([80] + ([18] * (Power Level))))) y: ([-75] + (pick random [-4] to [4]))
         create clone of (myself)
-        wait [0.07] seconds
+        wait [0.04] seconds
     end
 end
 ```
 
-> Rocks float up off the ground while you power up.
+> Rocks rip out of the ground while you power up. The higher your power level, the more rocks, the further out they come from, and from level 2 some are big boulders.
 
 ```
 when I receive [ki flare]
 if <(Is Clone) = [0]> then
     repeat [5]
-        go to x: ((Hero X) + (pick random [-95] to [95])) y: ([-75] + (pick random [-4] to [4]))
+        go to x: ((Hero X) + (pick random ([-1] * ([80] + ([18] * (Power Level)))) to ([80] + ([18] * (Power Level))))) y: ([-75] + (pick random [-4] to [4]))
         create clone of (myself)
         wait [0.07] seconds
     end
@@ -1774,19 +1774,34 @@ end
 ```
 when I start as a clone
 set [Is Clone] to [1]
-if <(pick random [1] to [2]) = [1]> then
-    switch costume to (rock 1)
+set [ghost] effect to [0]
+if <(pick random [1] to [6]) < (Power Level)> then
+    switch costume to (boulder)
+    set size to (pick random [55] to ([70] + ([14] * (Power Level)))) %
+    set [Rise] to (pick random [2] to ([2] + (Power Level)))
+    show
+    go to [front] layer
+    repeat [3]
+        change x by [3]
+        wait [0.03] seconds
+        change x by [-3]
+        wait [0.03] seconds
+    end
 else
-    switch costume to (rock 2)
+    if <(pick random [1] to [2]) = [1]> then
+        switch costume to (rock 1)
+    else
+        switch costume to (rock 2)
+    end
+    set size to (pick random [40] to [95]) %
+    set [Rise] to (pick random [2] to ([4] + (Power Level)))
+    show
+    go to [front] layer
 end
-set size to (pick random [40] to [95]) %
-set [Rise] to (pick random [2] to [5])
-show
-go to [front] layer
-repeat [20]
+repeat ([18] + ([3] * (Power Level)))
     change y by (Rise)
     change x by (pick random [-1] to [1])
-    turn right [9] degrees
+    turn right (pick random [3] to [11]) degrees
     wait [0.04] seconds
 end
 repeat [6]
@@ -1824,6 +1839,177 @@ if <(Is Clone) = [1]> then
     delete this clone
 end
 ```
+
+## Ground Crack
+
+Costumes: crack 1, crack 2, crack 3
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [ki rise]
+if <(Power Level) > [1]> then
+    if <(Power Level) > [3]> then
+        switch costume to (crack 3)
+    else
+        if <(Power Level) > [2]> then
+            switch costume to (crack 2)
+        else
+            switch costume to (crack 1)
+        end
+    end
+    go to x: (Hero X) y: ([-75] - [4])
+    set size to [30] %
+    set [ghost] effect to [0]
+    show
+    go to [back] layer
+    repeat [10]
+        change size by ([5] + ([2] * (Power Level)))
+        wait [0.04] seconds
+    end
+    wait ([0.6] + ([0.2] * (Power Level))) seconds
+    repeat [10]
+        change [ghost] effect by [10]
+        wait [0.04] seconds
+    end
+    hide
+end
+```
+
+> From power level 2 the ground cracks open under you. It gets wider every level.
+
+```
+when I receive [show title]
+hide
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when I receive [story scene]
+hide
+```
+
+```
+when I receive [brawl clear]
+hide
+```
+
+```
+when I receive [brawl start]
+hide
+```
+
+## Shockwave
+
+Costumes: ring
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [shockwave]
+go to x: (Hero X) y: ([-75] + [6])
+set size to [20] %
+set [ghost] effect to [0]
+show
+go to [front] layer
+repeat [14]
+    change size by ([8] + ([4] * (Power Level)))
+    change [ghost] effect by [7]
+    wait [0.03] seconds
+end
+hide
+```
+
+> A ring of power blasts out along the ground (power level 2 and up, and when you transform).
+
+```
+when I receive [show title]
+hide
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when I receive [story scene]
+hide
+```
+
+```
+when I receive [brawl clear]
+hide
+```
+
+```
+when I receive [brawl start]
+hide
+```
+
+## Swirl
+
+Costumes: swirl 1, swirl 2
+
+```
+when green flag clicked
+hide
+set [ghost] effect to [15]
+forever
+    if <<(Swirl On) = [1]> and <(State) = [fight]>> then
+        go to x: (Hero X) y: ((Hero Y) + [40])
+        if <((round ((timer) * [20])) mod [2]) = [0]> then
+            switch costume to (swirl 1)
+        else
+            switch costume to (swirl 2)
+        end
+        show
+        go to [front] layer
+    else
+        hide
+    end
+end
+```
+
+> Whirling motion lines round the WHIRLWIND and HELICOPTER KICKs.
+
+## Power Fist
+
+Costumes: punch, kick
+
+```
+when green flag clicked
+hide
+forever
+    if <<(Melee Charge) > [0]> and <(State) = [fight]>> then
+        go to x: ((Hero X) + ((Glow DX) * (Facing))) y: ((Hero Y) + (Glow DY))
+        switch costume to (Glow Kind)
+        set size to ([25] + ((Melee Charge) * [0.75])) %
+        turn right [15] degrees
+        if <(Melee Charge) = [100]> then
+            set [brightness] effect to ([35] * ((round ((timer) * [10])) mod [2]))
+        else
+            set [brightness] effect to [0]
+        end
+        show
+        go to [front] layer
+    else
+        hide
+    end
+end
+```
+
+> Hold PUNCH or KICK: power gathers in your fist (gold) or foot (blue) and grows until you let go.
 
 ## Sketch
 
@@ -2196,8 +2382,8 @@ go to x: [0] y: [-80]
 
 ## Hero
 
-Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur win, arthur dodge, arthur special, arthur down, arthur charge, arthur idle b, arthur walk 1, arthur walk 2, arthur walk 3, arthur walk 4, arthur punch 1, arthur kick 1, arthur hurt high, arthur charge up, arthur spin 1, arthur spin 2, arthur spin 3, arthur spin 4, arthur flip 1, arthur flip 2, arthur flip 3, arthur flip 4, arthur gold idle, arthur gold punch, arthur gold kick, arthur gold jump, arthur gold hurt, arthur gold win, arthur gold dodge, arthur gold special, arthur gold down, arthur gold charge, arthur gold idle b, arthur gold walk 1, arthur gold walk 2, arthur gold walk 3, arthur gold walk 4, arthur gold punch 1, arthur gold kick 1, arthur gold hurt high, arthur gold charge up, arthur gold spin 1, arthur gold spin 2, arthur gold spin 3, arthur gold spin 4, arthur gold flip 1, arthur gold flip 2, arthur gold flip 3, arthur gold flip 4, arthur silver idle, arthur silver punch, arthur silver kick, arthur silver jump, arthur silver hurt, arthur silver win, arthur silver dodge, arthur silver special, arthur silver down, arthur silver charge, arthur silver idle b, arthur silver walk 1, arthur silver walk 2, arthur silver walk 3, arthur silver walk 4, arthur silver punch 1, arthur silver kick 1, arthur silver hurt high, arthur silver charge up, arthur silver spin 1, arthur silver spin 2, arthur silver spin 3, arthur silver spin 4, arthur silver flip 1, arthur silver flip 2, arthur silver flip 3, arthur silver flip 4, nova idle, nova punch, nova kick, nova jump, nova hurt, nova win, nova dodge, nova special, nova down, nova charge, nova idle b, nova walk 1, nova walk 2, nova walk 3, nova walk 4, nova punch 1, nova kick 1, nova hurt high, nova charge up, nova spin 1, nova spin 2, nova spin 3, nova spin 4, nova flip 1, nova flip 2, nova flip 3, nova flip 4, nova gold idle, nova gold punch, nova gold kick, nova gold jump, nova gold hurt, nova gold win, nova gold dodge, nova gold special, nova gold down, nova gold charge, nova gold idle b, nova gold walk 1, nova gold walk 2, nova gold walk 3, nova gold walk 4, nova gold punch 1, nova gold kick 1, nova gold hurt high, nova gold charge up, nova gold spin 1, nova gold spin 2, nova gold spin 3, nova gold spin 4, nova gold flip 1, nova gold flip 2, nova gold flip 3, nova gold flip 4, nova silver idle, nova silver punch, nova silver kick, nova silver jump, nova silver hurt, nova silver win, nova silver dodge, nova silver special, nova silver down, nova silver charge, nova silver idle b, nova silver walk 1, nova silver walk 2, nova silver walk 3, nova silver walk 4, nova silver punch 1, nova silver kick 1, nova silver hurt high, nova silver charge up, nova silver spin 1, nova silver spin 2, nova silver spin 3, nova silver spin 4, nova silver flip 1, nova silver flip 2, nova silver flip 3, nova silver flip 4, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko win, rocko dodge, rocko special, rocko down, rocko charge, rocko idle b, rocko walk 1, rocko walk 2, rocko walk 3, rocko walk 4, rocko punch 1, rocko kick 1, rocko hurt high, rocko charge up, rocko spin 1, rocko spin 2, rocko spin 3, rocko spin 4, rocko flip 1, rocko flip 2, rocko flip 3, rocko flip 4, rocko gold idle, rocko gold punch, rocko gold kick, rocko gold jump, rocko gold hurt, rocko gold win, rocko gold dodge, rocko gold special, rocko gold down, rocko gold charge, rocko gold idle b, rocko gold walk 1, rocko gold walk 2, rocko gold walk 3, rocko gold walk 4, rocko gold punch 1, rocko gold kick 1, rocko gold hurt high, rocko gold charge up, rocko gold spin 1, rocko gold spin 2, rocko gold spin 3, rocko gold spin 4, rocko gold flip 1, rocko gold flip 2, rocko gold flip 3, rocko gold flip 4, rocko silver idle, rocko silver punch, rocko silver kick, rocko silver jump, rocko silver hurt, rocko silver win, rocko silver dodge, rocko silver special, rocko silver down, rocko silver charge, rocko silver idle b, rocko silver walk 1, rocko silver walk 2, rocko silver walk 3, rocko silver walk 4, rocko silver punch 1, rocko silver kick 1, rocko silver hurt high, rocko silver charge up, rocko silver spin 1, rocko silver spin 2, rocko silver spin 3, rocko silver spin 4, rocko silver flip 1, rocko silver flip 2, rocko silver flip 3, rocko silver flip 4
-Sprite-only variables: Last X, HVY, Spin, Jumps, Flip, Look, Line Until
+Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur win, arthur dodge, arthur special, arthur down, arthur charge, arthur idle b, arthur walk 1, arthur walk 2, arthur walk 3, arthur walk 4, arthur punch 1, arthur kick 1, arthur hurt high, arthur charge up, arthur spin 1, arthur spin 2, arthur spin 3, arthur spin 4, arthur heli 1, arthur heli 2, arthur heli 3, arthur heli 4, arthur sky kick, arthur windup, arthur flip 1, arthur flip 2, arthur flip 3, arthur flip 4, arthur gold idle, arthur gold punch, arthur gold kick, arthur gold jump, arthur gold hurt, arthur gold win, arthur gold dodge, arthur gold special, arthur gold down, arthur gold charge, arthur gold idle b, arthur gold walk 1, arthur gold walk 2, arthur gold walk 3, arthur gold walk 4, arthur gold punch 1, arthur gold kick 1, arthur gold hurt high, arthur gold charge up, arthur gold spin 1, arthur gold spin 2, arthur gold spin 3, arthur gold spin 4, arthur gold heli 1, arthur gold heli 2, arthur gold heli 3, arthur gold heli 4, arthur gold sky kick, arthur gold windup, arthur gold flip 1, arthur gold flip 2, arthur gold flip 3, arthur gold flip 4, arthur silver idle, arthur silver punch, arthur silver kick, arthur silver jump, arthur silver hurt, arthur silver win, arthur silver dodge, arthur silver special, arthur silver down, arthur silver charge, arthur silver idle b, arthur silver walk 1, arthur silver walk 2, arthur silver walk 3, arthur silver walk 4, arthur silver punch 1, arthur silver kick 1, arthur silver hurt high, arthur silver charge up, arthur silver spin 1, arthur silver spin 2, arthur silver spin 3, arthur silver spin 4, arthur silver heli 1, arthur silver heli 2, arthur silver heli 3, arthur silver heli 4, arthur silver sky kick, arthur silver windup, arthur silver flip 1, arthur silver flip 2, arthur silver flip 3, arthur silver flip 4, nova idle, nova punch, nova kick, nova jump, nova hurt, nova win, nova dodge, nova special, nova down, nova charge, nova idle b, nova walk 1, nova walk 2, nova walk 3, nova walk 4, nova punch 1, nova kick 1, nova hurt high, nova charge up, nova spin 1, nova spin 2, nova spin 3, nova spin 4, nova heli 1, nova heli 2, nova heli 3, nova heli 4, nova sky kick, nova windup, nova flip 1, nova flip 2, nova flip 3, nova flip 4, nova gold idle, nova gold punch, nova gold kick, nova gold jump, nova gold hurt, nova gold win, nova gold dodge, nova gold special, nova gold down, nova gold charge, nova gold idle b, nova gold walk 1, nova gold walk 2, nova gold walk 3, nova gold walk 4, nova gold punch 1, nova gold kick 1, nova gold hurt high, nova gold charge up, nova gold spin 1, nova gold spin 2, nova gold spin 3, nova gold spin 4, nova gold heli 1, nova gold heli 2, nova gold heli 3, nova gold heli 4, nova gold sky kick, nova gold windup, nova gold flip 1, nova gold flip 2, nova gold flip 3, nova gold flip 4, nova silver idle, nova silver punch, nova silver kick, nova silver jump, nova silver hurt, nova silver win, nova silver dodge, nova silver special, nova silver down, nova silver charge, nova silver idle b, nova silver walk 1, nova silver walk 2, nova silver walk 3, nova silver walk 4, nova silver punch 1, nova silver kick 1, nova silver hurt high, nova silver charge up, nova silver spin 1, nova silver spin 2, nova silver spin 3, nova silver spin 4, nova silver heli 1, nova silver heli 2, nova silver heli 3, nova silver heli 4, nova silver sky kick, nova silver windup, nova silver flip 1, nova silver flip 2, nova silver flip 3, nova silver flip 4, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko win, rocko dodge, rocko special, rocko down, rocko charge, rocko idle b, rocko walk 1, rocko walk 2, rocko walk 3, rocko walk 4, rocko punch 1, rocko kick 1, rocko hurt high, rocko charge up, rocko spin 1, rocko spin 2, rocko spin 3, rocko spin 4, rocko heli 1, rocko heli 2, rocko heli 3, rocko heli 4, rocko sky kick, rocko windup, rocko flip 1, rocko flip 2, rocko flip 3, rocko flip 4, rocko gold idle, rocko gold punch, rocko gold kick, rocko gold jump, rocko gold hurt, rocko gold win, rocko gold dodge, rocko gold special, rocko gold down, rocko gold charge, rocko gold idle b, rocko gold walk 1, rocko gold walk 2, rocko gold walk 3, rocko gold walk 4, rocko gold punch 1, rocko gold kick 1, rocko gold hurt high, rocko gold charge up, rocko gold spin 1, rocko gold spin 2, rocko gold spin 3, rocko gold spin 4, rocko gold heli 1, rocko gold heli 2, rocko gold heli 3, rocko gold heli 4, rocko gold sky kick, rocko gold windup, rocko gold flip 1, rocko gold flip 2, rocko gold flip 3, rocko gold flip 4, rocko silver idle, rocko silver punch, rocko silver kick, rocko silver jump, rocko silver hurt, rocko silver win, rocko silver dodge, rocko silver special, rocko silver down, rocko silver charge, rocko silver idle b, rocko silver walk 1, rocko silver walk 2, rocko silver walk 3, rocko silver walk 4, rocko silver punch 1, rocko silver kick 1, rocko silver hurt high, rocko silver charge up, rocko silver spin 1, rocko silver spin 2, rocko silver spin 3, rocko silver spin 4, rocko silver heli 1, rocko silver heli 2, rocko silver heli 3, rocko silver heli 4, rocko silver sky kick, rocko silver windup, rocko silver flip 1, rocko silver flip 2, rocko silver flip 3, rocko silver flip 4
+Sprite-only variables: Last X, HVY, Spin, Jumps, Flip, Look, Hold Until, Line Until
 
 ```
 when green flag clicked
@@ -2446,76 +2632,296 @@ forever
         end
         if <<(Want Punch) = [1]> and <(Hero Lock) = [0]>> then
             set [Want Punch] to [0]
-            switch costume to (join (Hero Look) [ punch 1])
-            wait [0.06] seconds
-            switch costume to (join (Hero Look) [ punch])
-            if <<(Weapon) = [boomerang]> and <(Boomerang Out) = [0]>> then
-                set [Boomerang Out] to [1]
-                change [Weapon Uses] by [-1]
-                broadcast [throw boomerang]
-                broadcast [swing sfx]
-            else
-                set [Hit Power] to ((Punch Power) + (Weapon Bonus))
-                if <(Weapon Bonus) > [0]> then
-                    change [Weapon Uses] by [-1]
-                    broadcast [swing]
-                else
-                    broadcast [swing sfx]
-                end
-                if <(abs of ((Enemy X) - (Hero X))) < (([70] + (Weapon Reach)) + (Enemy Body))> then
-                    if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
-                        broadcast [spike ouch]
-                    else
-                        broadcast [hero hits]
-                        if <(Weapon) = [hammer]> then
-                            broadcast [shake]
+            set [Hold Until] to ((timer) + [0.22])
+            repeat until <<<not <<(Punch Held) = [1]> or <key (z) pressed?>>> or <(timer) > (Hold Until)>> or <(Fight On) = [0]>>
+            end
+            if <<<(Punch Held) = [1]> or <key (z) pressed?>> and <(Fight On) = [1]>> then
+                set [Hero Lock] to [1]
+                set [Melee Charge] to [1]
+                set [Glow Kind] to [punch]
+                set [Glow DX] to [-20]
+                set [Glow DY] to [84]
+                switch costume to (join (Hero Look) [ windup])
+                broadcast [charge start]
+                repeat until <<not <<(Punch Held) = [1]> or <key (z) pressed?>>> or <(Fight On) = [0]>>
+                    if <(Melee Charge) < [100]> then
+                        change [Melee Charge] by [3]
+                        if <not <(Melee Charge) < [100]>> then
+                            set [Melee Charge] to [100]
+                            broadcast [charge full]
                         end
                     end
+                    change x by (((((round ((timer) * [30])) mod [2]) * [2]) - [1]) * ((Melee Charge) / [40]))
                 end
-                if <(Minions) > [0]> then
-                    set [Area X] to ((Hero X) + ((Facing) * [38.5]))
-                    set [Area R] to [38.5]
-                    set [Area Power] to (Hit Power)
-                    set [Area Kind] to [hit]
-                    broadcast [area hit]
+                if <(Fight On) = [1]> then
+                    set [Hit Power] to (((Punch Power) + (Weapon Bonus)) + (round ((Melee Charge) / [9])))
+                    set [Pop Text] to [METEOR PUNCH!]
+                    broadcast [popup]
+                    broadcast [whirl sfx]
+                    set [Glow DX] to [36]
+                    set [Glow DY] to [74]
+                    switch costume to (join (Hero Look) [ punch])
+                    repeat [6]
+                        move ([4] + ((Melee Charge) / [12])) steps
+                        if <(x position) < [-215]> then
+                            set x to [-215]
+                        end
+                        if <(x position) > [215]> then
+                            set x to [215]
+                        end
+                    end
+                    if <(Weapon Bonus) > [0]> then
+                        change [Weapon Uses] by [-1]
+                        broadcast [swing]
+                    else
+                        broadcast [swing sfx]
+                    end
+                    if <(abs of ((Enemy X) - (Hero X))) < (([80] + (Weapon Reach)) + (Enemy Body))> then
+                        if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
+                            broadcast [spike ouch]
+                        else
+                            broadcast [hero hits]
+                            if <(Weapon) = [hammer]> then
+                                broadcast [shake]
+                            end
+                        end
+                    end
+                    if <(Minions) > [0]> then
+                        set [Area X] to ((Hero X) + ((Facing) * [49]))
+                        set [Area R] to [49]
+                        set [Area Power] to (Hit Power)
+                        set [Area Kind] to [hit]
+                        broadcast [area hit]
+                    end
+                    if <(Melee Charge) = [100]> then
+                        broadcast [shake]
+                        broadcast [ki flare]
+                    end
+                    wait [0.25] seconds
                 end
-            end
-            wait [0.16] seconds
-            if <<<not <(Weapon) = [none]>> and <(Weapon Uses) < [1]>> and <(Boomerang Out) = [0]>> then
-                broadcast [weapon break]
-            end
-            if <(Hero Air) = [1]> then
-                switch costume to (join (Hero Look) [ jump])
+                set [Melee Charge] to [0]
+                if <<<not <(Weapon) = [none]>> and <(Weapon Uses) < [1]>> and <(Boomerang Out) = [0]>> then
+                    broadcast [weapon break]
+                end
+                if <(Hero Air) = [1]> then
+                    switch costume to (join (Hero Look) [ jump])
+                else
+                    switch costume to (join (Hero Look) [ idle])
+                end
+                set [Hero Lock] to [0]
+                wait until <not <<(Punch Held) = [1]> or <key (z) pressed?>>>
+                set [Punch Held] to [0]
+                set [Want Punch] to [0]
             else
-                switch costume to (join (Hero Look) [ idle])
+                switch costume to (join (Hero Look) [ punch 1])
+                wait [0.06] seconds
+                switch costume to (join (Hero Look) [ punch])
+                if <<(Weapon) = [boomerang]> and <(Boomerang Out) = [0]>> then
+                    set [Boomerang Out] to [1]
+                    change [Weapon Uses] by [-1]
+                    broadcast [throw boomerang]
+                    broadcast [swing sfx]
+                else
+                    set [Hit Power] to ((Punch Power) + (Weapon Bonus))
+                    if <(Weapon Bonus) > [0]> then
+                        change [Weapon Uses] by [-1]
+                        broadcast [swing]
+                    else
+                        broadcast [swing sfx]
+                    end
+                    if <(abs of ((Enemy X) - (Hero X))) < (([70] + (Weapon Reach)) + (Enemy Body))> then
+                        if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
+                            broadcast [spike ouch]
+                        else
+                            broadcast [hero hits]
+                            if <(Weapon) = [hammer]> then
+                                broadcast [shake]
+                            end
+                        end
+                    end
+                    if <(Minions) > [0]> then
+                        set [Area X] to ((Hero X) + ((Facing) * [38.5]))
+                        set [Area R] to [38.5]
+                        set [Area Power] to (Hit Power)
+                        set [Area Kind] to [hit]
+                        broadcast [area hit]
+                    end
+                end
+                wait [0.16] seconds
+                if <<<not <(Weapon) = [none]>> and <(Weapon Uses) < [1]>> and <(Boomerang Out) = [0]>> then
+                    broadcast [weapon break]
+                end
+                if <(Hero Air) = [1]> then
+                    switch costume to (join (Hero Look) [ jump])
+                else
+                    switch costume to (join (Hero Look) [ idle])
+                end
             end
         end
         if <<(Want Kick) = [1]> and <(Hero Lock) = [0]>> then
             set [Want Kick] to [0]
             if <<((timer) - (Kick At)) < [0.6]> and <(timer) > (Whirl Ready At)>> then
                 set [Kick At] to [0]
-                set [Hero Lock] to [1]
-                set [Whirl Ready At] to ((timer) + [1.2])
-                set [Pop Text] to [WHIRLWIND KICK!]
-                broadcast [popup]
-                broadcast [whirl sfx]
-                if <(Hero Air) = [0]> then
-                    change y by [16]
+                if <(Hero Air) = [1]> then
+                    set [Hero Lock] to [1]
+                    set [Whirl Ready At] to ((timer) + [1.2])
+                    set [Pop Text] to [HELICOPTER KICK!]
+                    broadcast [popup]
+                    broadcast [whirl sfx]
+                    set [HVY] to [7]
+                    set [Jumps] to [2]
+                    set [Flip] to [0]
+                    set [Spin] to [0]
+                    set [Swirl On] to [1]
+                    repeat until <<<(Spin) > [30]> or <(Hero Air) = [0]>> or <(Fight On) = [0]>>
+                        change [Spin] by [1]
+                        switch costume to (join (Hero Look) (join [ heli ] (((Spin) mod [4]) + [1])))
+                        if <(HVY) < [-1]> then
+                            set [HVY] to [-1]
+                        end
+                        move [5] steps
+                        if <(x position) < [-215]> then
+                            set x to [-215]
+                        end
+                        if <(x position) > [215]> then
+                            set x to [215]
+                        end
+                        if <((Spin) mod [5]) = [1]> then
+                            set [Hit Power] to [3]
+                            if <(abs of ((Enemy X) - (Hero X))) < ([70] + (Enemy Body))> then
+                                if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
+                                    broadcast [spike ouch]
+                                else
+                                    broadcast [hero hits]
+                                    if <(Weapon) = [hammer]> then
+                                        broadcast [shake]
+                                    end
+                                end
+                            end
+                            if <(Minions) > [0]> then
+                                set [Area X] to (Hero X)
+                                set [Area R] to [70]
+                                set [Area Power] to [3]
+                                set [Area Kind] to [hit]
+                                broadcast [area hit]
+                            end
+                        end
+                        if <((Spin) mod [10]) = [0]> then
+                            broadcast [whirl sfx]
+                        end
+                    end
+                    set [Swirl On] to [0]
+                    if <(Hero Air) = [1]> then
+                        switch costume to (join (Hero Look) [ jump])
+                    else
+                        switch costume to (join (Hero Look) [ idle])
+                    end
+                    set [Hero Lock] to [0]
+                else
+                    set [Hero Lock] to [1]
+                    set [Whirl Ready At] to ((timer) + [1.2])
+                    set [Pop Text] to [WHIRLWIND KICK!]
+                    broadcast [popup]
+                    broadcast [whirl sfx]
+                    if <(Hero Air) = [0]> then
+                        change y by [16]
+                    end
+                    set [Spin] to [0]
+                    set [Swirl On] to [1]
+                    repeat [15]
+                        change [Spin] by [1]
+                        switch costume to (join (Hero Look) (join [ spin ] (((floor of ((Spin) / [2])) mod [4]) + [1])))
+                        move [7] steps
+                        if <(x position) < [-215]> then
+                            set x to [-215]
+                        end
+                        if <(x position) > [215]> then
+                            set x to [215]
+                        end
+                        if <((Spin) mod [5]) = [1]> then
+                            set [Hit Power] to [4]
+                            if <(abs of ((Enemy X) - (Hero X))) < ([64] + (Enemy Body))> then
+                                if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
+                                    broadcast [spike ouch]
+                                else
+                                    broadcast [hero hits]
+                                    if <(Weapon) = [hammer]> then
+                                        broadcast [shake]
+                                    end
+                                end
+                            end
+                            if <(Minions) > [0]> then
+                                set [Area X] to (Hero X)
+                                set [Area R] to [64]
+                                set [Area Power] to [4]
+                                set [Area Kind] to [hit]
+                                broadcast [area hit]
+                            end
+                        end
+                    end
+                    set [Swirl On] to [0]
+                    if <(Hero Air) = [0]> then
+                        set y to [-75]
+                    end
+                    if <(Hero Air) = [1]> then
+                        switch costume to (join (Hero Look) [ jump])
+                    else
+                        switch costume to (join (Hero Look) [ idle])
+                    end
+                    set [Hero Lock] to [0]
                 end
-                set [Spin] to [0]
-                repeat [15]
-                    change [Spin] by [1]
-                    switch costume to (join (Hero Look) (join [ spin ] (((floor of ((Spin) / [2])) mod [4]) + [1])))
-                    move [7] steps
-                    if <(x position) < [-215]> then
-                        set x to [-215]
+            else
+                set [Hold Until] to ((timer) + [0.22])
+                repeat until <<<not <<(Kick Held) = [1]> or <key (x) pressed?>>> or <(timer) > (Hold Until)>> or <(Fight On) = [0]>>
+                end
+                if <<<(Kick Held) = [1]> or <key (x) pressed?>> and <(Fight On) = [1]>> then
+                    set [Hero Lock] to [1]
+                    set [Melee Charge] to [1]
+                    set [Glow Kind] to [kick]
+                    set [Glow DX] to [12]
+                    set [Glow DY] to [40]
+                    switch costume to (join (Hero Look) [ kick 1])
+                    broadcast [charge start]
+                    repeat until <<not <<(Kick Held) = [1]> or <key (x) pressed?>>> or <(Fight On) = [0]>>
+                        if <(Melee Charge) < [100]> then
+                            change [Melee Charge] by [3]
+                            if <not <(Melee Charge) < [100]>> then
+                                set [Melee Charge] to [100]
+                                broadcast [charge full]
+                            end
+                        end
+                        change x by (((((round ((timer) * [30])) mod [2]) * [2]) - [1]) * ((Melee Charge) / [40]))
                     end
-                    if <(x position) > [215]> then
-                        set x to [215]
-                    end
-                    if <((Spin) mod [5]) = [1]> then
-                        set [Hit Power] to [4]
-                        if <(abs of ((Enemy X) - (Hero X))) < ([64] + (Enemy Body))> then
+                    if <(Fight On) = [1]> then
+                        set [Hit Power] to (((Kick Power) + (Weapon Bonus)) + (round ((Melee Charge) / [12])))
+                        set [Pop Text] to [SKY KICK!]
+                        broadcast [popup]
+                        broadcast [whirl sfx]
+                        set [Glow DX] to [26]
+                        set [Glow DY] to [76]
+                        switch costume to (join (Hero Look) [ sky kick])
+                        if <(Weapon Bonus) > [0]> then
+                            change [Weapon Uses] by [-1]
+                            broadcast [swing]
+                        else
+                            broadcast [swing sfx]
+                        end
+                        if <(Hero Air) = [0]> then
+                            set [Hero Air] to [1]
+                        end
+                        set [Jumps] to [2]
+                        set [Flip] to [0]
+                        set [HVY] to ([9] + ((Melee Charge) / [14]))
+                        repeat [4]
+                            move [5] steps
+                            if <(x position) < [-215]> then
+                                set x to [-215]
+                            end
+                            if <(x position) > [215]> then
+                                set x to [215]
+                            end
+                        end
+                        if <(abs of ((Enemy X) - (Hero X))) < (([82] + (Weapon Reach)) + (Enemy Body))> then
                             if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
                                 broadcast [spike ouch]
                             else
@@ -2526,74 +2932,110 @@ forever
                             end
                         end
                         if <(Minions) > [0]> then
-                            set [Area X] to (Hero X)
-                            set [Area R] to [64]
-                            set [Area Power] to [4]
+                            set [Area X] to ((Hero X) + ((Facing) * [49.199999999999996]))
+                            set [Area R] to [49.199999999999996]
+                            set [Area Power] to (Hit Power)
                             set [Area Kind] to [hit]
                             broadcast [area hit]
                         end
-                    end
-                end
-                if <(Hero Air) = [0]> then
-                    set y to [-75]
-                end
-                if <(Hero Air) = [1]> then
-                    switch costume to (join (Hero Look) [ jump])
-                else
-                    switch costume to (join (Hero Look) [ idle])
-                end
-                set [Hero Lock] to [0]
-            else
-                set [Kick At] to (timer)
-                switch costume to (join (Hero Look) [ kick 1])
-                wait [0.07] seconds
-                switch costume to (join (Hero Look) [ kick])
-                move [14] steps
-                if <(x position) < [-215]> then
-                    set x to [-215]
-                end
-                if <(x position) > [215]> then
-                    set x to [215]
-                end
-                set [Hit Power] to ((Kick Power) + (Weapon Bonus))
-                if <(Weapon Bonus) > [0]> then
-                    change [Weapon Uses] by [-1]
-                    broadcast [swing]
-                else
-                    broadcast [swing sfx]
-                end
-                if <(abs of ((Enemy X) - (Hero X))) < (([82] + (Weapon Reach)) + (Enemy Body))> then
-                    if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
-                        broadcast [spike ouch]
-                    else
-                        broadcast [hero hits]
-                        if <(Weapon) = [hammer]> then
+                        repeat [5]
+                            move [3] steps
+                            if <(x position) < [-215]> then
+                                set x to [-215]
+                            end
+                            if <(x position) > [215]> then
+                                set x to [215]
+                            end
+                        end
+                        set [Hit Power] to (round ((Hit Power) / [2]))
+                        if <(abs of ((Enemy X) - (Hero X))) < (([82] + (Weapon Reach)) + (Enemy Body))> then
+                            if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
+                                broadcast [spike ouch]
+                            else
+                                broadcast [hero hits]
+                                if <(Weapon) = [hammer]> then
+                                    broadcast [shake]
+                                end
+                            end
+                        end
+                        if <(Minions) > [0]> then
+                            set [Area X] to ((Hero X) + ((Facing) * [49.199999999999996]))
+                            set [Area R] to [49.199999999999996]
+                            set [Area Power] to (Hit Power)
+                            set [Area Kind] to [hit]
+                            broadcast [area hit]
+                        end
+                        if <(Melee Charge) = [100]> then
                             broadcast [shake]
+                            broadcast [ki flare]
+                        end
+                        wait [0.2] seconds
+                    end
+                    set [Melee Charge] to [0]
+                    if <<<not <(Weapon) = [none]>> and <(Weapon Uses) < [1]>> and <(Boomerang Out) = [0]>> then
+                        broadcast [weapon break]
+                    end
+                    if <(Hero Air) = [1]> then
+                        switch costume to (join (Hero Look) [ jump])
+                    else
+                        switch costume to (join (Hero Look) [ idle])
+                    end
+                    set [Hero Lock] to [0]
+                    wait until <not <<(Kick Held) = [1]> or <key (x) pressed?>>>
+                    set [Kick Held] to [0]
+                    set [Want Kick] to [0]
+                else
+                    set [Kick At] to (timer)
+                    switch costume to (join (Hero Look) [ kick 1])
+                    wait [0.07] seconds
+                    switch costume to (join (Hero Look) [ kick])
+                    move [14] steps
+                    if <(x position) < [-215]> then
+                        set x to [-215]
+                    end
+                    if <(x position) > [215]> then
+                        set x to [215]
+                    end
+                    set [Hit Power] to ((Kick Power) + (Weapon Bonus))
+                    if <(Weapon Bonus) > [0]> then
+                        change [Weapon Uses] by [-1]
+                        broadcast [swing]
+                    else
+                        broadcast [swing sfx]
+                    end
+                    if <(abs of ((Enemy X) - (Hero X))) < (([82] + (Weapon Reach)) + (Enemy Body))> then
+                        if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
+                            broadcast [spike ouch]
+                        else
+                            broadcast [hero hits]
+                            if <(Weapon) = [hammer]> then
+                                broadcast [shake]
+                            end
                         end
                     end
-                end
-                if <(Minions) > [0]> then
-                    set [Area X] to ((Hero X) + ((Facing) * [45.1]))
-                    set [Area R] to [45.1]
-                    set [Area Power] to (Hit Power)
-                    set [Area Kind] to [hit]
-                    broadcast [area hit]
-                end
-                wait [0.22] seconds
-                move [-14] steps
-                if <(x position) < [-215]> then
-                    set x to [-215]
-                end
-                if <(x position) > [215]> then
-                    set x to [215]
-                end
-                if <<<not <(Weapon) = [none]>> and <(Weapon Uses) < [1]>> and <(Boomerang Out) = [0]>> then
-                    broadcast [weapon break]
-                end
-                if <(Hero Air) = [1]> then
-                    switch costume to (join (Hero Look) [ jump])
-                else
-                    switch costume to (join (Hero Look) [ idle])
+                    if <(Minions) > [0]> then
+                        set [Area X] to ((Hero X) + ((Facing) * [45.1]))
+                        set [Area R] to [45.1]
+                        set [Area Power] to (Hit Power)
+                        set [Area Kind] to [hit]
+                        broadcast [area hit]
+                    end
+                    wait [0.22] seconds
+                    move [-14] steps
+                    if <(x position) < [-215]> then
+                        set x to [-215]
+                    end
+                    if <(x position) > [215]> then
+                        set x to [215]
+                    end
+                    if <<<not <(Weapon) = [none]>> and <(Weapon Uses) < [1]>> and <(Boomerang Out) = [0]>> then
+                        broadcast [weapon break]
+                    end
+                    if <(Hero Air) = [1]> then
+                        switch costume to (join (Hero Look) [ jump])
+                    else
+                        switch costume to (join (Hero Look) [ idle])
+                    end
                 end
             end
         end
@@ -2871,10 +3313,13 @@ say [Hmmmm...] for [0.45] seconds
 set [Powering] to [1]
 broadcast [ki rise]
 say [HAAAAAA!]
-repeat [14]
-    change x by [2]
+if <(Power Level) > [1]> then
+    broadcast [shockwave]
+end
+repeat ([9] + (Power Level))
+    change x by ([1] + (Power Level))
     wait [0.04] seconds
-    change x by [-2]
+    change x by ([-1] * ([1] + (Power Level)))
     wait [0.04] seconds
 end
 if <(Power Level) > [2]> then
@@ -2890,8 +3335,9 @@ if <(Power Level) > [2]> then
     end
     switch costume to (join (Hero Look) [ charge up])
     broadcast [transform]
+    broadcast [shockwave]
 end
-repeat [6]
+repeat [4]
     change x by [2]
     wait [0.04] seconds
     change x by [-2]
@@ -4963,7 +5409,7 @@ Sprite-only variables: Lit, Grow
 when green flag clicked
 hide
 forever
-    if <<<(Super) = [100]> or <(Hero Safe) = [2]>> or <(Charge) = [100]>> then
+    if <<<<(Super) = [100]> or <(Hero Safe) = [2]>> or <(Charge) = [100]>> or <(Melee Charge) = [100]>> then
         set [Lit] to [1]
     else
         set [Lit] to [0]
@@ -6134,9 +6580,12 @@ hide
 ```
 when this sprite clicked
 set [Want Punch] to [1]
+set [Punch Held] to [1]
+wait until <not <mouse down?>>
+set [Punch Held] to [0]
 ```
 
-> Sets Want Punch. Hero's loop does the move.
+> Tap for a quick move. Hold to charge a power move (Punch Held).
 
 ```
 when I receive [fight on]
@@ -6191,9 +6640,12 @@ hide
 ```
 when this sprite clicked
 set [Want Kick] to [1]
+set [Kick Held] to [1]
+wait until <not <mouse down?>>
+set [Kick Held] to [0]
 ```
 
-> Sets Want Kick. Hero's loop does the move.
+> Tap for a quick move. Hold to charge a power move (Kick Held).
 
 ```
 when I receive [fight on]

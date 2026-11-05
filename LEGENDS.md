@@ -27,7 +27,7 @@ Every fight you win gives you **XP**: +1 for a chapter or a wave, +2 for a boss 
 | 4 | 12 | blue, with sparks | **BLUE STORM**: three lightning bolts |
 | 5 | 18 | purple-white, with lots of sparks | **ULTRA STORM**: five bolts, the last one huge |
 
-- **Powering up (Dragon Ball style):** before every fight your fighter crouches, clenches their fists and yells **HAAAAA!**. The aura surges, the ground shakes and rocks float up off the floor. From **power level 3** they **transform**: a white flash, **SUPER ARTHUR!** (or Nova or Rocko), and **golden spiky hair** for the whole fight. At **level 5** it's **ULTRA**, with **silver hair**. Levelling up after a win plays the transformation too, a quick flare of power goes off when your SUPER bar fills, and every POWER move starts with a short power-up.
+- **Powering up (Dragon Ball style):** before every fight your fighter crouches, clenches their fists and yells **HAAAAA!**. The aura surges, the ground shakes and rocks rip up out of the floor. **The higher your power level, the bigger the show:** more rocks from further away, the ground shakes longer, and from level 2 the **ground cracks open** under your feet, a **shockwave** ring blasts out, and **giant boulders** tear loose and float up (at level 5 most of them are boulders). From **power level 3** they **transform**: a white flash, **SUPER ARTHUR!** (or Nova or Rocko), and **golden spiky hair** for the whole fight. At **level 5** it's **ULTRA**, with **silver hair**. Levelling up after a win plays the transformation too, a quick flare of power goes off when your SUPER bar fills, and every POWER move starts with a short power-up.
 - **Your aura** shows your level. Each level is brighter, bigger and flickers faster. When your SUPER is full, or during a SUPER or POWER move, it **blazes** at full brightness.
 - **Every level** gives you +10 health and +1 damage on every hit.
 - **Enemies level up with you:** more health, harder hits, faster attacks. From level 3, **bosses call down lightning** too: a yellow mark shows where a bolt will strike, so move away or DODGE. They call more bolts at higher levels.
@@ -148,8 +148,8 @@ The buttons are along the bottom of the screen.
 | ◀ LEFT / RIGHT ▶ | arrows | Step. **Hold** the button to keep walking. |
 | JUMP | up arrow or space | Jump. **Tap again in the air** for a second, higher jump with a **front flip**. You can punch and kick in the air. |
 | DODGE | C | Hop backwards and turn see-through. Nothing can hurt you while you dodge. |
-| PUNCH | Z | Quick hit. With a boomerang, PUNCH throws it. |
-| KICK | X | Steps in and hits harder. **Tap twice quickly** (or hold KICK on the touch screen) for a **WHIRLWIND KICK**. |
+| PUNCH | Z | Quick hit. With a boomerang, PUNCH throws it. **Hold** for a **METEOR PUNCH** (see below). |
+| KICK | X | Steps in and hits harder. **Tap twice quickly** for a **WHIRLWIND KICK**, or in the air for a **HELICOPTER KICK**. **Hold** for a **SKY KICK**. |
 | FIRE | F (hold) | **Hold** to charge a fireball, **let go** to shoot it. See below. |
 | (BRAWL) drop down | down arrow | Push the joystick down to drop through a thin platform. |
 | POWER | G | Your POWER move (from power level 2). It recharges in about 6 seconds. |
@@ -183,6 +183,19 @@ The stick fighters move more like people now:
 ## Whirlwind Kick
 
 Tap **KICK twice quickly**. Your fighter lifts off the ground and **spins** with one leg out, travelling forward and hitting up to **3 times**. Because it spins, it hits enemies on **both sides**, which is great against a ninja squad or an enemy wave. It needs about a second to recharge. It works in BRAWL too, knocking fighters away on both sides. (Careful: it's still a kick, so it hurts to spin into Spike Bot's spikes!)
+
+## Helicopter Kick
+
+Jump, then tap **KICK twice quickly** while you're in the air. Your fighter splits their legs out like the blades of a helicopter and **spins fast**, with whirling motion lines round them. The spinning holds them up, so they **float down slowly**, drifting forward and hitting everything on **both sides** about every sixth of a second (up to 7 hits). It shares the Whirlwind Kick's recharge.
+
+## Power moves: hold PUNCH or KICK
+
+A quick tap is still a normal punch or kick. **Hold** the button (or Z / X) and your fighter winds up and gathers power, trembling harder as it builds:
+
+- **Hold PUNCH: METEOR PUNCH.** A **gold** ball of power grows in your fist. Let go and you **dash forward** and smash the enemy. The longer you held, the further the dash and the bigger the hit (about 3 punches' worth at full power).
+- **Hold KICK: SKY KICK.** A **blue** ball of power grows at your foot. Let go and you fly **upwards** with a rising kick that hits **twice**.
+
+After about a second you hear the *ding* and see **FULL POWER!**, your aura blazes, and the move also shakes the ground. Getting the timing right matters: while you charge, you can't dodge.
 
 ## Fireball
 
@@ -241,7 +254,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v2.3` in the bottom corner of the title.
+- **Version line:** `v2.4` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).

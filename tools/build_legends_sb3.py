@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "2.3"
+VERSION = "2.4"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -110,7 +110,11 @@ BOOMERANG_HIT = 7
 PUNCH_REACH = 70
 WHIRL_HIT = 4          # each of the WHIRLWIND KICK's hits
 WHIRL_COOLDOWN = 1.2
-DOUBLE_TAP = 0.6       # second KICK within this many seconds = WHIRLWIND KICK
+DOUBLE_TAP = 0.6       # second KICK within this many seconds = WHIRLWIND KICK (HELICOPTER KICK in the air)
+HELI_HIT = 3           # each of the HELICOPTER KICK's hits (up to 6)
+HELI_FRAMES = 30       # how long the helicopter spins (frames)
+HOLD_TIME = 0.22       # hold PUNCH or KICK this long to start charging a power move
+MELEE_RATE = 3         # charge per frame: full (100) in about a second
 JUMP_UP = 15        # first jump speed
 FLIP_UP = 11        # second jump (front flip) speed
 HERO_GRAV = 1.3
@@ -318,6 +322,18 @@ SKEL = {
                     fk=(56, 132), ff=(52, 154), nk=(26, 104), nf=(1, 100)),
     "spin 4":  dict(h=(50, 44), n=(50, 62), c=(50, 84), p=(50, 106), fe=(60, 74), fh=(70, 64), ne=(40, 74), nh=(30, 64),
                     fk=(54, 132), ff=(52, 154), nk=(42, 118), nf=(38, 128)),
+    # HELICOPTER KICK: legs split wide like rotor blades, drawn turning round in 4 steps
+    "heli 1":  dict(h=(50, 44), n=(50, 62), c=(50, 84), p=(50, 106), fe=(34, 70), fh=(16, 64), ne=(66, 70), nh=(84, 64),
+                    fk=(28, 116), ff=(4, 122), nk=(72, 116), nf=(96, 122)),
+    "heli 2":  dict(h=(50, 44), n=(50, 62), c=(50, 84), p=(50, 106), fe=(42, 72), fh=(34, 66), ne=(58, 72), nh=(66, 66),
+                    fk=(44, 122), ff=(38, 136), nk=(58, 120), nf=(66, 130)),
+    "heli 3":  dict(h=(50, 44), n=(50, 62), c=(50, 84), p=(50, 106), fe=(66, 70), fh=(84, 64), ne=(34, 70), nh=(16, 64),
+                    fk=(72, 116), ff=(96, 122), nk=(28, 116), nf=(4, 122)),
+    "heli 4":  dict(h=(50, 44), n=(50, 62), c=(50, 84), p=(50, 106), fe=(58, 72), fh=(66, 66), ne=(42, 72), nh=(34, 66),
+                    fk=(58, 120), ff=(66, 130), nk=(44, 122), nf=(36, 134)),
+    # SKY KICK: one foot shoots straight up and forward
+    "sky kick": dict(h=(38, 58), n=(41, 75), c=(45, 96), p=(50, 118), fe=(30, 88), fh=(20, 100), ne=(52, 90), nh=(60, 102),
+                     fk=(44, 142), ff=(40, 168), nk=(66, 98), nf=(84, 66)),
     "tuck":    dict(h=(58, 82), n=(54, 96), c=(50, 106), p=(44, 120), fe=(58, 104), fh=(66, 116), ne=(62, 102), nh=(70, 114),
                     fk=(62, 112), ff=(56, 132), nk=(64, 116), nf=(58, 136)),
     # powering up: wide crouch, fists clenched, head back, yelling
@@ -971,8 +987,8 @@ def apple_svg():
 
 
 def help_svg():
-    rows = [("◀ ▶  /  joystick", "walk (push up to jump)"), ("JUMP", "jump; tap again to flip"), ("PUNCH", "quick hit"),
-            ("KICK", "strong hit; tap twice to spin"), ("DODGE", "safe for a moment"), ("FIRE (hold)", "charge a fireball, let go"),
+    rows = [("◀ ▶  /  joystick", "walk (push up to jump)"), ("JUMP", "jump; tap again to flip"), ("PUNCH", "tap: hit; HOLD: METEOR PUNCH"),
+            ("KICK", "HOLD: SKY KICK; tap twice: spin"), ("JUMP + KICK x2", "HELICOPTER KICK"), ("DODGE", "safe for a moment"), ("FIRE (hold)", "charge a fireball, let go"),
             ("SUPER", "when the bar is full"), ("POWER", "your power-level move"), ("Walk over", "weapons and apples")]
     body = ['<rect x="6" y="6" width="428" height="308" rx="22" fill="#fffbeb" stroke="#0f172a" stroke-width="6"/>',
             '<path d="M6 60 L6 28 Q6 6 28 6 L412 6 Q434 6 434 28 L434 60 Z" fill="#2563eb"/>',
@@ -981,7 +997,7 @@ def help_svg():
     for key, what in rows:
         body.append(text_el(key, 150, y, 15, "#7c2d12", anchor="end"))
         body.append(text_el(what, 162, y, 15, "#0f172a", anchor="start", weight=600))
-        y += 24
+        y += 22
     body.append(text_el("Tap this card to close it.", 220, 300, 12, "#475569"))
     return svg_doc(440, 320, "".join(body))
 
@@ -1006,6 +1022,73 @@ def shuriken_svg():
 def smoke_svg():
     return svg_doc(90, 70, "".join(f'<circle cx="{x}" cy="{y}" r="{r}" fill="#e5e7eb" opacity="0.85"/>'
                                    for x, y, r in ((30, 40, 22), (55, 32, 24), (45, 50, 20), (66, 48, 16), (22, 52, 14))))
+
+
+def swirl_svg(frame):
+    """Motion lines whirling round a spinning kick (160 x 60, centre in the middle)."""
+    off = 45 * frame
+    return svg_doc(160, 60, (
+        f'<ellipse cx="80" cy="30" rx="76" ry="20" fill="none" stroke="#ffffff" stroke-width="5" opacity="0.85" '
+        f'stroke-linecap="round" stroke-dasharray="70 34" stroke-dashoffset="{off}"/>'
+        f'<ellipse cx="80" cy="30" rx="60" ry="13" fill="none" stroke="#7dd3fc" stroke-width="4" opacity="0.9" '
+        f'stroke-linecap="round" stroke-dasharray="44 26" stroke-dashoffset="{-off * 0.7}"/>'
+        f'<ellipse cx="80" cy="30" rx="40" ry="7" fill="none" stroke="#e0f2fe" stroke-width="3" opacity="0.7" '
+        f'stroke-linecap="round" stroke-dasharray="20 18" stroke-dashoffset="{off * 0.5}"/>'
+    ))
+
+
+def power_glow_svg(inner, mid, outer):
+    """A blazing ball of power with spiky rays, for a charging fist or foot (80 x 80)."""
+    rays = []
+    for k in range(10):
+        a = k * math.pi / 5
+        x1, y1 = 40 + 16 * math.cos(a), 40 + 16 * math.sin(a)
+        x2, y2 = 40 + 38 * math.cos(a + 0.12), 40 + 38 * math.sin(a + 0.12)
+        rays.append(f'<line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" stroke="{mid}" stroke-width="3" '
+                    f'stroke-linecap="round" opacity="0.8"/>')
+    return svg_doc(80, 80, (
+        f'<circle cx="40" cy="40" r="30" fill="{outer}" opacity="0.35"/>' + "".join(rays) +
+        f'<circle cx="40" cy="40" r="19" fill="{mid}" opacity="0.85"/>'
+        f'<circle cx="40" cy="40" r="10" fill="{inner}"/>'
+    ))
+
+
+def crack_svg(level):
+    """The ground splitting open under a powering-up fighter (260 x 50, centre in the middle). Bigger each level."""
+    rnd_ = __import__("random").Random(level * 7)
+    parts = [f'<ellipse cx="130" cy="25" rx="{18 + 8 * level}" ry="{5 + 2 * level}" fill="#1c1917" opacity="0.85"/>']
+    for k in range(2 + 2 * level):
+        side = -1 if k % 2 else 1
+        x, y = 130 + side * (10 + 4 * level), 25 + rnd_.uniform(-3, 3)
+        pts = [(x, y)]
+        for _ in range(3 + level):
+            x += side * rnd_.uniform(10, 14 + 5 * level)
+            y += rnd_.uniform(-5, 5)
+            pts.append((x, max(4, min(46, y))))
+        parts.append('<polyline points="' + " ".join(f"{a:.0f},{b:.0f}" for a, b in pts) + '" fill="none" '
+                     f'stroke="#292524" stroke-width="{2 + level * 0.6:.1f}" stroke-linejoin="round" stroke-linecap="round"/>')
+    for _ in range(3 + 2 * level):
+        cx, cy = 130 + rnd_.uniform(-60 - 20 * level, 60 + 20 * level), rnd_.uniform(8, 30)
+        parts.append(f'<circle cx="{cx:.0f}" cy="{cy:.0f}" r="{rnd_.uniform(5, 9 + level):.0f}" fill="#d6d3d1" opacity="0.55"/>')
+    return svg_doc(260, 50, "".join(parts))
+
+
+def shockwave_svg():
+    return svg_doc(220, 60, (
+        '<ellipse cx="110" cy="30" rx="104" ry="24" fill="none" stroke="#fef9c3" stroke-width="8" opacity="0.9"/>'
+        '<ellipse cx="110" cy="30" rx="96" ry="19" fill="none" stroke="#ffffff" stroke-width="4"/>'
+        '<ellipse cx="110" cy="30" rx="86" ry="15" fill="none" stroke="#fde68a" stroke-width="3" opacity="0.6"/>'
+    ))
+
+
+def boulder_svg():
+    return svg_doc(60, 52, (
+        '<polygon points="6,34 10,14 24,4 42,6 56,20 54,40 40,50 16,48" fill="#57534e" stroke="#292524" stroke-width="3"/>'
+        '<polyline points="24,10 28,22 22,32" fill="none" stroke="#292524" stroke-width="2"/>'
+        '<polyline points="44,14 38,26 46,36" fill="none" stroke="#292524" stroke-width="2"/>'
+        '<polygon points="12,18 22,8 30,12 18,22" fill="#a8a29e" opacity="0.6"/>'
+        '<path d="M10 44 Q20 52 30 46 Q40 54 50 44" fill="#78350f" opacity="0.8"/>'
+    ))
 
 
 def shadow_svg():
@@ -2459,6 +2542,8 @@ def build():
         ("Power Level", 1), ("Power XP", 0), ("XP Gain", 0), ("Want Power", 0), ("Power Ready At", 0), ("Power Move", "none"),
         ("Bolt X", 0), ("Bolt Y", GROUND), ("Bolt Owner", "hero"), ("Bolt Power", 0), ("Bolt Size", 100),
         ("Fire Held", 0), ("Charge", 0), ("Fire Power", 0), ("Fireball Out", 0),
+        ("Punch Held", 0), ("Kick Held", 0), ("Melee Charge", 0), ("Glow DX", 0), ("Glow DY", 60), ("Glow Kind", "punch"),
+        ("Swirl On", 0),
         ("Shot X", 999), ("Shot Live", 0), ("Shot Cancel", 0), ("Boom X", 0),
     ]:
         G(name, value)
@@ -2825,21 +2910,101 @@ def build():
     db = game.sprite("Debris", size=60, rotation="all around")
     db.costume("rock 1", svg_doc(30, 26, '<polygon points="4,18 9,5 21,2 28,12 22,24 9,24" fill="#78716c" stroke="#44403c" stroke-width="2"/>'), 15, 13)
     db.costume("rock 2", svg_doc(22, 18, '<polygon points="2,12 7,3 18,4 20,14 10,17" fill="#a8a29e" stroke="#57534e" stroke-width="2"/>'), 11, 9)
+    db.costume("boulder", boulder_svg(), 30, 26)
     DR = db
     DR.local("Is Clone", 0)
     DR.local("Rise", 3)
     DR.on_flag(DR.hide(), DR.set("Is Clone", 0))
 
-    def rocks(n):
+    PLV = V("Power Level")
+    spread = add(80, mul(18, PLV))
+
+    def rocks(n, gap):
         return DR.if_(eq(V("Is Clone"), 0), [DR.repeat(n, [
-            DR.goto(add(V("Hero X"), rnd(-95, 95)), add(GROUND, rnd(-4, 4))), DR.clone(), DR.wait(0.07)])])
-    DR.on_msg("ki rise", rocks(14), note="Rocks float up off the ground while you power up.")
-    DR.on_msg("ki flare", rocks(5))
+            DR.goto(add(V("Hero X"), rnd(mul(-1, spread), spread)), add(GROUND, rnd(-4, 4))), DR.clone(), DR.wait(gap)])])
+    DR.on_msg("ki rise", rocks(add(6, mul(4, PLV)), 0.04),
+              note="Rocks rip out of the ground while you power up. The higher your power level, the more rocks, "
+                   "the further out they come from, and from level 2 some are big boulders.")
+    DR.on_msg("ki flare", rocks(5, 0.07))
     DR.on_clone(
-        DR.set("Is Clone", 1), DR.if_(eq(rnd(1, 2), 1), [DR.wear("rock 1")], [DR.wear("rock 2")]), DR.size_to(rnd(40, 95)),
-        DR.set("Rise", rnd(2, 5)), DR.show(), DR.front(),
-        DR.repeat(20, [DR.dy(V("Rise")), DR.dx(rnd(-1, 1)), DR.turn(9), DR.wait(0.04)]),
+        DR.set("Is Clone", 1), DR.effect("GHOST", 0),
+        DR.if_(lt(rnd(1, 6), PLV), [
+            # a boulder: it shudders, tears loose, then floats up slowly
+            DR.wear("boulder"), DR.size_to(rnd(55, add(70, mul(14, PLV)))), DR.set("Rise", rnd(2, add(2, PLV))), DR.show(), DR.front(),
+            DR.repeat(3, [DR.dx(3), DR.wait(0.03), DR.dx(-3), DR.wait(0.03)]),
+        ], [
+            DR.if_(eq(rnd(1, 2), 1), [DR.wear("rock 1")], [DR.wear("rock 2")]), DR.size_to(rnd(40, 95)),
+            DR.set("Rise", rnd(2, add(4, PLV))), DR.show(), DR.front(),
+        ]),
+        DR.repeat(add(18, mul(3, PLV)), [DR.dy(V("Rise")), DR.dx(rnd(-1, 1)), DR.turn(rnd(3, 11)), DR.wait(0.04)]),
         DR.repeat(6, [DR.effect_by("GHOST", 16), DR.dy(V("Rise")), DR.wait(0.04)]), DR.delete_clone(),
+    )
+
+    # ground cracks and a shockwave ring under the hero while powering up
+    ck = game.sprite("Ground Crack", size=100, rotation="don't rotate")
+    for lv in (1, 2, 3):
+        ck.costume(f"crack {lv}", crack_svg(lv), 130, 25)
+    CK = ck
+    CK.on_flag(CK.hide())
+    CK.on_msg(
+        "ki rise",
+        CK.if_(gt(PLV, 1), [
+            CK.if_(gt(PLV, 3), [CK.wear("crack 3")], [CK.if_(gt(PLV, 2), [CK.wear("crack 2")], [CK.wear("crack 1")])]),
+            CK.goto(V("Hero X"), sub(GROUND, 4)), CK.size_to(30), CK.effect("GHOST", 0), CK.show(), CK.back(),
+            CK.repeat(10, [CK.size_by(add(5, mul(2, PLV))), CK.wait(0.04)]),
+            CK.wait(add(0.6, mul(0.2, PLV))),
+            CK.repeat(10, [CK.effect_by("GHOST", 10), CK.wait(0.04)]), CK.hide(),
+        ]),
+        note="From power level 2 the ground cracks open under you. It gets wider every level.",
+    )
+    for m in ("show title", "choose hero", "story scene", "brawl clear", "brawl start"):
+        CK.on_msg(m, CK.hide())
+    sw_ring = game.sprite("Shockwave", size=100, rotation="don't rotate")
+    sw_ring.costume("ring", shockwave_svg(), 110, 30)
+    SR = sw_ring
+    SR.on_flag(SR.hide())
+    SR.on_msg(
+        "shockwave",
+        SR.goto(V("Hero X"), add(GROUND, 6)), SR.size_to(20), SR.effect("GHOST", 0), SR.show(), SR.front(),
+        SR.repeat(14, [SR.size_by(add(8, mul(4, PLV))), SR.effect_by("GHOST", 7), SR.wait(0.03)]), SR.hide(),
+        note="A ring of power blasts out along the ground (power level 2 and up, and when you transform).",
+    )
+    for m in ("show title", "choose hero", "story scene", "brawl clear", "brawl start"):
+        SR.on_msg(m, SR.hide())
+
+    # motion lines for the spinning kicks, and the blazing fist or foot while charging a power move
+    swl = game.sprite("Swirl", size=100, rotation="don't rotate")
+    swl.costume("swirl 1", swirl_svg(0), 80, 30)
+    swl.costume("swirl 2", swirl_svg(1), 80, 30)
+    SW = swl
+    SW.on_flag(
+        SW.hide(), SW.effect("GHOST", 15),
+        SW.forever([
+            SW.if_(and_(eq(V("Swirl On"), 1), eq(V("State"), "fight")), [
+                SW.goto(V("Hero X"), add(V("Hero Y"), 40)),
+                SW.if_(eq(mod(round_(mul(TIMER, 20)), 2), 0), [SW.wear("swirl 1")], [SW.wear("swirl 2")]),
+                SW.show(), SW.front(),
+            ], [SW.hide()]),
+        ]),
+        note="Whirling motion lines round the WHIRLWIND and HELICOPTER KICKs.",
+    )
+    pf = game.sprite("Power Fist", size=50, rotation="don't rotate")
+    pf.costume("punch", power_glow_svg("#fffbeb", "#facc15", "#f97316"), 40, 40)
+    pf.costume("kick", power_glow_svg("#f0f9ff", "#38bdf8", "#6366f1"), 40, 40)
+    PF = pf
+    PF.on_flag(
+        PF.hide(),
+        PF.forever([
+            PF.if_(and_(gt(V("Melee Charge"), 0), eq(V("State"), "fight")), [
+                PF.goto(add(V("Hero X"), mul(V("Glow DX"), V("Facing"))), add(V("Hero Y"), V("Glow DY"))),
+                PF.wear(V("Glow Kind")), PF.size_to(add(25, mul(V("Melee Charge"), 0.75))),
+                PF.turn(15),
+                PF.if_(eq(V("Melee Charge"), 100), [PF.effect("BRIGHTNESS", mul(35, mod(round_(mul(TIMER, 10)), 2)))],
+                       [PF.effect("BRIGHTNESS", 0)]),
+                PF.show(), PF.front(),
+            ], [PF.hide()]),
+        ]),
+        note="Hold PUNCH or KICK: power gathers in your fist (gold) or foot (blue) and grows until you let go.",
     )
     for m in ("show title", "choose hero", "story scene", "brawl clear"):
         DR.on_msg(m, DR.if_(eq(V("Is Clone"), 1), [DR.delete_clone()]))
@@ -2885,7 +3050,7 @@ def build():
     KS.on_click(KS.if_(eq(V("State"), "intro"), [KS.broadcast("skip intro")]))
     s.on_stage_click(s.if_(eq(V("State"), "intro"), [s.broadcast("skip intro")]), note="Tap during the intro to skip it.")
     s.on_msg("scribble", s.play("scribble"))
-    s.on_msg("ki rise", s.play("ki roar"), s.repeat(7, [s.broadcast("shake"), s.wait(0.17)]))
+    s.on_msg("ki rise", s.play("ki roar"), s.repeat(add(5, mul(2, V("Power Level"))), [s.broadcast("shake"), s.wait(0.17)]))
     s.on_msg("ki flare", s.play("ki flare"))
     s.on_msg("transform", s.play("transform"), s.broadcast("popup"),
              s.repeat(3, [s.effect("BRIGHTNESS", 90), s.wait(0.05), s.effect("BRIGHTNESS", 0), s.wait(0.05)]))
@@ -2913,7 +3078,7 @@ def build():
         for look, hair in (("", None), (" gold", "gold"), (" silver", "silver")):
             for pose in ("idle", "punch", "kick", "jump", "hurt", "win", "dodge", "special", "down", "charge",
                          "idle b", "walk 1", "walk 2", "walk 3", "walk 4", "punch 1", "kick 1", "hurt high", "charge up",
-                         "spin 1", "spin 2", "spin 3", "spin 4"):
+                         "spin 1", "spin 2", "spin 3", "spin 4", "heli 1", "heli 2", "heli 3", "heli 4", "sky kick", "windup"):
                 face = "hurt" if pose == "hurt" else ("ko" if pose == "down" else ("yell" if pose == "charge up" else "smile"))
                 glow = {"special": "#facc15", "charge": "#fb923c"}.get(pose)
                 hero.costume(f"{h['key']}{look} {pose}", fighter_svg(h["color"], "aim" if pose == "charge" else pose, h["gear"],
@@ -2977,6 +3142,7 @@ def build():
     H.local("Jumps", 0)
     H.local("Flip", 0)
     H.local("Look", "")
+    H.local("Hold Until", 0)
     H.on_flag(
         H.forever([
             H.set("Look", COSTUME),
@@ -3024,15 +3190,93 @@ def build():
         H.set("Hero Lock", 1), H.set("Whirl Ready At", add(TIMER, WHIRL_COOLDOWN)),
         H.set("Pop Text", "WHIRLWIND KICK!"), H.broadcast("popup"), H.broadcast("whirl sfx"),
         H.if_(eq(V("Hero Air"), 0), [H.dy(16)]),
-        H.set("Spin", 0),
+        H.set("Spin", 0), H.set("Swirl On", 1),
         H.repeat(15, [
             H.change("Spin", 1),
             H.wear(join(V("Hero Look"), join(" spin ", add(mod(floor_(div(V("Spin"), 2)), 4), 1)))),
             H.move(7), *H.clamp_x(-215, 215),
             H.if_(eq(mod(V("Spin"), 5), 1), whirl_hit()),
         ]),
+        H.set("Swirl On", 0),
         H.if_(eq(V("Hero Air"), 0), [H.set_y(GROUND)]),
         rest_pose(), H.set("Hero Lock", 0),
+    ]
+
+    def heli_hit():
+        return [H.set("Hit Power", HELI_HIT),
+                H.if_(lt(abs_(sub(V("Enemy X"), V("Hero X"))), add(70, V("Enemy Body"))), [land_hit()]),
+                area(70, HELI_HIT, at=V("Hero X"))]
+
+    heli = [
+        # HELICOPTER KICK (in the air): legs out like rotor blades, spin fast, hover down slowly, hit both sides
+        H.set("Hero Lock", 1), H.set("Whirl Ready At", add(TIMER, WHIRL_COOLDOWN)),
+        H.set("Pop Text", "HELICOPTER KICK!"), H.broadcast("popup"), H.broadcast("whirl sfx"),
+        H.set("HVY", 7), H.set("Jumps", 2), H.set("Flip", 0), H.set("Spin", 0), H.set("Swirl On", 1),
+        H.until(or_(gt(V("Spin"), HELI_FRAMES), eq(V("Hero Air"), 0), eq(V("Fight On"), 0)), [
+            H.change("Spin", 1),
+            H.wear(join(V("Hero Look"), join(" heli ", add(mod(V("Spin"), 4), 1)))),
+            # the spinning legs hold Hero up: fall slowly
+            H.if_(lt(V("HVY"), -1), [H.set("HVY", -1)]),
+            H.move(5), *H.clamp_x(-215, 215),
+            H.if_(eq(mod(V("Spin"), 5), 1), heli_hit()),
+            H.if_(eq(mod(V("Spin"), 10), 0), [H.broadcast("whirl sfx")]),
+        ]),
+        H.set("Swirl On", 0), rest_pose(), H.set("Hero Lock", 0),
+    ]
+
+    # ---- hold PUNCH or KICK: charge a power move, let go to unleash it ----
+    punch_held = or_(eq(V("Punch Held"), 1), ("keypressed", "z"))
+    kick_held = or_(eq(V("Kick Held"), 1), ("keypressed", "x"))
+
+    def still_held(held):
+        # wait a moment: a quick tap is a normal move, a hold starts charging
+        return [H.set("Hold Until", add(TIMER, HOLD_TIME)),
+                H.until(or_(not_(held), gt(TIMER, V("Hold Until")), eq(V("Fight On"), 0)), [])]
+
+    def charge_melee(held, kind, pose_name, dx, dy):
+        return [
+            H.set("Hero Lock", 1), H.set("Melee Charge", 1), H.set("Glow Kind", kind), H.set("Glow DX", dx),
+            H.set("Glow DY", dy), pose(pose_name), H.broadcast("charge start"),
+            H.until(or_(not_(held), eq(V("Fight On"), 0)), [
+                H.if_(lt(V("Melee Charge"), 100), [
+                    H.change("Melee Charge", MELEE_RATE),
+                    H.if_(not_(lt(V("Melee Charge"), 100)), [H.set("Melee Charge", 100), H.broadcast("charge full")]),
+                ]),
+                # tremble harder as the power builds
+                H.dx(mul(sub(mul(mod(round_(mul(TIMER, 30)), 2), 2), 1), div(V("Melee Charge"), 40))),
+            ]),
+        ]
+
+    def melee_done(held, want, flag):
+        return [H.set("Melee Charge", 0), break_check(), rest_pose(), H.set("Hero Lock", 0),
+                H.wait_until(not_(held)), H.set(flag, 0), H.set(want, 0)]
+
+    full = eq(V("Melee Charge"), 100)
+    meteor = [
+        # METEOR PUNCH: a blazing dash; the longer you held, the further and harder
+        H.set("Hit Power", add(add(V("Punch Power"), V("Weapon Bonus")), round_(div(V("Melee Charge"), 9)))),
+        H.set("Pop Text", "METEOR PUNCH!"), H.broadcast("popup"), H.broadcast("whirl sfx"),
+        H.set("Glow DX", 36), H.set("Glow DY", 74), pose("punch"),
+        H.repeat(6, [H.move(add(4, div(V("Melee Charge"), 12))), *H.clamp_x(-215, 215)]),
+        weapon_swing(),
+        H.if_(in_reach(PUNCH_REACH + 10), [land_hit()]), area(PUNCH_REACH * 0.7, V("Hit Power")),
+        H.if_(full, [H.broadcast("shake"), H.broadcast("ki flare")]),
+        H.wait(0.25),
+    ]
+    sky_kick = [
+        # SKY KICK: a rising kick that hits twice
+        H.set("Hit Power", add(add(V("Kick Power"), V("Weapon Bonus")), round_(div(V("Melee Charge"), 12)))),
+        H.set("Pop Text", "SKY KICK!"), H.broadcast("popup"), H.broadcast("whirl sfx"),
+        H.set("Glow DX", 26), H.set("Glow DY", 76), pose("sky kick"), weapon_swing(),
+        H.if_(eq(V("Hero Air"), 0), [H.set("Hero Air", 1)]),
+        H.set("Jumps", 2), H.set("Flip", 0), H.set("HVY", add(9, div(V("Melee Charge"), 14))),
+        H.repeat(4, [H.move(5), *H.clamp_x(-215, 215)]),
+        H.if_(in_reach(KICK_REACH), [land_hit()]), area(KICK_REACH * 0.6, V("Hit Power")),
+        H.repeat(5, [H.move(3), *H.clamp_x(-215, 215)]),
+        H.set("Hit Power", round_(div(V("Hit Power"), 2))),
+        H.if_(in_reach(KICK_REACH), [land_hit()]), area(KICK_REACH * 0.6, V("Hit Power")),
+        H.if_(full, [H.broadcast("shake"), H.broadcast("ki flare")]),
+        H.wait(0.2),
     ]
 
     dodge = [
@@ -3111,11 +3355,23 @@ def build():
                           [H.if_(eq(V("Power Level"), 1), [H.set("Pop Text", "Win fights to unlock POWER!"),
                                                             H.broadcast("popup")])]),
                 ]),
-                H.if_(and_(eq(V("Want Punch"), 1), eq(V("Hero Lock"), 0)), [H.set("Want Punch", 0), *punch]),
+                H.if_(and_(eq(V("Want Punch"), 1), eq(V("Hero Lock"), 0)), [
+                    H.set("Want Punch", 0), *still_held(punch_held),
+                    H.if_(and_(punch_held, eq(V("Fight On"), 1)), [
+                        *charge_melee(punch_held, "punch", "windup", -20, 84),
+                        H.if_(eq(V("Fight On"), 1), meteor), *melee_done(punch_held, "Want Punch", "Punch Held"),
+                    ], punch),
+                ]),
                 H.if_(and_(eq(V("Want Kick"), 1), eq(V("Hero Lock"), 0)), [
                     H.set("Want Kick", 0),
                     H.if_(and_(lt(sub(TIMER, V("Kick At")), DOUBLE_TAP), gt(TIMER, V("Whirl Ready At"))),
-                          [H.set("Kick At", 0), *whirl], [H.set("Kick At", TIMER), *kick]),
+                          [H.set("Kick At", 0), H.if_(eq(V("Hero Air"), 1), heli, whirl)], [
+                        *still_held(kick_held),
+                        H.if_(and_(kick_held, eq(V("Fight On"), 1)), [
+                            *charge_melee(kick_held, "kick", "kick 1", 12, 40),
+                            H.if_(eq(V("Fight On"), 1), sky_kick), *melee_done(kick_held, "Want Kick", "Kick Held"),
+                        ], [H.set("Kick At", TIMER), *kick]),
+                    ]),
                 ]),
                 H.if_(and_(eq(V("Want Dodge"), 1), eq(V("Hero Lock"), 0)), [
                     H.set("Want Dodge", 0), H.if_(eq(V("Hero Air"), 0), dodge),
@@ -3219,16 +3475,18 @@ def build():
         "power up show",
         H.set("Hero Lock", 1), pose("charge up"), H.say("Hmmmm...", 0.45),
         H.set("Powering", 1), H.broadcast("ki rise"), H.say("HAAAAAA!"),
-        H.repeat(14, [H.dx(2), H.wait(0.04), H.dx(-2), H.wait(0.04)]),
+        H.if_(gt(V("Power Level"), 1), [H.broadcast("shockwave")]),
+        # the higher the power level, the longer and harder the power-up
+        H.repeat(add(9, V("Power Level")), [H.dx(add(1, V("Power Level"))), H.wait(0.04), H.dx(mul(-1, add(1, V("Power Level")))), H.wait(0.04)]),
         # level 3 and up: transform! golden hair (silver at level 5)
         H.if_(gt(V("Power Level"), 2), [
             H.if_(gt(V("Power Level"), 4), [H.set("Hero Look", join(V("Hero Name"), " silver"))],
                   [H.set("Hero Look", join(V("Hero Name"), " gold"))]),
             H.if_(gt(V("Power Level"), 4), [H.set("Pop Text", join("ULTRA ", join(V("Hero Title"), "!")))],
                   [H.set("Pop Text", join("SUPER ", join(V("Hero Title"), "!")))]),
-            pose("charge up"), H.broadcast("transform"),
+            pose("charge up"), H.broadcast("transform"), H.broadcast("shockwave"),
         ]),
-        H.repeat(6, [H.dx(2), H.wait(0.04), H.dx(-2), H.wait(0.04)]),
+        H.repeat(4, [H.dx(2), H.wait(0.04), H.dx(-2), H.wait(0.04)]),
         H.say(""), H.set("Powering", 0), pose("idle"), H.set("Hero Lock", 0),
         note="Powering up, Dragon Ball style: crouch, yell HAAAAA!, the aura flares, the ground shakes and rocks float up. "
              "From power level 3 the hair turns golden (silver at level 5) for the rest of the fight.",
@@ -3984,7 +4242,7 @@ def build():
     AU = aura
     AU.local("Lit", 0)
     AU.local("Grow", 1)
-    powered = or_(eq(V("Super"), 100), eq(V("Hero Safe"), 2), eq(V("Charge"), 100))
+    powered = or_(eq(V("Super"), 100), eq(V("Hero Safe"), 2), eq(V("Charge"), 100), eq(V("Melee Charge"), 100))
     flicker = AU.if_(eq(mod(round_(mul(TIMER, add(8, mul(3, V("Power Level"))))), 2), 0),
                      [AU.wear(join("lv", join(V("Power Level"), " 1")))], [AU.wear(join("lv", join(V("Power Level"), " 2")))])
     AU.on_flag(
@@ -4316,7 +4574,12 @@ def build():
     for i, (name, label, fill, action) in enumerate(controls):
         x = -212 + 53 * i
         b = button(name, label, fill, x, -152, width=51, size=10)
-        if action == "Fire Held":
+        if action in ("Want Punch", "Want Kick"):
+            held = action.replace("Want", "") + " Held"
+            held = held.replace("  ", " ").strip()
+            b.on_click(b.set(action, 1), b.set(held, 1), b.wait_until(not_(MOUSE_DOWN)), b.set(held, 0),
+                       note=f"Tap for a quick move. Hold to charge a power move ({held}).")
+        elif action == "Fire Held":
             b.on_click(b.set("Fire Held", 1), b.wait_until(not_(MOUSE_DOWN)), b.set("Fire Held", 0),
                        note="Hold to charge a fireball, let go to shoot.")
         elif action.startswith("move"):

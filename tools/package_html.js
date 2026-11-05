@@ -133,19 +133,20 @@ const PAD_JS = `
     function get (name) { var x = v(name); return x ? x.value : null; }
     function buzz () { if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} } }
 
-    // buttons: press sets the Want variable; holding PUNCH or KICK repeats
-    [['bP', 'Want Punch', true], ['bK', 'Want Kick', true], ['bJ', 'Want Jump', false],
+    // buttons: press sets the Want variable; holding PUNCH or KICK charges a power move
+    // (Punch Held / Kick Held stay 1 until you let go)
+    [['bP', 'Want Punch', 'Punch Held'], ['bK', 'Want Kick', 'Kick Held'], ['bJ', 'Want Jump', false],
      ['bD', 'Want Dodge', false], ['bS', 'Want Super', false], ['bW', 'Want Power', false]].forEach(function (b) {
-        var el = document.getElementById(b[0]), timer = null;
+        var el = document.getElementById(b[0]);
         el.addEventListener('pointerdown', function (e) {
             e.preventDefault();
             el.setPointerCapture(e.pointerId);
             el.classList.add('down');
             set(b[1], 1);
             buzz();
-            if (b[2]) timer = setInterval(function () { set(b[1], 1); }, 230);
+            if (b[2]) set(b[2], 1);
         });
-        function up () { el.classList.remove('down'); if (timer) { clearInterval(timer); timer = null; } }
+        function up () { el.classList.remove('down'); if (b[2]) set(b[2], 0); }
         el.addEventListener('pointerup', up);
         el.addEventListener('pointercancel', up);
     });

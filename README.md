@@ -11,7 +11,7 @@ Arthur's stickman fighting game, built in Scratch, with an Android tablet in min
 - **Power levels 1 to 5**: win fights to level up. You get a new aura colour (red, orange, gold, blue, purple-white) and a new POWER move: FLAME DASH, then lightning strikes from the sky. Enemies and bosses get stronger with you, and bosses call down lightning too.
 - **Levels**: EASY, NORMAL, HARD and CHAMPION. NORMAL makes fights about twice as long as before.
 - **A paper intro**: a pencil draws the fighters and a ninja on notebook paper, then colours them in (with a SKIP button).
-- **Dragon Ball-style power-ups**: yelling, a surging aura, shaking ground and floating rocks, and golden (then silver) super-form hair from power level 3.
+- **Dragon Ball-style power-ups**: yelling, a surging aura, shaking ground, cracks, a shockwave and boulders ripping out of the ground (more every level), and golden (then silver) super-form hair from power level 3.
 - **BRAWL stages**: 10 to pick from, including a Pirate Ship with cannonballs, low-gravity Space, slippery Snowy Peak, bouncy Candy Land and conveyor-belt Robot Factory.
 - **Extras from Grok's plan**: healing apples, sound on/off, a how-to-play card, PRACTICE mode and a debug overlay.
 - **Ninjas**: a Bamboo Forest full of ninjas and the boss MASTER KAGE, who teleports in smoke and sends a squad of ninjas at you.
@@ -19,7 +19,7 @@ Arthur's stickman fighting game, built in Scratch, with an Android tablet in min
 - **Story mode**: nine chapters to win back the Golden Crown from the Shadow King, with talking scenes you can skip.
 - **Arcade mode**: endless waves that get harder, with a score and a best score.
 - **Three fighters**: Arthur, Nova and Rocko, each with their own speed, power, health and SUPER move.
-- **Moves**: punch, kick, jump and a double jump with a front flip, a spinning WHIRLWIND KICK (tap KICK twice), air attacks, dodge, combos, a SUPER meter, perfect dodges, and a **fireball** you hold to charge up.
+- **Moves**: punch, kick, jump and a double jump with a front flip, a spinning WHIRLWIND KICK (tap KICK twice), a HELICOPTER KICK (tap KICK twice in the air), hold-to-charge METEOR PUNCH and SKY KICK, air attacks, dodge, combos, a SUPER meter, perfect dodges, and a **fireball** you hold to charge up.
 - **Spiky enemies and bosses**: Spike Bot, the giant **MEGA SPIKE** boss (Spike Roll, spike shots and Spike Rain), and a Shadow King who grows Spike Armor. Punching spikes hurts!
 - **Weapons** fall into the arena: a sword, a hammer and a boomerang. Each one breaks after a few uses.
 - Beat Story mode to unlock the **Golden Crown** for every fighter.

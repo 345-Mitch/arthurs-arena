@@ -266,7 +266,7 @@ function watch (T, stats, label) {
     return () => {
         lockFrames = T.get('Hero Lock') === 1 ? lockFrames + 1 : 0;
         boomFrames = T.get('Boomerang Out') === 1 ? boomFrames + 1 : 0;
-        if (lockFrames === 120) fail(`${label}: Hero Lock stuck on for 4 seconds`);
+        if (lockFrames === 120) fail(`${label}: Hero Lock stuck on for 4 seconds (${T.costume('Hero')}, ${T.get('Pop Text')}, charge ${T.get('Melee Charge')}, air ${T.get('Hero Air')})`);
         if (boomFrames === 150) fail(`${label}: boomerang never came back`);
         const hp = T.get('Hero HP');
         if (hp < 0 || hp > T.get('Hero Max')) fail(`${label}: Hero HP out of range ${hp}`);
@@ -527,28 +527,34 @@ async function powerUpTest () {
         T.click('Arcade Button');
         await T.step(3);
         T.click('Pick Rocko');
-        let rocks = 0, powering = false, yelled = false, frames = 0;
+        let rocks = 0, boulders = 0, crack = false, ring = false, powering = false, yelled = false, frames = 0;
         while (T.get('Fight On') !== 1 && frames < 30 * 10) {
             await T.step();
             frames++;
             rocks = Math.max(rocks, T.clones('Debris').length);
+            boulders = Math.max(boulders, T.clones('Debris').filter(c => c.getCostumes()[c.currentCostume].name === 'boulder').length);
+            if (T.sprite('Ground Crack').visible) crack = true;
+            if (T.sprite('Shockwave').visible) ring = true;
             if (T.get('Powering') === 1) powering = true;
             if (((T.sprite('Hero').getCustomState('Scratch.looks') || {}).text || '').startsWith('HAAA')) yelled = true;
         }
         const look = T.get('Hero Look');
         if (process.env.DEBUG_PU) process.stdout.write(`name ${T.get('Hero Name')} hero ${T.get('Hero')} look ${look} costume ${T.costume('Hero')} state ${T.get('State')}\n`);
-        out[level] = {look, rocks, powering, yelled, seconds: +(frames / 30).toFixed(1)};
+        out[level] = {look, rocks, boulders, crack, ring, powering, yelled, seconds: +(frames / 30).toFixed(1)};
         if (!powering || !yelled || rocks < 5) fail(`powerup: level ${level} show missing (powering ${powering}, yell ${yelled}, rocks ${rocks})`);
         const want = level >= 5 ? 'rocko silver' : level >= 3 ? 'rocko gold' : 'rocko';
         if (look !== want) fail(`powerup: level ${level} look is ${look}, expected ${want}`);
         if (!T.costume('Hero').startsWith(want + ' ')) fail(`powerup: hero costume ${T.costume('Hero')}`);
         if (T.get('Hero Lock') !== 0) fail('powerup: hero still locked after powering up');
+        if (level >= 3 && (!crack || !ring || !boulders)) fail(`powerup: level ${level} has crack ${crack} ring ${ring} boulders ${boulders}`);
+        if (level === 1 && (crack || boulders)) fail('powerup: level 1 should not crack the ground or lift boulders');
         // walking still uses the golden costumes
         T.set('Joy X', 1);
         await T.step(8);
         T.set('Joy X', 0);
         if (!T.costume('Hero').startsWith(want + ' ')) fail(`powerup: walking lost the look (${T.costume('Hero')})`);
     }
+    if (!(out[5].rocks > out[3].rocks && out[3].rocks > out[1].rocks)) fail(`powerup: rocks do not grow with level ${out[1].rocks} ${out[3].rocks} ${out[5].rocks}`);
     return out;
 }
 
@@ -701,6 +707,101 @@ async function whirlTest () {
     for (let i = 0; i < 25; i++) { await T.step(); if (T.costume('Hero').includes(' spin ')) single = true; }
     if (single) fail('whirl: a single tap spun');
     return {spinFrames: [...spins].sort(), dealt, liftedTo: Math.round(top + 75)};
+}
+
+async function heliTest () {
+    // jump, then tap KICK twice in the air: HELICOPTER KICK (legs spin like rotor blades, hover down, many hits)
+    const T = await startArcadeAt(1);
+    if (T.get('Fight On') !== 1) return fail('heli: fight did not start');
+    T.set('Enemy HP', 999); T.set('Enemy Max', 999); T.set('Hero Safe Until', 1e12); T.set('Enemy Stun Until', 0);
+    const ex = T.get('Enemy X');
+    T.sprite('Hero').setXY(ex > 0 ? ex - 60 : ex + 60, -75);
+    await T.step(3);
+    const hp = T.get('Enemy HP');
+    T.set('Want Jump', 1);
+    await T.step(2);
+    T.set('Want Kick', 1);
+    await T.step(3);
+    T.set('Want Kick', 1);
+    const frames = new Set();
+    let swirl = false, airFrames = 0, pop = '';
+    for (let i = 0; i < 70; i++) {
+        await T.step();
+        const c = T.costume('Hero');
+        if (c.includes(' heli ')) { frames.add(c.split(' heli ')[1]); airFrames++; }
+        if (T.sprite('Swirl').visible) swirl = true;
+        if (T.get('Pop Text').includes('HELICOPTER')) pop = T.get('Pop Text');
+    }
+    const dealt = hp - T.get('Enemy HP');
+    if (frames.size < 4) fail(`heli: only heli frames ${[...frames]}`);
+    if (!swirl) fail('heli: no swirl motion lines');
+    if (!pop) fail('heli: no HELICOPTER KICK! popup');
+    if (dealt < 4 + 3 * 3) fail(`heli: kick + helicopter only did ${dealt}`);
+    if (T.get('Hero Lock') !== 0 || T.sprite('Hero').y !== -75) fail('heli: hero not back on the ground and free');
+    if (T.sprite('Swirl').visible) fail('heli: swirl still showing');
+    return {heliFrames: [...frames].sort(), spinFrames: airFrames, dealt};
+}
+
+async function meleeChargeTest () {
+    // hold PUNCH: METEOR PUNCH; hold KICK: SKY KICK; a tap is still a normal move
+    const T = await startArcadeAt(1);
+    if (T.get('Fight On') !== 1) return fail('melee: fight did not start');
+    T.set('Enemy HP', 999); T.set('Enemy Max', 999); T.set('Hero Safe Until', 1e12); T.set('Enemy Stun Until', 0);
+    const place = () => { const ex = T.get('Enemy X'); T.sprite('Hero').setXY(ex > 0 ? ex - 90 : ex + 90, -75); };
+    place();
+    await T.step(3);
+    const out = {};
+    // tap punch: no charge
+    let hp = T.get('Enemy HP');
+    T.set('Want Punch', 1);
+    let charged = false;
+    for (let i = 0; i < 20; i++) { await T.step(); if (T.get('Melee Charge') > 0) charged = true; }
+    if (charged) fail('melee: a tap on PUNCH started charging');
+    out.tapPunch = hp - T.get('Enemy HP');
+    // hold punch for 1.5 seconds
+    await T.step(20); place(); await T.step(2);
+    hp = T.get('Enemy HP');
+    T.set('Punch Held', 1); T.set('Want Punch', 1);
+    let glow = false, windup = false;
+    for (let i = 0; i < 45; i++) {
+        await T.step();
+        if (T.sprite('Power Fist').visible) glow = true;
+        if (T.costume('Hero').endsWith(' windup')) windup = true;
+    }
+    out.punchCharge = T.get('Melee Charge');
+    if (out.punchCharge !== 100) fail(`melee: punch charge only reached ${out.punchCharge}`);
+    if (!glow || !windup) fail(`melee: charging punch shows glow ${glow} windup ${windup}`);
+    if (T.get('Enemy HP') !== hp) fail('melee: charging already hit');
+    const startX = T.sprite('Hero').x;
+    T.set('Punch Held', 0);
+    let meteor = false;
+    for (let i = 0; i < 30; i++) { await T.step(); if (T.get('Pop Text') === 'METEOR PUNCH!') meteor = true; }
+    out.meteor = hp - T.get('Enemy HP');
+    out.dash = Math.round(Math.abs(T.sprite('Hero').x - startX));
+    if (!meteor) fail('melee: no METEOR PUNCH! popup');
+    if (out.meteor < 5 + 10) fail(`melee: METEOR PUNCH only did ${out.meteor}`);
+    if (out.dash < 40) fail(`melee: METEOR PUNCH only dashed ${out.dash}`);
+    if (T.get('Hero Lock') !== 0 || T.get('Melee Charge') !== 0 || T.sprite('Power Fist').visible) fail('melee: punch did not finish cleanly');
+    // hold kick
+    await T.step(20); place(); await T.step(2);
+    hp = T.get('Enemy HP');
+    T.set('Kick Held', 1); T.set('Want Kick', 1);
+    await T.step(45);
+    if (T.get('Melee Charge') !== 100 || T.get('Glow Kind') !== 'kick') fail(`melee: kick charge ${T.get('Melee Charge')} ${T.get('Glow Kind')}`);
+    T.set('Kick Held', 0);
+    let top = -999, sky = false;
+    for (let i = 0; i < 50; i++) {
+        await T.step();
+        top = Math.max(top, T.sprite('Hero').y);
+        if (T.costume('Hero').endsWith(' sky kick')) sky = true;
+    }
+    out.skyKick = hp - T.get('Enemy HP');
+    out.skyHeight = Math.round(top + 75);
+    if (!sky) fail('melee: no sky kick pose');
+    if (out.skyHeight < 40) fail(`melee: SKY KICK only rose ${out.skyHeight}`);
+    if (out.skyKick < 8 + 8) fail(`melee: SKY KICK only did ${out.skyKick}`);
+    if (T.get('Hero Lock') !== 0 || T.sprite('Hero').y !== -75) fail('melee: hero not back on the ground and free after SKY KICK');
+    return out;
 }
 
 async function introTest () {
@@ -1138,6 +1239,8 @@ async function brawlTest () {
     if (want('powerup')) results.powerup = await powerUpTest();
     if (want('flip')) results.flip = await flipTest();
     if (want('whirl')) results.whirl = await whirlTest();
+    if (want('heli')) results.heli = await heliTest();
+    if (want('melee')) results.melee = await meleeChargeTest();
     if (want('adventure')) results.adventure = await adventureTest();
     if (want('adventure')) results.adventureBot = await adventureBotRun();
     if (want('brawl')) results.brawl = await brawlTest();
