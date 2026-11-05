@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "2.7"
+VERSION = "2.8"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -1874,28 +1874,90 @@ ART_MARGIN = 60   # room either side of a picture platform for a head, a tail or
 THICK = 18
 
 
-def art_platform_svg(art, w, left=False):
+def trex_svg(w, m, step=False):
+    """A realistic T-Rex seen from the side, facing right, with a riding saddle on its back.
+    Its back (the saddle top) is the flat platform at y=top; its feet stand 80 below. step = the other walking pose."""
+    T = 34
+    X = lambda x: m + x  # noqa: E731  (x from the hips end of the platform)
+    R = lambda x: m + w + x  # noqa: E731  (x past the front of the platform: neck and head)
+    skin = ('<defs><linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">'
+            '<stop offset="0" stop-color="#3f4a24"/><stop offset="0.55" stop-color="#6b7a3a"/>'
+            '<stop offset="1" stop-color="#c9b98a"/></linearGradient>'
+            '<linearGradient id="leg" x1="0" y1="0" x2="0" y2="1">'
+            '<stop offset="0" stop-color="#4b5729"/><stop offset="1" stop-color="#2f3618"/></linearGradient>'
+            '<radialGradient id="eye" cx="0.4" cy="0.4" r="0.6"><stop offset="0" stop-color="#fde047"/>'
+            '<stop offset="1" stop-color="#b45309"/></radialGradient></defs>')
+
+    def leg(hip_x, foot_dx, dark):
+        """A big muscular thigh, a long shin and a three-toed clawed foot on the ground."""
+        hx, fy = X(hip_x), T + 80
+        fx = hx + foot_dx
+        fill = "#2f3618" if dark else "url(#leg)"
+        knee_x = hx + 14 + foot_dx * 0.3
+        return (
+            f'<path d="M{hx - 22} {T + 14} C{hx - 30} {T + 44} {hx - 10} {T + 58} {knee_x} {T + 56} '
+            f'L{fx - 2} {fy - 8} L{fx - 8} {fy} L{fx + 22} {fy} Q{fx + 28} {fy - 2} {fx + 22} {fy - 6} '
+            f'L{fx + 10} {fy - 9} L{knee_x + 14} {T + 50} C{hx + 30} {T + 34} {hx + 22} {T + 12} {hx} {T + 8} Z" '
+            f'fill="{fill}" stroke="#1c2410" stroke-width="2.5" stroke-linejoin="round"/>'
+            # toe claws
+            + "".join(f'<path d="M{fx + c} {fy} l5 -1 l-3 -4 Z" fill="#e7e5e4" stroke="#44403c" stroke-width="1"/>'
+                      for c in (6, 13, 20))
+        )
+    far_dx, near_dx = (16, -14) if step else (-14, 16)
+    teeth_top = "".join(f'<path d="M{R(x)} {T - 13} l2.5 6 l2.5 -6 Z" fill="#fafaf9" stroke="#a8a29e" stroke-width=".6"/>'
+                        for x in range(22, 52, 5))
+    teeth_low = "".join(f'<path d="M{R(x)} {T - 1} l2.5 -5 l2.5 5 Z" fill="#fafaf9" stroke="#a8a29e" stroke-width=".6"/>'
+                        for x in range(24, 48, 5))
+    body = (
+        skin
+        # far leg behind the body, darker
+        + leg(92, far_dx, True)
+        # tail, body, neck and head as one shape
+        + f'<path d="M{X(-58)} {T + 26} Q{X(-20)} {T + 4} {X(10)} {T + 2} L{R(-25)} {T + 2} '
+          f'Q{R(-6)} {T + 1} {R(2)} {T - 14} C{R(8)} {T - 30} {R(30)} {T - 36} {R(52)} {T - 27} '
+          f'Q{R(59)} {T - 23} {R(57)} {T - 14} L{R(30)} {T - 10} '
+          f'L{R(52)} {T - 4} Q{R(50)} {T + 3} {R(24)} {T + 3} Q{R(12)} {T + 5} {R(4)} {T + 18} '
+          f'Q{R(-4)} {T + 40} {R(-30)} {T + 46} Q{X(w / 2)} {T + 56} {X(30)} {T + 46} '
+          f'Q{X(-6)} {T + 40} {X(-58)} {T + 29} Z" fill="url(#skin)" stroke="#1c2410" stroke-width="2.5" stroke-linejoin="round"/>'
+        # open mouth: dark inside, then teeth
+        + f'<path d="M{R(30)} {T - 10} L{R(55)} {T - 13} L{R(52)} {T - 4} Z" fill="#7f1d1d"/>' + teeth_top + teeth_low
+        # dark stripes across the back and tail
+        + "".join(f'<path d="M{X(x)} {T + 3} q-4 10 2 18" stroke="#2c3418" stroke-width="5" fill="none" stroke-linecap="round" opacity="0.7"/>'
+                  for x in range(-34, w - 10, 22))
+        # little bony bumps along the neck and tail
+        + "".join(f'<circle cx="{R(x)}" cy="{y}" r="2.4" fill="#55602f" stroke="#1c2410" stroke-width="1"/>'
+                  for x, y in ((-2, T - 4), (4, T - 16), (12, T - 27)))
+        # scales: rows of tiny dots, and a pale belly sheen
+        + "".join(f'<circle cx="{X(x)}" cy="{T + y}" r="1.1" fill="#283015" opacity="0.5"/>'
+                  for x in range(4, w + 4, 9) for y in (14, 26) if (x + y) % 2)
+        + f'<path d="M{X(34)} {T + 44} Q{X(w / 2)} {T + 52} {R(-30)} {T + 42}" stroke="#e7dcb5" stroke-width="4" fill="none" opacity="0.6"/>'
+        # eye with a bony brow ridge, nostril and cheek line
+        + f'<path d="M{R(22)} {T - 28} Q{R(30)} {T - 33} {R(38)} {T - 28}" stroke="#1c2410" stroke-width="3" fill="none"/>'
+        f'<ellipse cx="{R(30)}" cy="{T - 23}" rx="4.2" ry="3.4" fill="url(#eye)" stroke="#1c2410" stroke-width="1.2"/>'
+        f'<ellipse cx="{R(30.5)}" cy="{T - 23}" rx="1" ry="2.8" fill="#111"/>'
+        f'<ellipse cx="{R(52)}" cy="{T - 24}" rx="2" ry="1.2" fill="#1c2410"/>'
+        f'<path d="M{R(14)} {T - 18} Q{R(18)} {T - 8} {R(28)} {T - 9}" stroke="#2c3418" stroke-width="1.5" fill="none"/>'
+        # tiny two-fingered arm
+        + f'<path d="M{R(-12)} {T + 24} Q{R(-2)} {T + 30} {R(4)} {T + 36} l4 -2 M{R(4)} {T + 36} l3 3" stroke="#3f4a24" '
+          f'stroke-width="4" fill="none" stroke-linecap="round"/>'
+        # near leg in front of the body
+        + leg(46, near_dx, False)
+        # riding saddle and its strap under the belly (the saddle top is the platform)
+        + f'<path d="M{X(w * 0.32)} {T + 2} L{X(w * 0.32)} {T + 50}" stroke="#78350f" stroke-width="5"/>'
+        f'<path d="M{X(w * 0.18)} {T + 4} Q{X(w * 0.18)} {T - 1} {X(w * 0.24)} {T} L{X(w * 0.42)} {T} '
+        f'Q{X(w * 0.48)} {T - 3} {X(w * 0.48)} {T + 4} Q{X(w * 0.33)} {T + 12} {X(w * 0.18)} {T + 4} Z" '
+        f'fill="#92400e" stroke="#451a03" stroke-width="2"/>'
+        f'<rect x="{X(w * 0.3)}" y="{T + 8}" width="6" height="8" rx="2" fill="#facc15" stroke="#713f12"/>'
+    )
+    return body, T
+
+
+def art_platform_svg(art, w, left=False, step=False):
     """A platform that is a picture: its flat top is where fighters stand. Returns svg, centre x, centre y."""
     m = ART_MARGIN
     if art == "trex":
-        top = 14
-        body = (
-            # tail, body, armoured back, legs, head (the T-Rex faces right)
-            f'<path d="M{m + 10} {top + 10} Q{m - 40} {top + 10} {m - 58} {top + 40} Q{m - 20} {top + 34} {m + 10} {top + 44} Z" fill="#15803d" stroke="#14532d" stroke-width="3"/>'
-            f'<rect x="{m}" y="{top}" width="{w}" height="48" rx="22" fill="#16a34a" stroke="#14532d" stroke-width="3"/>'
-            + "".join(f'<path d="M{m + x} {top + 2} l9 -10 l9 10 Z" fill="#94a3b8" stroke="#334155" stroke-width="2"/>'
-                      for x in range(14, w - 14, 30))
-            + f'<rect x="{m + 8}" y="{top}" width="{w - 16}" height="9" rx="4" fill="#64748b" stroke="#334155" stroke-width="2"/>'
-            f'<rect x="{m + w * 0.38:.0f}" y="{top + 4}" width="30" height="16" rx="5" fill="#b45309" stroke="#78350f" stroke-width="2"/>'
-            f'<path d="M{m + 28} {top + 40} L{m + 22} {top + 82} L{m + 40} {top + 82} L{m + 44} {top + 44} Z" fill="#15803d" stroke="#14532d" stroke-width="3"/>'
-            f'<path d="M{m + w - 50} {top + 40} L{m + w - 54} {top + 82} L{m + w - 36} {top + 82} L{m + w - 30} {top + 44} Z" fill="#15803d" stroke="#14532d" stroke-width="3"/>'
-            f'<path d="M{m + w - 14} {top + 6} Q{m + w + 6} {top - 34} {m + w + 52} {top - 22} L{m + w + 56} {top - 2} '
-            f'L{m + w + 34} {top + 4} L{m + w + 50} {top + 12} L{m + w + 10} {top + 24} Z" fill="#16a34a" stroke="#14532d" stroke-width="3"/>'
-            f'<circle cx="{m + w + 26}" cy="{top - 18}" r="4" fill="#fef08a" stroke="#000" stroke-width="1.5"/>'
-            + "".join(f'<path d="M{m + w + x} {top + 4} l3 6 l3 -6 Z" fill="#ffffff"/>' for x in (36, 42))
-            + f'<path d="M{m + w - 2} {top + 26} L{m + w + 12} {top + 34}" stroke="#14532d" stroke-width="5" stroke-linecap="round"/>'
-        )
-        width, height = w + 2 * m, top + 86
+        body, top = trex_svg(w, m, step)
+        width, height = w + 2 * m, top + 84
     elif art == "truck":
         top = 8
         body = (
@@ -2006,8 +2068,22 @@ def brawl_sky_svg(stage):
                 '<path d="M0 260 L70 170 L120 210 L190 120 L230 150 L250 80 L280 150 L330 200 L400 140 L480 220 L480 360 L0 360 Z" fill="#7c2d12" opacity="0.7"/>'
                 '<path d="M240 85 L250 80 L262 88 Q256 60 250 40 Q246 60 240 85 Z" fill="#ef4444"/>'
                 '<path d="M250 40 Q230 10 260 -10 Q290 10 250 40" fill="#9ca3af" opacity="0.6"/>'
-                + "".join(f'<path d="M{x} 260 q4 -30 -12 -50 M{x} 260 q-4 -30 12 -50" stroke="#166534" stroke-width="5" fill="none"/>' for x in (60, 420))
-                + '<path d="M120 90 q10 -8 20 0 q10 -8 20 0" stroke="#1c1917" stroke-width="3" fill="none"/>',
+                # a long-necked sauropod walking far away on the plain (hazy, so it looks distant)
+                '<g opacity="0.55" fill="#5b3a1e">'
+                '<path d="M330 236 Q342 214 372 214 Q392 214 400 226 Q416 222 440 236 Q414 232 400 236 Z"/>'
+                '<path d="M352 218 Q338 180 322 156 Q318 150 312 152 Q306 154 310 158 Q326 168 344 220 Z"/>'
+                '<rect x="350" y="230" width="7" height="22"/><rect x="364" y="232" width="7" height="20"/>'
+                '<rect x="384" y="230" width="7" height="22"/><rect x="396" y="232" width="7" height="20"/></g>'
+                # pterosaurs gliding: pointed wings, a crest and a long beak
+                + "".join(f'<g transform="translate({x} {y}) scale({k})" fill="#3b1d0e" opacity="0.8">'
+                          '<path d="M0 0 Q-14 -10 -34 -4 Q-18 -2 -4 4 Z M0 0 Q14 -12 34 -6 Q18 -2 4 4 Z"/>'
+                          '<path d="M-2 2 L10 0 L-2 -2 Z M-1 -1 L-8 -6 L-2 0 Z"/></g>'
+                          for x, y, k in ((130, 80, 1.0), (175, 105, 0.6)))
+                # cycads and tree ferns in front of the hills
+                + "".join(f'<rect x="{x - 3}" y="{232 - h}" width="6" height="{h + 30}" fill="#3f2a14"/>'
+                          + "".join(f'<path d="M{x} {232 - h} q{dx} {-14 + abs(dx) // 3} {dx * 2} {6}" stroke="#166534" stroke-width="4" fill="none" stroke-linecap="round"/>'
+                                    for dx in (-16, -9, -3, 3, 9, 16))
+                          for x, h in ((40, 40), (70, 22), (440, 46), (465, 26))),
         "highway": '<circle cx="80" cy="60" r="30" fill="#fef08a"/>'
                    + "".join(f'<rect x="{x}" y="{y}" width="{w}" height="{260 - y}" fill="#94a3b8" opacity="0.7"/>'
                              for x, y, w in ((150, 120, 40), (195, 90, 50), (250, 140, 34), (290, 100, 44), (340, 130, 30)))
@@ -2533,8 +2609,9 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
             x1, y1, x2, y2 = plat[:4]
             if len(plat) > 6:
                 for left in (False, True):
-                    svg, cx, cy = art_platform_svg(plat[6], x2 - x1, left)
-                    pl.costume(f"{st['key']} {i}" + (" l" if left else ""), svg, cx, cy)
+                    for step in (False, True):
+                        svg, cx, cy = art_platform_svg(plat[6], x2 - x1, left, step)
+                        pl.costume(f"{st['key']} {i}" + (" l" if left else "") + (" s" if step else ""), svg, cx, cy)
                 continue
             svg, cy = platform_svg(st["key"], x1, y1, x2, y2, plat[4] if len(plat) > 4 else 0, plat[5] if len(plat) > 5 else 0)
             pl.costume(f"{st['key']} {i}", svg, 0, cy)
@@ -2542,6 +2619,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
     PL.local("Is Clone", 0)
     PL.local("My Id", 0)
     PL.local("Stage Key", "")
+    PL.local("Suf", "")
     keys = [PL.if_(eq(V("Brawl Stage"), i), [PL.set("Stage Key", st["key"])]) for i, st in enumerate(BRAWL_STAGES, start=1)]
     PL.on_flag(PL.hide(), PL.set("Is Clone", 0))
     PL.on_msg("brawl go", PL.if_(eq(V("Is Clone"), 0), [
@@ -2553,8 +2631,11 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
             PL.size_to(mul(100, V("Zoom"))),
             # a T-Rex, truck or raft turns round when it drives the other way
             PL.if_(eq(item("Plat Art", V("My Id")), 1), [
-                PL.if_(lt(item("Plat Push", V("My Id")), 0), [PL.wear(join(V("Stage Key"), join(" ", join(V("My Id"), " l"))))],
-                       [PL.wear(join(V("Stage Key"), join(" ", V("My Id"))))]),
+                PL.set("Suf", ""),
+                PL.if_(lt(item("Plat Push", V("My Id")), 0), [PL.set("Suf", " l")]),
+                # a walking step every fifth of a second (the T-Rex's legs move)
+                PL.if_(eq(mod(floor_(mul(TIMER, 5)), 2), 1), [PL.set("Suf", join(V("Suf"), " s"))]),
+                PL.wear(join(V("Stage Key"), join(" ", join(V("My Id"), V("Suf"))))),
             ]),
             PL.goto(mul(sub(item("Plat X1", V("My Id")), V("Cam X")), V("Zoom")),
                     mul(sub(item("Plat Y1", V("My Id")), V("Cam Y")), V("Zoom"))),

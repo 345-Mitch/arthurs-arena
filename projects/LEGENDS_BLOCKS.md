@@ -8820,8 +8820,8 @@ set [BF Power] to [0]
 
 ## Brawl Platform
 
-Costumes: sky 1, sky 2, sky 3, sky 4, ramps 1, ramps 2, ramps 3, ramps 4, ramps 5, ramps 6, pagoda 1, pagoda 2, pagoda 3, pagoda 4, pagoda 5, pagoda 6, pirate 1, pirate 2, pirate 3, pirate 4, pirate 5, castle 1, castle 2, castle 3, castle 4, castle 5, castle 6, space 1, space 2, space 3, space 4, space 5, space 6, snow 1, snow 2, snow 3, snow 4, snow 5, candy 1, candy 2, candy 3, candy 4, candy 5, candy 6, factory 1, factory 2, factory 3, factory 4, factory 5, factory 6, towers 1, towers 2, towers 3, towers 4, towers 5, towers 6, towers 7, towers 8, jungle 1, jungle 2, jungle 3, jungle 4, jungle 5, jungle 5 l, jungle 6, dino 1, dino 2, dino 2 l, dino 3, dino 4, dino 5, highway 1, highway 2, highway 3, highway 4, highway 5, highway 5 l, highway 6, highway 7, pond 1, pond 2, pond 3, pond 3 l, pond 4, pond 5, pond 6, pond 7
-Sprite-only variables: Is Clone, My Id, Stage Key
+Costumes: sky 1, sky 2, sky 3, sky 4, ramps 1, ramps 2, ramps 3, ramps 4, ramps 5, ramps 6, pagoda 1, pagoda 2, pagoda 3, pagoda 4, pagoda 5, pagoda 6, pirate 1, pirate 2, pirate 3, pirate 4, pirate 5, castle 1, castle 2, castle 3, castle 4, castle 5, castle 6, space 1, space 2, space 3, space 4, space 5, space 6, snow 1, snow 2, snow 3, snow 4, snow 5, candy 1, candy 2, candy 3, candy 4, candy 5, candy 6, factory 1, factory 2, factory 3, factory 4, factory 5, factory 6, towers 1, towers 2, towers 3, towers 4, towers 5, towers 6, towers 7, towers 8, jungle 1, jungle 2, jungle 3, jungle 4, jungle 5, jungle 5 s, jungle 5 l, jungle 5 l s, jungle 6, dino 1, dino 2, dino 2 s, dino 2 l, dino 2 l s, dino 3, dino 4, dino 5, highway 1, highway 2, highway 3, highway 4, highway 5, highway 5 s, highway 5 l, highway 5 l s, highway 6, highway 7, pond 1, pond 2, pond 3, pond 3 s, pond 3 l, pond 3 l s, pond 4, pond 5, pond 6, pond 7
+Sprite-only variables: Is Clone, My Id, Stage Key, Suf
 
 ```
 when green flag clicked
@@ -8890,11 +8890,14 @@ show
 repeat until <(Brawl Live) = [0]>
     set size to ([100] * (Zoom)) %
     if <(item (My Id) of [Plat Art]) = [1]> then
+        set [Suf] to []
         if <(item (My Id) of [Plat Push]) < [0]> then
-            switch costume to (join (Stage Key) (join [ ] (join (My Id) [ l])))
-        else
-            switch costume to (join (Stage Key) (join [ ] (My Id)))
+            set [Suf] to [ l]
         end
+        if <((floor of ((timer) * [5])) mod [2]) = [1]> then
+            set [Suf] to (join (Suf) [ s])
+        end
+        switch costume to (join (Stage Key) (join [ ] (join (My Id) (Suf))))
     end
     go to x: (((item (My Id) of [Plat X1]) - (Cam X)) * (Zoom)) y: (((item (My Id) of [Plat Y1]) - (Cam Y)) * (Zoom))
 end

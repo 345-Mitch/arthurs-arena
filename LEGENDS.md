@@ -89,7 +89,7 @@ Tap **BRAWL**, pick your fighter, and fight three CPU fighters at once (ninjas c
   - **Robot Factory:** **conveyor belts** carry you along
   - **Tower Steps:** ramps, steps and high towers
   - **Jungle:** tree branches and a **vine swing** that sways from side to side. Watch out for falling **coconuts**!
-  - **Dino Valley:** ride on the back of an **armoured T-Rex** as it stomps back and forth under a volcano
+  - **Dino Valley:** ride in the saddle of a big **T-Rex** as it walks back and forth under a volcano, with a long-necked dinosaur in the distance and pterosaurs in the sky
   - **Highway:** a bridge with ramps and a **flatbed truck** you can ride. **Trucks** speed along the road, so jump!
   - **Fishing Pond:** two docks and a **raft** that floats between them. Fall in the water and you're out! **Fish** leap up out of the pond
 - **Damage %:** the number at the top shows each fighter's damage. The higher it is, the further they fly when hit.
@@ -261,7 +261,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v2.7` in the bottom corner of the title.
+- **Version line:** `v2.8` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).
