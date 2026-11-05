@@ -23,7 +23,7 @@ const SAVE_JS = `
 (function () {
     var KEY = 'arthurs-arena-legends-save';
     var KEEP = ['Best', 'Crown', 'Power XP', 'Power Level'];   // keep the highest
-    var LAST = ['Difficulty'];      // keep the last choice
+    var LAST = ['Difficulty', 'Sound On', 'Stage Pick'];      // keep the last choice
     function stageVars () {
         var stage = vm.runtime.getTargetForStage && vm.runtime.getTargetForStage();
         if (!stage) return null;

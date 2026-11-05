@@ -5,9 +5,9 @@ Made by `tools/build_legends_sb3.py` from the same blocks that are inside
 
 ## Stage
 
-Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Bamboo, Dojo, Volcano, Castle, Arcade, Ending, brawl sky, brawl ramps, brawl pagoda, brawl towers
+Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Bamboo, Dojo, Volcano, Castle, Arcade, Ending, brawl sky, brawl ramps, brawl pagoda, brawl pirate, brawl castle, brawl space, brawl snow, brawl candy, brawl factory, brawl towers
 Sounds: hit, big hit, hurt, jump, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, poof, shuriken, spike fall, win
-Sprite-only variables: New Level, K, Pick, Min X, Max X, Min Y, Max Y, Alive, Zoom To
+Sprite-only variables: New Level, Frames, Second, K, Pick, Min X, Max X, Min Y, Max Y, Alive, Zoom To
 
 ```
 when green flag clicked
@@ -95,6 +95,11 @@ end
 
 ```
 when I receive [load enemy]
+if <(Mode) = [practice]> then
+    set [Enemy Type] to [1]
+    switch backdrop to (Yard)
+    set [Pace] to [1]
+end
 if <(Mode) = [story]> then
     set [Enemy Type] to (Chapter)
     if <(Chapter) = [1]> then
@@ -126,13 +131,16 @@ if <(Mode) = [story]> then
     end
     set [Pace] to [1]
 else
-    if <((Wave) mod [9]) = [0]> then
-        set [Enemy Type] to [9]
+    if <(Mode) = [practice]> then
     else
-        set [Enemy Type] to ((((Wave) - [1]) mod [9]) + [1])
+        if <((Wave) mod [9]) = [0]> then
+            set [Enemy Type] to [9]
+        else
+            set [Enemy Type] to ((((Wave) - [1]) mod [9]) + [1])
+        end
+        switch backdrop to (Arcade)
+        set [Pace] to ([8] / ([7] + (Wave)))
     end
-    switch backdrop to (Arcade)
-    set [Pace] to ([8] / ([7] + (Wave)))
 end
 if <(Enemy Type) = [1]> then
     set [Enemy Name] to [rival]
@@ -265,10 +273,10 @@ when I receive [start fight]
 set [Fight On] to [0]
 set [State] to [fight]
 broadcast [load enemy] and wait
-if <(Mode) = [story]> then
-    set [Hero HP] to (Hero Max)
-else
+if <(Mode) = [arcade]> then
     show variable [Wave]
+else
+    set [Hero HP] to (Hero Max)
 end
 show variable [Score]
 hide variable [Best]
@@ -306,6 +314,10 @@ set [Want Dodge] to [0]
 set [Want Super] to [0]
 set [Fight On] to [1]
 broadcast [fight on]
+if <(Mode) = [practice]> then
+    set [Pop Text] to [PRACTICE: try every move!]
+    broadcast [popup]
+end
 ```
 
 > READY... FIGHT! Taps before FIGHT! are thrown away.
@@ -342,9 +354,15 @@ if <<(Fight On) = [1]> and <(timer) > (Enemy Stun Until)>> then
         broadcast [king angry]
     end
     if <(Enemy HP) < [1]> then
-        set [Enemy HP] to [0]
-        set [Fight On] to [0]
-        broadcast [enemy down]
+        if <(Mode) = [practice]> then
+            set [Enemy HP] to (Enemy Max)
+            set [Pop Text] to [Nice! Again!]
+            broadcast [popup]
+        else
+            set [Enemy HP] to [0]
+            set [Fight On] to [0]
+            broadcast [enemy down]
+        end
     end
 end
 ```
@@ -472,6 +490,56 @@ set [Want Power] to [1]
 ```
 
 > G: your POWER move (from power level 2).
+
+```
+when green flag clicked
+forever
+    sound_setvolumeto
+    change [Frames] by [1]
+    if <(timer) > ((Second) + [1])> then
+        set [FPS] to (Frames)
+        set [Frames] to [0]
+        set [Second] to (timer)
+    end
+end
+```
+
+> Sound on/off (only the Stage plays sounds, so setting its volume is enough) and a frames-per-second count.
+
+```
+when [d] key pressed
+broadcast [toggle debug]
+```
+
+> D: Mitch's debug overlay (or tap the version number on the title).
+
+```
+when I receive [toggle debug]
+set [Debug] to ([1] - (Debug))
+if <(Debug) = [1]> then
+    show variable [FPS]
+    show variable [State]
+    show variable [Mode]
+    show variable [Fight On]
+    show variable [Hero HP]
+    show variable [Enemy HP]
+    show variable [Enemy Name]
+    show variable [Minions]
+    show variable [Power Level]
+    show variable [Brawl Live]
+else
+    hide variable [FPS]
+    hide variable [State]
+    hide variable [Mode]
+    hide variable [Fight On]
+    hide variable [Hero HP]
+    hide variable [Enemy HP]
+    hide variable [Enemy Name]
+    hide variable [Minions]
+    hide variable [Power Level]
+    hide variable [Brawl Live]
+end
+```
 
 ```
 when I receive [enemy hurt]
@@ -716,11 +784,17 @@ set [Brawl On] to [0]
 set [Brawl Live] to [0]
 set [Fight On] to [0]
 broadcast [brawl clear] and wait
-set [Brawl Stage] to (((Brawl Stage) mod [4]) + [1])
+if <(Stage Pick) = [0]> then
+    set [Brawl Stage] to (pick random [1] to [10])
+else
+    set [Brawl Stage] to (Stage Pick)
+end
 delete all of [Plat X1]
 delete all of [Plat Y1]
 delete all of [Plat X2]
 delete all of [Plat Y2]
+delete all of [Plat Bounce]
+delete all of [Plat Push]
 delete all of [B X]
 delete all of [B Y]
 delete all of [B Dmg]
@@ -737,20 +811,31 @@ if <(Brawl Stage) = [1]> then
     add [-100] to [Plat Y1]
     add [290] to [Plat X2]
     add [-100] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [-235] to [Plat X1]
     add [-10] to [Plat Y1]
     add [-105] to [Plat X2]
     add [-10] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [105] to [Plat X1]
     add [-10] to [Plat Y1]
     add [235] to [Plat X2]
     add [-10] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [-65] to [Plat X1]
     add [78] to [Plat Y1]
     add [65] to [Plat X2]
     add [78] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     set [Plat Count] to [4]
     set [Solid Count] to [1]
+    set [Stage Grav] to [1]
+    set [Stage Grip] to [0.45]
+    set [Stage Key] to [sky]
     set [Pop Text] to [SKY RUINS]
     broadcast [popup]
 end
@@ -760,28 +845,43 @@ if <(Brawl Stage) = [2]> then
     add [-150] to [Plat Y1]
     add [-135] to [Plat X2]
     add [-65] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [-135] to [Plat X1]
     add [-65] to [Plat Y1]
     add [135] to [Plat X2]
     add [-65] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [135] to [Plat X1]
     add [-65] to [Plat Y1]
     add [340] to [Plat X2]
     add [-150] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [-215] to [Plat X1]
     add [35] to [Plat Y1]
     add [-95] to [Plat X2]
     add [35] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [95] to [Plat X1]
     add [35] to [Plat Y1]
     add [215] to [Plat X2]
     add [35] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [-45] to [Plat X1]
     add [115] to [Plat Y1]
     add [45] to [Plat X2]
     add [115] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     set [Plat Count] to [6]
     set [Solid Count] to [3]
+    set [Stage Grav] to [1]
+    set [Stage Grip] to [0.45]
+    set [Stage Key] to [ramps]
     set [Pop Text] to [RAMP VALLEY]
     broadcast [popup]
 end
@@ -791,67 +891,365 @@ if <(Brawl Stage) = [3]> then
     add [-130] to [Plat Y1]
     add [300] to [Plat X2]
     add [-130] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [-265] to [Plat X1]
     add [-40] to [Plat Y1]
     add [-175] to [Plat X2]
     add [5] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [-175] to [Plat X1]
     add [5] to [Plat Y1]
     add [-85] to [Plat X2]
     add [-40] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [85] to [Plat X1]
     add [-40] to [Plat Y1]
     add [175] to [Plat X2]
     add [5] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [175] to [Plat X1]
     add [5] to [Plat Y1]
     add [265] to [Plat X2]
     add [-40] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [-45] to [Plat X1]
     add [85] to [Plat Y1]
     add [45] to [Plat X2]
     add [85] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     set [Plat Count] to [6]
     set [Solid Count] to [1]
+    set [Stage Grav] to [1]
+    set [Stage Grip] to [0.45]
+    set [Stage Key] to [pagoda]
     set [Pop Text] to [PAGODA ROOFS]
     broadcast [popup]
 end
 if <(Brawl Stage) = [4]> then
+    switch backdrop to (brawl pirate)
+    add [-300] to [Plat X1]
+    add [-110] to [Plat Y1]
+    add [300] to [Plat X2]
+    add [-110] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [-205] to [Plat X1]
+    add [15] to [Plat Y1]
+    add [-125] to [Plat X2]
+    add [15] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [125] to [Plat X1]
+    add [15] to [Plat Y1]
+    add [205] to [Plat X2]
+    add [15] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [-50] to [Plat X1]
+    add [105] to [Plat Y1]
+    add [50] to [Plat X2]
+    add [105] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [190] to [Plat X1]
+    add [-55] to [Plat Y1]
+    add [300] to [Plat X2]
+    add [-55] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    set [Plat Count] to [5]
+    set [Solid Count] to [1]
+    set [Stage Grav] to [1]
+    set [Stage Grip] to [0.45]
+    set [Stage Key] to [pirate]
+    set [Pop Text] to [PIRATE SHIP]
+    broadcast [popup]
+end
+if <(Brawl Stage) = [5]> then
+    switch backdrop to (brawl castle)
+    add [-310] to [Plat X1]
+    add [-130] to [Plat Y1]
+    add [310] to [Plat X2]
+    add [-130] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [-290] to [Plat X1]
+    add [-25] to [Plat Y1]
+    add [-180] to [Plat X2]
+    add [-25] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [180] to [Plat X1]
+    add [-25] to [Plat Y1]
+    add [290] to [Plat X2]
+    add [-25] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [-180] to [Plat X1]
+    add [-130] to [Plat Y1]
+    add [-110] to [Plat X2]
+    add [-70] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [-110] to [Plat X1]
+    add [45] to [Plat Y1]
+    add [110] to [Plat X2]
+    add [45] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [110] to [Plat X1]
+    add [-70] to [Plat Y1]
+    add [180] to [Plat X2]
+    add [-130] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    set [Plat Count] to [6]
+    set [Solid Count] to [1]
+    set [Stage Grav] to [1]
+    set [Stage Grip] to [0.45]
+    set [Stage Key] to [castle]
+    set [Pop Text] to [CASTLE WALLS]
+    broadcast [popup]
+end
+if <(Brawl Stage) = [6]> then
+    switch backdrop to (brawl space)
+    add [-280] to [Plat X1]
+    add [-110] to [Plat Y1]
+    add [-30] to [Plat X2]
+    add [-110] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [30] to [Plat X1]
+    add [-110] to [Plat Y1]
+    add [280] to [Plat X2]
+    add [-110] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [-25] to [Plat X1]
+    add [-30] to [Plat Y1]
+    add [25] to [Plat X2]
+    add [-30] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [-200] to [Plat X1]
+    add [40] to [Plat Y1]
+    add [-110] to [Plat X2]
+    add [40] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [110] to [Plat X1]
+    add [40] to [Plat Y1]
+    add [200] to [Plat X2]
+    add [40] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [-40] to [Plat X1]
+    add [130] to [Plat Y1]
+    add [40] to [Plat X2]
+    add [130] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    set [Plat Count] to [6]
+    set [Solid Count] to [2]
+    set [Stage Grav] to [0.55]
+    set [Stage Grip] to [0.45]
+    set [Stage Key] to [space]
+    set [Pop Text] to [SPACE STATION]
+    broadcast [popup]
+end
+if <(Brawl Stage) = [7]> then
+    switch backdrop to (brawl snow)
+    add [-320] to [Plat X1]
+    add [-140] to [Plat Y1]
+    add [-60] to [Plat X2]
+    add [-60] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [-60] to [Plat X1]
+    add [-60] to [Plat Y1]
+    add [60] to [Plat X2]
+    add [-60] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [60] to [Plat X1]
+    add [-60] to [Plat Y1]
+    add [320] to [Plat X2]
+    add [-140] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [-230] to [Plat X1]
+    add [30] to [Plat Y1]
+    add [-120] to [Plat X2]
+    add [30] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [120] to [Plat X1]
+    add [30] to [Plat Y1]
+    add [230] to [Plat X2]
+    add [30] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    set [Plat Count] to [5]
+    set [Solid Count] to [3]
+    set [Stage Grav] to [1]
+    set [Stage Grip] to [0.07]
+    set [Stage Key] to [snow]
+    set [Pop Text] to [SNOWY PEAK]
+    broadcast [popup]
+end
+if <(Brawl Stage) = [8]> then
+    switch backdrop to (brawl candy)
+    add [-300] to [Plat X1]
+    add [-110] to [Plat Y1]
+    add [300] to [Plat X2]
+    add [-110] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [-255] to [Plat X1]
+    add [-45] to [Plat Y1]
+    add [-195] to [Plat X2]
+    add [-45] to [Plat Y2]
+    add [1] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [195] to [Plat X1]
+    add [-45] to [Plat Y1]
+    add [255] to [Plat X2]
+    add [-45] to [Plat Y2]
+    add [1] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [-120] to [Plat X1]
+    add [40] to [Plat Y1]
+    add [-40] to [Plat X2]
+    add [40] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [40] to [Plat X1]
+    add [40] to [Plat Y1]
+    add [120] to [Plat X2]
+    add [40] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [-30] to [Plat X1]
+    add [140] to [Plat Y1]
+    add [30] to [Plat X2]
+    add [140] to [Plat Y2]
+    add [1] to [Plat Bounce]
+    add [0] to [Plat Push]
+    set [Plat Count] to [6]
+    set [Solid Count] to [1]
+    set [Stage Grav] to [1]
+    set [Stage Grip] to [0.45]
+    set [Stage Key] to [candy]
+    set [Pop Text] to [CANDY LAND]
+    broadcast [popup]
+end
+if <(Brawl Stage) = [9]> then
+    switch backdrop to (brawl factory)
+    add [-120] to [Plat X1]
+    add [-110] to [Plat Y1]
+    add [120] to [Plat X2]
+    add [-110] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    add [-320] to [Plat X1]
+    add [-110] to [Plat Y1]
+    add [-120] to [Plat X2]
+    add [-110] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [1.8] to [Plat Push]
+    add [120] to [Plat X1]
+    add [-110] to [Plat Y1]
+    add [320] to [Plat X2]
+    add [-110] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [-1.8] to [Plat Push]
+    add [-220] to [Plat X1]
+    add [10] to [Plat Y1]
+    add [-80] to [Plat X2]
+    add [10] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [1.5] to [Plat Push]
+    add [80] to [Plat X1]
+    add [10] to [Plat Y1]
+    add [220] to [Plat X2]
+    add [10] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [-1.5] to [Plat Push]
+    add [-40] to [Plat X1]
+    add [100] to [Plat Y1]
+    add [40] to [Plat X2]
+    add [100] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
+    set [Plat Count] to [6]
+    set [Solid Count] to [3]
+    set [Stage Grav] to [1]
+    set [Stage Grip] to [0.45]
+    set [Stage Key] to [factory]
+    set [Pop Text] to [ROBOT FACTORY]
+    broadcast [popup]
+end
+if <(Brawl Stage) = [10]> then
     switch backdrop to (brawl towers)
     add [-330] to [Plat X1]
     add [-130] to [Plat Y1]
     add [-185] to [Plat X2]
     add [-130] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [-185] to [Plat X1]
     add [-130] to [Plat Y1]
     add [-95] to [Plat X2]
     add [-60] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [-95] to [Plat X1]
     add [-60] to [Plat Y1]
     add [95] to [Plat X2]
     add [-60] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [95] to [Plat X1]
     add [-60] to [Plat Y1]
     add [185] to [Plat X2]
     add [-130] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [185] to [Plat X1]
     add [-130] to [Plat Y1]
     add [330] to [Plat X2]
     add [-130] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [-300] to [Plat X1]
     add [5] to [Plat Y1]
     add [-200] to [Plat X2]
     add [5] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [200] to [Plat X1]
     add [5] to [Plat Y1]
     add [300] to [Plat X2]
     add [5] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     add [-60] to [Plat X1]
     add [60] to [Plat Y1]
     add [60] to [Plat X2]
     add [60] to [Plat Y2]
+    add [0] to [Plat Bounce]
+    add [0] to [Plat Push]
     set [Plat Count] to [8]
     set [Solid Count] to [5]
+    set [Stage Grav] to [1]
+    set [Stage Grip] to [0.45]
+    set [Stage Key] to [towers]
     set [Pop Text] to [TOWER STEPS]
     broadcast [popup]
 end
@@ -1037,6 +1435,16 @@ set [Fire Held] to [0]
 ```
 when I receive [brawl hit]
 start sound (hit)
+```
+
+```
+when I receive [boing]
+start sound (jump)
+```
+
+```
+when I receive [cannon fire]
+start sound (big hit)
 ```
 
 ```
@@ -1767,7 +2175,7 @@ repeat until <(Fight On) = [0]>
         point in direction [90]
         set [Enemy Facing] to [1]
     end
-    if <(timer) < (Enemy Stun Until)> then
+    if <<(timer) < (Enemy Stun Until)> or <(Mode) = [practice]>> then
         wait [0.05] seconds
     else
         if <(Enemy Type) = [1]> then
@@ -2931,6 +3339,87 @@ end
 ```
 
 > Every 3 to 7 seconds a weapon falls from the sky. Walk over it to pick it up. Sword: +4 power, longer reach, 10 swings. Hammer: +9 power and a shake, 5 swings. Boomerang: PUNCH throws it, 6 throws.
+
+```
+when I receive [show title]
+hide
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when I receive [story scene]
+hide
+```
+
+```
+when I receive [hero down]
+hide
+```
+
+```
+when I receive [enemy down]
+hide
+```
+
+```
+when I receive [ending]
+hide
+```
+
+## Apple
+
+Costumes: apple
+Sprite-only variables: Life, Got
+
+```
+when green flag clicked
+hide
+forever
+    if <<<(Fight On) = [1]> and <(State) = [fight]>> and <not <(Mode) = [practice]>>> then
+        wait (pick random [10] to [16]) seconds
+        if <<(Fight On) = [1]> and <(Hero HP) < (Hero Max)>> then
+            go to x: (pick random [-180] to [120]) y: [170]
+            show
+            go to [front] layer
+            repeat until <(y position) < [-49]>
+                change y by [-8]
+                turn right [0] degrees
+            end
+            set y to [-53]
+            set [Life] to [0]
+            set [Got] to [0]
+            repeat until <<<(Got) = [1]> or <(Life) > [160]>> or <(Fight On) = [0]>>
+                change [Life] by [1]
+                if <<(abs of ((x position) - (Hero X))) < [32]> and <((Hero Y) - [-75]) < [60]>> then
+                    set [Got] to [1]
+                end
+                if <(Life) > [120]> then
+                    set [ghost] effect to (((Life) - [120]) * [2])
+                end
+            end
+            hide
+            set [ghost] effect to [0]
+            if <<(Got) = [1]> and <(Fight On) = [1]>> then
+                change [Hero HP] by [25]
+                if <(Hero HP) > (Hero Max)> then
+                    set [Hero HP] to (Hero Max)
+                end
+                set [Pop Text] to [YUM! +25 HEALTH]
+                broadcast [popup]
+                broadcast [weapon get]
+            end
+        end
+    else
+        wait [0.3] seconds
+    end
+end
+```
+
+> Grok's healing apple: when you are hurt, an apple sometimes falls. Walk over it for +25 health.
 
 ```
 when I receive [show title]
@@ -5033,6 +5522,165 @@ when I receive [choose hero]
 hide
 ```
 
+## Practice Button
+
+Costumes: button
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [show title]
+go to x: [132] y: [-90]
+show
+go to [front] layer
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when this sprite clicked
+set [Mode] to [practice]
+broadcast [choose hero]
+```
+
+> Grok's practice fight: a dummy that never hits back and never goes down. Try every move.
+
+## Help Button
+
+Costumes: button
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [show title]
+go to x: [214] y: [-136]
+show
+go to [front] layer
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when this sprite clicked
+broadcast [show help]
+```
+
+## Help Card
+
+Costumes: help
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [show help]
+set size to [85] %
+go to x: [0] y: [22]
+show
+go to [front] layer
+```
+
+> Grok's how-to-play card.
+
+```
+when this sprite clicked
+hide
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when I receive [start fight]
+hide
+```
+
+```
+when I receive [brawl start]
+hide
+```
+
+## Sound Button
+
+Costumes: on, off
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [show title]
+go to x: [166] y: [-136]
+if <(Sound On) = [1]> then
+    switch costume to (on)
+else
+    switch costume to (off)
+end
+show
+go to [front] layer
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when this sprite clicked
+set [Sound On] to ([1] - (Sound On))
+if <(Sound On) = [1]> then
+    switch costume to (on)
+else
+    switch costume to (off)
+end
+```
+
+> Grok's sound on/off. The app remembers it.
+
+## Version
+
+Costumes: v
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [show title]
+go to x: [214] y: [-172]
+show
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when this sprite clicked
+broadcast [toggle debug]
+```
+
+> Tap the version number to show or hide Mitch's debug overlay.
+
 ## Level Button
 
 Costumes: easy, normal, hard, champion
@@ -5044,7 +5692,7 @@ hide
 
 ```
 when I receive [show title]
-go to x: [18] y: [-90]
+go to x: [-30] y: [-90]
 if <(Difficulty) = [1]> then
     switch costume to (easy)
 end
@@ -5637,7 +6285,7 @@ if <(Stun) > [0]> then
     end
 else
     if <(Ground) = [1]> then
-        change [VX] by ((((Dir) * (Speed)) - (VX)) * [0.45])
+        change [VX] by ((((Dir) * (Speed)) - (VX)) * (Stage Grip))
     else
         change [VX] by ((((Dir) * (Speed)) - (VX)) * [0.12])
     end
@@ -5803,7 +6451,7 @@ end
 if <(Drop) > [0]> then
     change [Drop] by [-1]
 end
-change [VY] by [-1]
+change [VY] by ([-1] * (Stage Grav))
 if <(VY) < [-15]> then
     set [VY] to [-15]
 end
@@ -5837,6 +6485,15 @@ if <not <(VY) > [0]>> then
 end
 set [X] to (NX)
 set [Y] to (NY)
+if <(Ground) = [1]> then
+    change [X] by (item (On Plat) of [Plat Push])
+    if <(item (On Plat) of [Plat Bounce]) = [1]> then
+        set [VY] to [17]
+        set [Ground] to [0]
+        set [Jumps] to [1]
+        broadcast [boing]
+    end
+end
 replace item (My Id) of [B X] with (X)
 replace item (My Id) of [B Y] with (Y)
 if <<<(abs of (X)) > [560]> or <(Y) < [-360]>> or <(Y) > [470]>> then
@@ -6130,7 +6787,7 @@ set [BF Power] to [0]
 
 ## Brawl Platform
 
-Costumes: sky 1, sky 2, sky 3, sky 4, ramps 1, ramps 2, ramps 3, ramps 4, ramps 5, ramps 6, pagoda 1, pagoda 2, pagoda 3, pagoda 4, pagoda 5, pagoda 6, towers 1, towers 2, towers 3, towers 4, towers 5, towers 6, towers 7, towers 8
+Costumes: sky 1, sky 2, sky 3, sky 4, ramps 1, ramps 2, ramps 3, ramps 4, ramps 5, ramps 6, pagoda 1, pagoda 2, pagoda 3, pagoda 4, pagoda 5, pagoda 6, pirate 1, pirate 2, pirate 3, pirate 4, pirate 5, castle 1, castle 2, castle 3, castle 4, castle 5, castle 6, space 1, space 2, space 3, space 4, space 5, space 6, snow 1, snow 2, snow 3, snow 4, snow 5, candy 1, candy 2, candy 3, candy 4, candy 5, candy 6, factory 1, factory 2, factory 3, factory 4, factory 5, factory 6, towers 1, towers 2, towers 3, towers 4, towers 5, towers 6, towers 7, towers 8
 Sprite-only variables: Is Clone, My Id, Stage Key
 
 ```
@@ -6152,6 +6809,24 @@ if <(Is Clone) = [0]> then
         set [Stage Key] to [pagoda]
     end
     if <(Brawl Stage) = [4]> then
+        set [Stage Key] to [pirate]
+    end
+    if <(Brawl Stage) = [5]> then
+        set [Stage Key] to [castle]
+    end
+    if <(Brawl Stage) = [6]> then
+        set [Stage Key] to [space]
+    end
+    if <(Brawl Stage) = [7]> then
+        set [Stage Key] to [snow]
+    end
+    if <(Brawl Stage) = [8]> then
+        set [Stage Key] to [candy]
+    end
+    if <(Brawl Stage) = [9]> then
+        set [Stage Key] to [factory]
+    end
+    if <(Brawl Stage) = [10]> then
         set [Stage Key] to [towers]
     end
     set [My Id] to [0]
@@ -6326,6 +7001,115 @@ if <(Is Clone) = [1]> then
     delete this clone
 end
 ```
+
+## Cannonball
+
+Costumes: ball
+Sprite-only variables: Done, J
+
+```
+define (cannon frame)   [run without screen refresh]
+change [CB X] by ([10] * (CB Dir))
+set size to ([60] * (Zoom)) %
+go to x: (((CB X) - (Cam X)) * (Zoom)) y: (((CB Y) - (Cam Y)) * (Zoom))
+set [J] to [0]
+repeat [4]
+    change [J] by [1]
+    if <<<<(Done) = [0]> and <(item (J) of [B Alive]) = [1]>> and <(abs of ((item (J) of [B X]) - (CB X))) < [24]>> and <(abs of (((item (J) of [B Y]) + [35]) - (CB Y))) < [40]>> then
+        set [Done] to [1]
+        replace item (J) of [B Hit] with ((item (J) of [B Hit]) + [12])
+        replace item (J) of [B KX] with ((CB Dir) * ([7] + ((item (J) of [B Dmg]) / [9])))
+        replace item (J) of [B KY] with ([7] + ((item (J) of [B Dmg]) / [11]))
+        broadcast [brawl ko]
+    end
+end
+```
+
+```
+when green flag clicked
+hide
+forever
+    if <<(Brawl On) = [1]> and <(Stage Key) = [pirate]>> then
+        wait (pick random [6] to [10]) seconds
+        if <<(Brawl On) = [1]> and <(Stage Key) = [pirate]>> then
+            if <(pick random [1] to [2]) = [1]> then
+                set [CB Dir] to [1]
+            else
+                set [CB Dir] to [-1]
+            end
+            set [CB X] to ((CB Dir) * [-520])
+            set [CB Y] to (pick random [-85] to [40])
+            set [Done] to [0]
+            set [Pop Text] to [CANNON!]
+            broadcast [popup]
+            broadcast [cannon fire]
+            show
+            go to [front] layer
+            repeat until <<<(Done) = [1]> or <(abs of (CB X)) > [560]>> or <(Brawl Live) = [0]>>
+                (cannon frame)
+            end
+            hide
+        end
+    else
+        wait [0.3] seconds
+    end
+end
+```
+
+> PIRATE SHIP: every few seconds a cannonball flies across the deck. Jump over it!
+
+```
+when I receive [brawl clear]
+hide
+```
+
+```
+when I receive [show title]
+hide
+```
+
+## Stage Button
+
+Costumes: stage 0, stage 1, stage 2, stage 3, stage 4, stage 5, stage 6, stage 7, stage 8, stage 9, stage 10
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [choose hero]
+if <(Mode) = [brawl]> then
+    switch costume to (join [stage ] (Stage Pick))
+    go to x: [40] y: [-162]
+    show
+    go to [front] layer
+else
+    hide
+end
+```
+
+```
+when I receive [hero picked]
+hide
+```
+
+```
+when I receive [show title]
+hide
+```
+
+```
+when this sprite clicked
+change [Stage Pick] by [1]
+if <(Stage Pick) > [10]> then
+    set [Stage Pick] to [0]
+end
+switch costume to (join [stage ] (Stage Pick))
+broadcast [swing sfx]
+```
+
+> Tap to choose the BRAWL stage, or RANDOM.
 
 ## P1 Marker
 

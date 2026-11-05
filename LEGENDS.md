@@ -72,10 +72,16 @@ If you get knocked out, tap **RETRY** to try the same chapter again. You get ful
 
 Tap **BRAWL**, pick your fighter, and fight three CPU fighters at once (ninjas can show up too), everyone against everyone. Fighters are smaller and the **camera follows the action**, zooming out when fighters are far apart and in when they're close.
 
-- **Stages:** each match moves to the next one:
+- **Stages:** pick one with the **STAGE** button on the fighter-select screen, or leave it on RANDOM.
   - **Sky Ruins:** floating platforms
-  - **Ramp Valley:** a hill with ramps up and down, plus ledges
-  - **Pagoda Roofs:** sloped red roofs and a high platform at night
+  - **Ramp Valley:** a hill with ramps up and down
+  - **Pagoda Roofs:** sloped red roofs at night
+  - **Pirate Ship:** masts and crow's nests. **Cannonballs** fly across the deck, so jump over them!
+  - **Castle Walls:** towers, ramps and a high bridge
+  - **Space Station:** **low gravity**, so you jump much higher and float down
+  - **Snowy Peak:** **slippery ice**, so you slide when you stop
+  - **Candy Land:** green **bounce pads** throw you into the air
+  - **Robot Factory:** **conveyor belts** carry you along
   - **Tower Steps:** ramps, steps and high towers
 - **Damage %:** the number at the top shows each fighter's damage. The higher it is, the further they fly when hit.
 - **Lives:** the dots show lives (3 each). Get knocked off the screen and you lose one, then drop back in from the sky.
@@ -86,6 +92,10 @@ Tap **BRAWL**, pick your fighter, and fight three CPU fighters at once (ninjas c
   - **Attacks:** PUNCH is quick, KICK hits harder, DODGE makes you safe for a moment, and FIRE charges a fireball.
   - **SMASH:** when SUPER is full you glow with red fire. SUPER then does a SMASH that sends fighters flying.
 - The yellow **P1** arrow shows which fighter is you.
+
+## Practice
+
+Tap **PRACTICE** on the title to try every move on a dummy that never hits back and never goes down. Leave with the ✕ button.
 
 ## Arcade
 
@@ -192,6 +202,19 @@ All the fighter numbers are in the **Stage**, in the script `when I receive [her
 - Draw a new fighter: costumes are named `arthur idle`, `arthur punch` and so on. Paint over them in the Costumes tab.
 
 `projects/LEGENDS_BLOCKS.md` lists every script in every sprite, so you can find any block.
+
+## Extras from Grok's plan
+
+Ideas from Grok's feature plan (pull request #1) that fit the game:
+
+- **Healing apple:** when you're hurt, an apple sometimes falls. Walk over it for +25 health.
+- **Sound on/off:** the speaker button on the title. The app remembers it.
+- **How to play:** the **?** button on the title.
+- **Practice fight:** the **PRACTICE** button.
+- **Version line:** `v1.7` in the bottom corner of the title.
+- **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
+
+Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).
 
 ## Notes for Mitch
 

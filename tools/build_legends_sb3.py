@@ -39,6 +39,8 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
+VERSION = "1.7"
+APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
 HEROES = [
@@ -552,6 +554,7 @@ def backdrop_svg(kind):
             + '<path d="M200 128 L210 100 L225 118 L240 92 L255 118 L270 100 L280 128 Z" fill="#facc15" stroke="#fde68a" stroke-width="3"/>'
             + outlined_text("Arthur's Arena", 240, 70, 50, "#ffffff", "#4c1d95")
             + text_el("LEGENDS OF THE GOLDEN CROWN", 240, 160, 16, "#fde68a")
+            + text_el(f"v{VERSION}", 470, 352, 10, "#a5b4fc", anchor="end")
         )
     elif kind == "Select":
         body = (
@@ -753,6 +756,38 @@ def warning_svg():
 def spike_shot_svg():
     return svg_doc(50, 20, '<polygon points="0,4 36,4 50,10 36,16 0,16" fill="#e5e7eb" stroke="#1f2937" stroke-width="2.5" stroke-linejoin="round"/>'
                            '<rect x="0" y="4" width="10" height="12" fill="#7f1d1d"/>')
+
+
+def apple_svg():
+    return svg_doc(60, 60, ('<circle cx="30" cy="34" r="27" fill="#fde68a" opacity="0.6"/>'
+                            '<path d="M30 20 C14 12 6 30 12 44 C18 56 26 52 30 50 C34 52 42 56 48 44 C54 30 46 12 30 20 Z" '
+                            'fill="#dc2626" stroke="#7f1d1d" stroke-width="2.5"/>'
+                            '<path d="M30 20 Q31 12 35 8" stroke="#78350f" stroke-width="3" fill="none"/>'
+                            '<path d="M33 13 Q42 6 46 14 Q38 18 33 13 Z" fill="#22c55e"/>'
+                            '<ellipse cx="21" cy="30" rx="4" ry="7" fill="#ffffff" opacity="0.5"/>'))
+
+
+def help_svg():
+    rows = [("◀ ▶  /  joystick", "walk (push up to jump)"), ("JUMP", "jump, twice in BRAWL"), ("PUNCH", "quick hit"),
+            ("KICK", "strong hit"), ("DODGE", "safe for a moment"), ("FIRE (hold)", "charge a fireball, let go"),
+            ("SUPER", "when the bar is full"), ("POWER", "your power-level move"), ("Walk over", "weapons and apples")]
+    body = ['<rect x="6" y="6" width="428" height="308" rx="22" fill="#fffbeb" stroke="#0f172a" stroke-width="6"/>',
+            '<path d="M6 60 L6 28 Q6 6 28 6 L412 6 Q434 6 434 28 L434 60 Z" fill="#2563eb"/>',
+            outlined_text("HOW TO PLAY", 220, 47, 30, "#ffffff")]
+    y = 88
+    for key, what in rows:
+        body.append(text_el(key, 150, y, 15, "#7c2d12", anchor="end"))
+        body.append(text_el(what, 162, y, 15, "#0f172a", anchor="start", weight=600))
+        y += 24
+    body.append(text_el("Tap this card to close it.", 220, 300, 12, "#475569"))
+    return svg_doc(440, 320, "".join(body))
+
+
+def speaker_svg(on):
+    waves = ('<path d="M30 14 Q38 22 30 30 M34 9 Q46 22 34 35" stroke="#ffffff" stroke-width="3" fill="none" stroke-linecap="round"/>'
+             if on else '<path d="M30 14 L42 30 M42 14 L30 30" stroke="#ef4444" stroke-width="4" stroke-linecap="round"/>')
+    return svg_doc(48, 44, '<rect x="2" y="2" width="44" height="40" rx="12" fill="#334155" stroke="#ffffff" stroke-width="3"/>'
+                           '<path d="M10 17 L17 17 L25 10 L25 34 L17 27 L10 27 Z" fill="#ffffff"/>' + waves)
 
 
 def shuriken_svg():
@@ -1323,6 +1358,9 @@ class Target:
         self.set_input(bid, "SOUND_MENU", [1, menu])
         return bid
 
+    def volume(self, n):
+        return self.blk("sound_setvolumeto", {"VOLUME": ("num", n)})
+
     def stop_sounds(self):
         return self.blk("sound_stopallsounds")
 
@@ -1457,6 +1495,23 @@ BRAWL_STAGES = [
     dict(key="pagoda", name="PAGODA ROOFS", sky=("#0f172a", "#7f1d1d"), solid=1,
          plats=[(-300, -130, 300, -130), (-265, -40, -175, 5), (-175, 5, -85, -40), (85, -40, 175, 5), (175, 5, 265, -40),
                 (-45, 85, 45, 85)]),
+    # platforms may have a 5th value (bouncy) and a 6th (conveyor push per frame)
+    dict(key="pirate", name="PIRATE SHIP", sky=("#38bdf8", "#e0f2fe"), solid=1, hazard="cannon",
+         plats=[(-300, -110, 300, -110), (-205, 15, -125, 15), (125, 15, 205, 15), (-50, 105, 50, 105), (190, -55, 300, -55)]),
+    dict(key="castle", name="CASTLE WALLS", sky=("#60a5fa", "#dbeafe"), solid=1,
+         plats=[(-310, -130, 310, -130), (-290, -25, -180, -25), (180, -25, 290, -25), (-180, -130, -110, -70),
+                (-110, 45, 110, 45), (110, -70, 180, -130)]),
+    dict(key="space", name="SPACE STATION", sky=("#020617", "#1e1b4b"), solid=2, grav=0.55,
+         plats=[(-280, -110, -30, -110), (30, -110, 280, -110), (-25, -30, 25, -30), (-200, 40, -110, 40), (110, 40, 200, 40),
+                (-40, 130, 40, 130)]),
+    dict(key="snow", name="SNOWY PEAK", sky=("#93c5fd", "#f8fafc"), solid=3, grip=0.07,
+         plats=[(-320, -140, -60, -60), (-60, -60, 60, -60), (60, -60, 320, -140), (-230, 30, -120, 30), (120, 30, 230, 30)]),
+    dict(key="candy", name="CANDY LAND", sky=("#f9a8d4", "#fdf2f8"), solid=1,
+         plats=[(-300, -110, 300, -110), (-255, -45, -195, -45, 1), (195, -45, 255, -45, 1), (-120, 40, -40, 40), (40, 40, 120, 40),
+                (-30, 140, 30, 140, 1)]),
+    dict(key="factory", name="ROBOT FACTORY", sky=("#475569", "#94a3b8"), solid=3,
+         plats=[(-120, -110, 120, -110), (-320, -110, -120, -110, 0, 1.8), (120, -110, 320, -110, 0, -1.8),
+                (-220, 10, -80, 10, 0, 1.5), (80, 10, 220, 10, 0, -1.5), (-40, 100, 40, 100)]),
     dict(key="towers", name="TOWER STEPS", sky=("#312e81", "#a5b4fc"), solid=5,
          plats=[(-330, -130, -185, -130), (-185, -130, -95, -60), (-95, -60, 95, -60), (95, -60, 185, -130),
                 (185, -130, 330, -130), (-300, 5, -200, 5), (200, 5, 300, 5), (-60, 60, 60, 60)]),
@@ -1464,16 +1519,28 @@ BRAWL_STAGES = [
 THICK = 18
 
 
-def platform_svg(stage, x1, y1, x2, y2):
+def platform_svg(stage, x1, y1, x2, y2, bounce=0, push=0):
     w = x2 - x1
     top = max(y1, y2)
     h = abs(y2 - y1) + THICK + 4
     ty1, ty2 = top - y1 + 2, top - y2 + 2
     colors = {"sky": ("#a8a29e", "#57534e", "#86efac"), "ramps": ("#b45309", "#78350f", "#fcd34d"),
-              "towers": ("#6366f1", "#312e81", "#c4b5fd"), "pagoda": ("#991b1b", "#450a0a", "#fbbf24")}[stage]
+              "towers": ("#6366f1", "#312e81", "#c4b5fd"), "pagoda": ("#991b1b", "#450a0a", "#fbbf24"),
+              "pirate": ("#92400e", "#451a03", "#fbbf24"), "castle": ("#a8a29e", "#44403c", "#e7e5e4"),
+              "space": ("#64748b", "#1e293b", "#22d3ee"), "snow": ("#bae6fd", "#0369a1", "#ffffff"),
+              "candy": ("#f472b6", "#9d174d", "#fde68a"), "factory": ("#57534e", "#1c1917", "#facc15")}[stage]
+    if bounce:
+        colors = ("#a3e635", "#3f6212", "#ecfccb")
+    extra = ""
+    if bounce:  # a springy pad
+        extra = "".join(f'<path d="M{x} {ty1 + 6} l6 6 l6 -6" stroke="#3f6212" stroke-width="2" fill="none"/>' for x in range(4, w - 8, 14))
+    if push:    # a conveyor belt with arrows
+        arrow = "&gt;" if push > 0 else "&lt;"
+        extra = "".join(text_el(arrow.replace("&gt;", ">").replace("&lt;", "<"), x, ty1 + THICK - 3, 14, "#facc15")
+                        for x in range(14, w - 6, 26))
     body = (f'<polygon points="0,{ty1} {w},{ty2} {w},{ty2 + THICK} 0,{ty1 + THICK}" fill="{colors[0]}" '
             f'stroke="{colors[1]}" stroke-width="3" stroke-linejoin="round"/>'
-            f'<polyline points="0,{ty1 + 1.5} {w},{ty2 + 1.5}" stroke="{colors[2]}" stroke-width="5" fill="none"/>')
+            f'<polyline points="0,{ty1 + 1.5} {w},{ty2 + 1.5}" stroke="{colors[2]}" stroke-width="5" fill="none"/>' + extra)
     return svg_doc(w, h, body), ty1
 
 
@@ -1488,6 +1555,30 @@ def brawl_sky_svg(stage):
                   + "".join(f'<rect x="{x}" y="{y}" width="14" height="20" rx="5" fill="#ef4444"/><rect x="{x + 5}" y="{y - 8}" '
                             f'width="4" height="8" fill="#fbbf24"/>' for x, y in ((60, 60), (150, 90), (300, 50), (440, 120)))
                   + '<path d="M0 300 L120 230 L200 280 L330 210 L480 290 L480 360 L0 360 Z" fill="#1e1b4b" opacity="0.8"/>',
+        "pirate": '<circle cx="400" cy="60" r="30" fill="#fde047"/>'
+                  '<rect y="250" width="480" height="110" fill="#0369a1"/>'
+                  + "".join(f'<path d="M{x} 262 q15 -10 30 0" stroke="#bae6fd" stroke-width="3" fill="none"/>' for x in range(0, 480, 60))
+                  + '<rect x="90" y="40" width="10" height="210" fill="#78350f"/><path d="M100 50 L170 90 L100 150 Z" fill="#f5f5f4"/>'
+                  '<rect x="380" y="70" width="10" height="180" fill="#78350f"/><path d="M390 80 L440 110 L390 150 Z" fill="#f5f5f4"/>'
+                  '<path d="M100 40 l24 8 l-24 8 Z" fill="#111827"/>',
+        "castle": '<path d="M0 260 L0 140 L40 140 L40 120 L60 120 L60 140 L100 140 L100 120 L120 120 L120 140 L360 140 L360 120 '
+                  'L380 120 L380 140 L420 140 L420 120 L440 120 L440 140 L480 140 L480 260 Z" fill="#78716c" opacity="0.6"/>'
+                  '<rect x="200" y="60" width="80" height="120" fill="#78716c" opacity="0.6"/><path d="M190 60 L240 20 L290 60 Z" fill="#b91c1c"/>'
+                  '<path d="M240 20 L240 0 L262 8 L240 14" fill="#facc15"/>',
+        "space": "".join(f'<circle cx="{(k * 97) % 480}" cy="{(k * 53) % 360}" r="{1 + k % 2}" fill="#ffffff"/>' for k in range(40))
+                 + '<circle cx="380" cy="90" r="46" fill="#7c3aed"/><ellipse cx="380" cy="90" rx="74" ry="12" fill="none" stroke="#c4b5fd" stroke-width="5"/>'
+                   '<circle cx="80" cy="280" r="60" fill="#0ea5e9" opacity="0.6"/>',
+        "snow": '<path d="M0 250 L100 120 L170 200 L260 70 L360 190 L430 110 L480 160 L480 360 L0 360 Z" fill="#cbd5e1"/>'
+                '<path d="M230 110 L260 70 L290 110 Z M80 145 L100 120 L120 145 Z" fill="#ffffff"/>'
+                + "".join(f'<circle cx="{(k * 71) % 480}" cy="{(k * 37) % 300}" r="2.5" fill="#ffffff"/>' for k in range(30)),
+        "candy": "".join(f'<ellipse cx="{x}" cy="{y}" rx="40" ry="16" fill="#ffffff" opacity="0.85"/>' for x, y in ((80, 60), (330, 40), (430, 110)))
+                 + "".join(f'<rect x="{x - 3}" y="170" width="6" height="90" fill="#f5f5f4"/><circle cx="{x}" cy="160" r="26" fill="{c}"/>'
+                           f'<path d="M{x - 18} 160 Q{x} 140 {x + 18} 160 Q{x} 180 {x - 18} 160" stroke="#ffffff" stroke-width="4" fill="none"/>'
+                           for x, c in ((60, "#f43f5e"), (240, "#8b5cf6"), (420, "#14b8a6"))),
+        "factory": '<rect x="0" y="40" width="480" height="14" fill="#334155"/>'
+                   + "".join(f'<circle cx="{x}" cy="{y}" r="{r}" fill="#64748b"/><circle cx="{x}" cy="{y}" r="{r // 3}" fill="#334155"/>'
+                             for x, y, r in ((70, 130, 40), (400, 110, 50), (250, 70, 24)))
+                   + '<rect x="200" y="90" width="18" height="170" fill="#1e293b"/><circle cx="310" cy="170" r="10" fill="#ef4444"/>',
         "towers": "".join(f'<circle cx="{x}" cy="{y}" r="2" fill="#ffffff"/>' for x, y in ((40, 40), (130, 80), (260, 30), (390, 60), (450, 140)))
                   + '<circle cx="90" cy="70" r="26" fill="#e0e7ff"/>',
     }[stage["key"]]
@@ -1513,12 +1604,13 @@ def marker_svg():
 
 def declare_brawl(game):
     for name in ("B SY", "B X", "B Y", "B Dmg", "B Stock", "B Alive", "B Hit", "B KX", "B KY", "B Kind", "B Pool",
-                 "Plat X1", "Plat Y1", "Plat X2", "Plat Y2"):
+                 "Plat X1", "Plat Y1", "Plat X2", "Plat Y2", "Plat Bounce", "Plat Push"):
         game.list(name)
     for name, value in (("Brawl On", 0), ("Brawl Live", 0), ("Brawl Stage", 0), ("Cam X", 0), ("Cam Y", 0), ("Zoom", 1),
                         ("P1 Screen X", 0), ("P1 Screen Y", 0), ("P1 Screen Size", BRAWL_SIZE), ("Brawl Winner", 0),
                         ("BF X", 0), ("BF Y", 0), ("BF Dir", 1), ("BF Power", 0), ("Plat Count", 0),
-                        ("Solid Count", 1), ("Joy Y", 0), ("Want Drop", 0),
+                        ("Solid Count", 1), ("Joy Y", 0), ("Want Drop", 0), ("Stage Grav", 1), ("Stage Grip", 0.45),
+                        ("Stage Key", ""), ("Stage Pick", 0), ("CB X", 0), ("CB Y", 0), ("CB Dir", 1),
                         ("P1 %", 0), ("P2 %", 0), ("P3 %", 0), ("P4 %", 0)):
         game.var(name, value)
 
@@ -1535,17 +1627,24 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
     load_stage = []
     for i, st in enumerate(BRAWL_STAGES, start=1):
         rows = []
-        for x1, y1, x2, y2 in st["plats"]:
-            rows += [s.list_add("Plat X1", x1), s.list_add("Plat Y1", y1), s.list_add("Plat X2", x2), s.list_add("Plat Y2", y2)]
+        for pl in st["plats"]:
+            x1, y1, x2, y2 = pl[:4]
+            bounce = pl[4] if len(pl) > 4 else 0
+            push = pl[5] if len(pl) > 5 else 0
+            rows += [s.list_add("Plat X1", x1), s.list_add("Plat Y1", y1), s.list_add("Plat X2", x2), s.list_add("Plat Y2", y2),
+                     s.list_add("Plat Bounce", bounce), s.list_add("Plat Push", push)]
         load_stage.append(s.if_(eq(V("Brawl Stage"), i), [s.backdrop(f"brawl {st['key']}"), *rows,
                                                           s.set("Plat Count", len(st["plats"])), s.set("Solid Count", st["solid"]),
+                                                          s.set("Stage Grav", st.get("grav", 1)), s.set("Stage Grip", st.get("grip", 0.45)),
+                                                          s.set("Stage Key", st["key"]),
                                                           s.set("Pop Text", st["name"]), s.broadcast("popup")]))
     s.on_msg(
         "brawl start",
         s.set("State", "brawl"), s.set("Brawl On", 0), s.set("Brawl Live", 0), s.set("Fight On", 0),
         s.broadcast("brawl clear", wait=True),
-        s.set("Brawl Stage", add(mod(V("Brawl Stage"), len(BRAWL_STAGES)), 1)),
-        *[s.list_clear(n) for n in ("Plat X1", "Plat Y1", "Plat X2", "Plat Y2", "B X", "B Y", "B Dmg", "B Stock",
+        # the STAGE button picks one; RANDOM (0) picks for you
+        s.if_(eq(V("Stage Pick"), 0), [s.set("Brawl Stage", rnd(1, len(BRAWL_STAGES)))], [s.set("Brawl Stage", V("Stage Pick"))]),
+        *[s.list_clear(n) for n in ("Plat X1", "Plat Y1", "Plat X2", "Plat Y2", "Plat Bounce", "Plat Push", "B X", "B Y", "B Dmg", "B Stock",
                                     "B Alive", "B Hit", "B KX", "B KY", "B Kind", "B Pool")],
         *load_stage,
         *[s.list_add("B Pool", k) for k in CPU_POOL],
@@ -1636,6 +1735,8 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
     )
     s.on_msg("brawl clear", s.set("Fire Held", 0))
     s.on_msg("brawl hit", s.play("hit"))
+    s.on_msg("boing", s.play("jump"))
+    s.on_msg("cannon fire", s.play("big hit"))
     s.on_msg("brawl smash", s.play("big hit"))
     s.on_msg("brawl ko", s.play("boom"))
     for m in ("show title", "choose hero"):
@@ -1784,7 +1885,8 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
               [B.if_(eq(V("My Id"), 1), player_input, cpu_input)]),
         B.if_(gt(V("Stun"), 0), [B.change("Stun", -1), B.set("VX", mul(V("VX"), 0.96)),
                                  B.if_(lt(V("Stun"), 1), [B.effect("BRIGHTNESS", 0)])], [
-            B.if_(eq(V("Ground"), 1), [B.change("VX", mul(sub(mul(V("Dir"), V("Speed")), V("VX")), 0.45))],
+            # Stage Grip: 0.45 normally, very low on ice so you slide
+            B.if_(eq(V("Ground"), 1), [B.change("VX", mul(sub(mul(V("Dir"), V("Speed")), V("VX")), V("Stage Grip")))],
                   [B.change("VX", mul(sub(mul(V("Dir"), V("Speed")), V("VX")), 0.12))]),
             B.if_(gt(V("Dir"), 0.1), [B.set("Face", 1)]), B.if_(lt(V("Dir"), -0.1), [B.set("Face", -1)]),
         ]),
@@ -1807,7 +1909,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         ]),
         # 4. move and land on platforms and ramps
         B.if_(gt(V("Drop"), 0), [B.change("Drop", -1)]),
-        B.change("VY", -GRAV), B.if_(lt(V("VY"), MAX_FALL), [B.set("VY", MAX_FALL)]),
+        B.change("VY", mul(-GRAV, V("Stage Grav"))), B.if_(lt(V("VY"), MAX_FALL), [B.set("VY", MAX_FALL)]),
         B.set("NX", add(V("X"), V("VX"))), B.set("NY", add(V("Y"), V("VY"))),
         B.set("Was Ground", V("Ground")), B.set("Ground", 0),
         B.if_(not_(gt(V("VY"), 0)), [
@@ -1826,6 +1928,13 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
             ]),
         ]),
         B.set("X", V("NX")), B.set("Y", V("NY")),
+        B.if_(eq(V("Ground"), 1), [
+            # conveyor belts carry you; bouncy pads throw you up
+            B.change("X", item("Plat Push", V("On Plat"))),
+            B.if_(eq(item("Plat Bounce", V("On Plat")), 1), [
+                B.set("VY", 17), B.set("Ground", 0), B.set("Jumps", 1), B.broadcast("boing"),
+            ]),
+        ]),
         B.list_set("B X", V("My Id"), V("X")), B.list_set("B Y", V("My Id"), V("Y")),
         # 5. flew past the edge of the screen: lose a life
         B.if_(or_(gt(abs_(V("X")), BLAST_X), lt(V("Y"), BLAST_LOW), gt(V("Y"), BLAST_HIGH)), [
@@ -1933,8 +2042,9 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
     # ---------------------------------------------------------- platforms --
     pl = game.sprite("Brawl Platform", size=100, rotation="don't rotate")
     for st in BRAWL_STAGES:
-        for i, (x1, y1, x2, y2) in enumerate(st["plats"], start=1):
-            svg, cy = platform_svg(st["key"], x1, y1, x2, y2)
+        for i, plat in enumerate(st["plats"], start=1):
+            x1, y1, x2, y2 = plat[:4]
+            svg, cy = platform_svg(st["key"], x1, y1, x2, y2, plat[4] if len(plat) > 4 else 0, plat[5] if len(plat) > 5 else 0)
             pl.costume(f"{st['key']} {i}", svg, 0, cy)
     PL = pl
     PL.local("Is Clone", 0)
@@ -2009,6 +2119,64 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
     for m in ("brawl clear", "show title", "choose hero"):
         BS.on_msg(m, BS.if_(eq(V("Is Clone"), 1), [BS.delete_clone()]))
 
+    cb = game.sprite("Cannonball", size=60, rotation="don't rotate")
+    cb.costume("ball", svg_doc(40, 40, '<circle cx="20" cy="20" r="16" fill="#1f2937" stroke="#f97316" stroke-width="3"/>'
+                                       '<circle cx="14" cy="14" r="4" fill="#9ca3af"/>'), 20, 20)
+    CB = cb
+    CB.local("Done", 0)
+    CB.local("J", 0)
+    CB.define(
+        "cannon frame",
+        CB.change("CB X", mul(10, V("CB Dir"))),
+        CB.size_to(mul(60, V("Zoom"))),
+        CB.goto(mul(sub(V("CB X"), V("Cam X")), V("Zoom")), mul(sub(V("CB Y"), V("Cam Y")), V("Zoom"))),
+        CB.set("J", 0),
+        CB.repeat(N, [
+            CB.change("J", 1),
+            CB.if_(and_(eq(V("Done"), 0), eq(item("B Alive", V("J")), 1), lt(abs_(sub(item("B X", V("J")), V("CB X"))), 24),
+                        lt(abs_(sub(add(item("B Y", V("J")), 35), V("CB Y"))), 40)), [
+                CB.set("Done", 1),
+                CB.list_set("B Hit", V("J"), add(item("B Hit", V("J")), 12)),
+                CB.list_set("B KX", V("J"), mul(V("CB Dir"), add(7, div(item("B Dmg", V("J")), 9)))),
+                CB.list_set("B KY", V("J"), add(7, div(item("B Dmg", V("J")), 11))),
+                CB.broadcast("brawl ko"),
+            ]),
+        ]),
+    )
+    CB.on_flag(
+        CB.hide(),
+        CB.forever([
+            CB.if_(and_(eq(V("Brawl On"), 1), eq(V("Stage Key"), "pirate")), [
+                CB.wait(rnd(6, 10)),
+                CB.if_(and_(eq(V("Brawl On"), 1), eq(V("Stage Key"), "pirate")), [
+                    CB.if_(eq(rnd(1, 2), 1), [CB.set("CB Dir", 1)], [CB.set("CB Dir", -1)]),
+                    CB.set("CB X", mul(V("CB Dir"), -520)), CB.set("CB Y", rnd(-85, 40)), CB.set("Done", 0),
+                    CB.set("Pop Text", "CANNON!"), CB.broadcast("popup"), CB.broadcast("cannon fire"), CB.show(), CB.front(),
+                    CB.until(or_(eq(V("Done"), 1), gt(abs_(V("CB X")), 560), eq(V("Brawl Live"), 0)), [CB.call("cannon frame")]),
+                    CB.hide(),
+                ]),
+            ], [CB.wait(0.3)]),
+        ]),
+        note="PIRATE SHIP: every few seconds a cannonball flies across the deck. Jump over it!",
+    )
+    for m in ("brawl clear", "show title"):
+        CB.on_msg(m, CB.hide())
+
+    pick = game.sprite("Stage Button", x=40, y=-162, rotation="don't rotate")
+    pick.costume("stage 0", difficulty_svg("RANDOM", "#facc15").replace("LEVEL:", "STAGE:"), 95, 20)
+    for i, st in enumerate(BRAWL_STAGES, start=1):
+        pick.costume(f"stage {i}", difficulty_svg(st["name"], "#facc15").replace("LEVEL:", "STAGE:")
+                     .replace('font-size="15"', 'font-size="12"'), 95, 20)
+    PK = pick
+    PK.on_flag(PK.hide())
+    PK.on_msg("choose hero", PK.if_(eq(V("Mode"), "brawl"), [PK.wear(join("stage ", V("Stage Pick"))), PK.goto(40, -162),
+                                                             PK.show(), PK.front()], [PK.hide()]))
+    for m in ("hero picked", "show title"):
+        PK.on_msg(m, PK.hide())
+    PK.on_click(PK.change("Stage Pick", 1), PK.if_(gt(V("Stage Pick"), len(BRAWL_STAGES)), [PK.set("Stage Pick", 0)]),
+                PK.wear(join("stage ", V("Stage Pick"))), PK.broadcast("swing sfx"),
+                note="Tap to choose the BRAWL stage, or RANDOM.")
+
     mk = game.sprite("P1 Marker", size=80, rotation="don't rotate")
     mk.costume("arrow", marker_svg(), 15, 26)
     MK = mk
@@ -2039,7 +2207,7 @@ def build():
         ("Hit Power", 5), ("Hurt Power", 6), ("Shot Y", GROUND + 18), ("Shot Dir", -1), ("Wave Dir", -1),
         ("Line", ""), ("Line Secs", 2), ("Skip", 0), ("Pop Text", ""), ("Banner", "fight"),
         ("Joy X", 0), ("Touch Pad", 0), ("Spikes", 0), ("Difficulty", 2), ("Enemy Weapon", "none"), ("Enemy Swing Until", 0),
-        ("Turn Until", 0), ("Turn Dir", 1), ("Minions", 0), ("Summon Count", 1), ("Smoke X", 0), ("Smoke Y", GROUND),
+        ("Turn Until", 0), ("Turn Dir", 1), ("Sound On", 1), ("Debug", 0), ("FPS", 0), ("Minions", 0), ("Summon Count", 1), ("Smoke X", 0), ("Smoke Y", GROUND),
         ("Area X", 0), ("Area R", 0), ("Area Power", 0), ("Area Kind", "hit"), ("Fire Stop", 0),
         ("Power Level", 1), ("Power XP", 0), ("XP Gain", 0), ("Want Power", 0), ("Power Ready At", 0), ("Power Move", "none"),
         ("Bolt X", 0), ("Bolt Y", GROUND), ("Bolt Owner", "hero"), ("Bolt Power", 0), ("Bolt Size", 100),
@@ -2098,13 +2266,14 @@ def build():
     chapter_backdrops = [s.if_(eq(V("Chapter"), i), [s.backdrop(c["backdrop"])]) for i, c in enumerate(CHAPTERS, start=1)]
     s.on_msg(
         "load enemy",
+        s.if_(eq(V("Mode"), "practice"), [s.set("Enemy Type", 1), s.backdrop("Yard"), s.set("Pace", 1)]),
         s.if_(eq(V("Mode"), "story"),
               [s.set("Enemy Type", V("Chapter")), *chapter_backdrops, s.set("Pace", 1)],
-              [s.if_(eq(mod(V("Wave"), KING), 0),
+              [s.if_(eq(V("Mode"), "practice"), [], [s.if_(eq(mod(V("Wave"), KING), 0),
                      [s.set("Enemy Type", KING)],
                      [s.set("Enemy Type", add(mod(sub(V("Wave"), 1), KING), 1))]),
                s.backdrop("Arcade"),
-               s.set("Pace", div(8, add(7, V("Wave"))))]),
+               s.set("Pace", div(8, add(7, V("Wave"))))])]),
         *loads,
         s.if_(eq(V("Mode"), "arcade"), [
             s.change("Enemy Max", mul(8, sub(V("Wave"), 1))),
@@ -2128,7 +2297,7 @@ def build():
         "start fight",
         s.set("Fight On", 0), s.set("State", "fight"),
         s.broadcast("load enemy", wait=True),
-        s.if_(eq(V("Mode"), "story"), [s.set("Hero HP", V("Hero Max"))], [s.show_var("Wave")]),
+        s.if_(eq(V("Mode"), "arcade"), [s.show_var("Wave")], [s.set("Hero HP", V("Hero Max"))]),
         s.show_var("Score"), s.hide_var("Best"),
         s.set("Minions", 0), s.set("Combo", 0), s.set("Weapon", "none"), s.set("Weapon Uses", 0), s.set("Boomerang Out", 0),
         s.set("Hero Lock", 0), s.set("Hero Safe", 0), s.set("Hero Air", 0),
@@ -2142,6 +2311,7 @@ def build():
         s.set("Banner", "fight"), s.broadcast("banner"), s.wait(0.3),
         s.set("Want Punch", 0), s.set("Want Kick", 0), s.set("Want Jump", 0), s.set("Want Dodge", 0), s.set("Want Super", 0),
         s.set("Fight On", 1), s.broadcast("fight on"),
+        s.if_(eq(V("Mode"), "practice"), [s.set("Pop Text", "PRACTICE: try every move!"), s.broadcast("popup")]),
         note="READY... FIGHT! Taps before FIGHT! are thrown away.",
     )
 
@@ -2169,7 +2339,10 @@ def build():
                 s.set("Enemy Phase", 2), s.set("Pace", mul(V("Pace"), 0.7)), s.broadcast("king angry"),
             ]),
             s.if_(lt(V("Enemy HP"), 1), [
-                s.set("Enemy HP", 0), s.set("Fight On", 0), s.broadcast("enemy down"),
+                s.if_(eq(V("Mode"), "practice"), [
+                    # the practice dummy never goes down: it fills back up
+                    s.set("Enemy HP", V("Enemy Max")), s.set("Pop Text", "Nice! Again!"), s.broadcast("popup"),
+                ], [s.set("Enemy HP", 0), s.set("Fight On", 0), s.broadcast("enemy down")]),
             ]),
         ]),
         note="Hit Power is set just before this message. Hits inside 1.2 seconds build a combo; every 3rd hit is a bonus. The Shadow King gets angry at half health.",
@@ -2220,6 +2393,21 @@ def build():
              s.wait(0.05), s.effect("BRIGHTNESS", 0))
     s.on_msg("power flash", s.play("power up"), s.effect("COLOR", 40), s.wait(0.12), s.clear_fx())
     s.on_key("g", s.set("Want Power", 1), note="G: your POWER move (from power level 2).")
+    s.local("Frames", 0)
+    s.local("Second", 0)
+    s.on_flag(
+        s.forever([
+            s.volume(mul(100, V("Sound On"))),
+            # frames per second, for the debug overlay
+            s.change("Frames", 1),
+            s.if_(gt(TIMER, add(V("Second"), 1)), [s.set("FPS", V("Frames")), s.set("Frames", 0), s.set("Second", TIMER)]),
+        ]),
+        note="Sound on/off (only the Stage plays sounds, so setting its volume is enough) and a frames-per-second count.",
+    )
+    s.on_key("d", s.broadcast("toggle debug"), note="D: Mitch's debug overlay (or tap the version number on the title).")
+    debug_vars = ("FPS", "State", "Mode", "Fight On", "Hero HP", "Enemy HP", "Enemy Name", "Minions", "Power Level", "Brawl Live")
+    s.on_msg("toggle debug", s.set("Debug", sub(1, V("Debug"))),
+             s.if_(eq(V("Debug"), 1), [s.show_var(n) for n in debug_vars], [s.hide_var(n) for n in debug_vars]))
     s.on_msg("enemy hurt", s.play("hit"))
     s.on_msg("charge start", s.play("charge"))
     s.on_msg("charge full", s.play("charged"), s.set("Pop Text", "FULL POWER!"), s.broadcast("popup"))
@@ -2815,7 +3003,7 @@ def build():
         "fight on",
         E.until(eq(V("Fight On"), 0), [
             face_hero(),
-            E.if_(lt(TIMER, V("Enemy Stun Until")), [E.wait(0.05)], [
+            E.if_(or_(lt(TIMER, V("Enemy Stun Until")), eq(V("Mode"), "practice")), [E.wait(0.05)], [
                 E.if_(eq(V("Enemy Type"), 1), walker()),
                 E.if_(eq(V("Enemy Type"), 2), thrower()),
                 E.if_(eq(V("Enemy Type"), 3), charger()),
@@ -2978,6 +3166,38 @@ def build():
     )
     for m in FIGHT_HIDE:
         D.on_msg(m, D.hide())
+
+    apple = game.sprite("Apple", size=60, rotation="don't rotate")
+    apple.costume("apple", apple_svg(), 30, 34)
+    AP = apple
+    AP.local("Life", 0)
+    AP.local("Got", 0)
+    AP.on_flag(
+        AP.hide(),
+        AP.forever([
+            AP.if_(and_(eq(V("Fight On"), 1), eq(V("State"), "fight"), not_(eq(V("Mode"), "practice"))), [
+                AP.wait(rnd(10, 16)),
+                AP.if_(and_(eq(V("Fight On"), 1), lt(V("Hero HP"), V("Hero Max"))), [
+                    AP.goto(rnd(-180, 120), 170), AP.show(), AP.front(),
+                    AP.until(lt(YPOS, GROUND + 26), [AP.dy(-8), AP.turn(0)]), AP.set_y(GROUND + 22),
+                    AP.set("Life", 0), AP.set("Got", 0),
+                    AP.until(or_(eq(V("Got"), 1), gt(V("Life"), 160), eq(V("Fight On"), 0)), [
+                        AP.change("Life", 1),
+                        AP.if_(and_(lt(abs_(sub(XPOS, V("Hero X"))), 32), lt(sub(V("Hero Y"), GROUND), 60)), [AP.set("Got", 1)]),
+                        AP.if_(gt(V("Life"), 120), [AP.effect("GHOST", mul(sub(V("Life"), 120), 2))]),
+                    ]),
+                    AP.hide(), AP.effect("GHOST", 0),
+                    AP.if_(and_(eq(V("Got"), 1), eq(V("Fight On"), 1)), [
+                        AP.change("Hero HP", APPLE_HEAL), AP.if_(gt(V("Hero HP"), V("Hero Max")), [AP.set("Hero HP", V("Hero Max"))]),
+                        AP.set("Pop Text", f"YUM! +{APPLE_HEAL} HEALTH"), AP.broadcast("popup"), AP.broadcast("weapon get"),
+                    ]),
+                ]),
+            ], [AP.wait(0.3)]),
+        ]),
+        note="Grok's healing apple: when you are hurt, an apple sometimes falls. Walk over it for +25 health.",
+    )
+    for m in FIGHT_HIDE:
+        AP.on_msg(m, AP.hide())
 
     boom = game.sprite("Boomerang", size=60, rotation="all around")
     boom.costume("spin", weapon_svg("boomerang"), 30, 40)
@@ -3573,14 +3793,51 @@ def build():
     PB.on_msg("show title", PB.goto(-160, -140), PB.wear(join("lv", V("Power Level"))), PB.show(), PB.front(),
               note="Your POWER LEVEL on the title screen.")
     PB.on_msg("choose hero", PB.hide())
-    diff_btn = game.sprite("Level Button", x=18, y=-90, rotation="don't rotate")
+    practice = button("Practice Button", "PRACTICE", "#0d9488", 132, -90, width=100, height=36, size=13)
+    practice.on_msg("show title", practice.goto(132, -90), practice.show(), practice.front())
+    practice.on_msg("choose hero", practice.hide())
+    practice.on_click(practice.set("Mode", "practice"), practice.broadcast("choose hero"),
+                      note="Grok's practice fight: a dummy that never hits back and never goes down. Try every move.")
+
+    helpb = button("Help Button", "?", "#2563eb", 214, -136, width=40, height=36, size=20)
+    helpb.on_msg("show title", helpb.goto(214, -136), helpb.show(), helpb.front())
+    helpb.on_msg("choose hero", helpb.hide())
+    helpb.on_click(helpb.broadcast("show help"))
+    card_help = game.sprite("Help Card", x=0, y=0, rotation="don't rotate")
+    card_help.costume("help", help_svg(), 220, 160)
+    HC = card_help
+    HC.on_flag(HC.hide())
+    HC.on_msg("show help", HC.size_to(85), HC.goto(0, 22), HC.show(), HC.front(), note="Grok's how-to-play card.")
+    HC.on_click(HC.hide())
+    for m in ("choose hero", "start fight", "brawl start"):
+        HC.on_msg(m, HC.hide())
+
+    snd = game.sprite("Sound Button", x=166, y=-136, rotation="don't rotate")
+    snd.costume("on", speaker_svg(True), 24, 22)
+    snd.costume("off", speaker_svg(False), 24, 22)
+    SB = snd
+    SB.on_flag(SB.hide())
+    SB.on_msg("show title", SB.goto(166, -136), SB.if_(eq(V("Sound On"), 1), [SB.wear("on")], [SB.wear("off")]), SB.show(), SB.front())
+    SB.on_msg("choose hero", SB.hide())
+    SB.on_click(SB.set("Sound On", sub(1, V("Sound On"))), SB.if_(eq(V("Sound On"), 1), [SB.wear("on")], [SB.wear("off")]),
+                note="Grok's sound on/off. The app remembers it.")
+
+    ver = game.sprite("Version", x=214, y=-172, rotation="don't rotate")
+    ver.costume("v", svg_doc(60, 22, '<rect width="60" height="22" fill="#000000" opacity="0.01"/>'), 30, 11)
+    VR = ver
+    VR.on_flag(VR.hide())
+    VR.on_msg("show title", VR.goto(214, -172), VR.show())
+    VR.on_msg("choose hero", VR.hide())
+    VR.on_click(VR.broadcast("toggle debug"), note="Tap the version number to show or hide Mitch's debug overlay.")
+
+    diff_btn = game.sprite("Level Button", x=-30, y=-90, rotation="don't rotate")
     for key, word, fill, *_ in DIFFICULTIES:
         diff_btn.costume(key, difficulty_svg(word, fill), 95, 20)
     DB = diff_btn
     def show_level():
         return [DB.if_(eq(V("Difficulty"), i), [DB.wear(k)]) for i, (k, *_r) in enumerate(DIFFICULTIES, start=1)]
     DB.on_flag(DB.hide())
-    DB.on_msg("show title", DB.goto(18, -90), *show_level(), DB.show(), DB.front())
+    DB.on_msg("show title", DB.goto(-30, -90), *show_level(), DB.show(), DB.front())
     DB.on_msg("choose hero", DB.hide())
     DB.on_click(DB.change("Difficulty", 1), DB.if_(gt(V("Difficulty"), len(DIFFICULTIES)), [DB.set("Difficulty", 1)]),
                 *show_level(), DB.broadcast("swing sfx"),
@@ -3726,7 +3983,9 @@ def write_sb3(game):
         "targets": targets,
         "monitors": [monitor("Score", 196, 28), monitor("Wave", 205, 54), monitor("Best", 200, 310)]
         + [dict(monitor(f"P{i} %", sx + 4, 6), mode="large")
-           for i, sx in enumerate(getattr(game, "brawl_slots", []), start=1)],
+           for i, sx in enumerate(getattr(game, "brawl_slots", []), start=1)]
+        + [monitor(n, 4, 40 + 22 * i) for i, n in enumerate(("FPS", "State", "Mode", "Fight On", "Hero HP", "Enemy HP",
+                                                             "Enemy Name", "Minions", "Power Level", "Brawl Live"))],
         "extensions": [],
         "meta": {"semver": "3.0.0", "vm": "2.3.0", "agent": "arthurs-arena legends builder"},
     }

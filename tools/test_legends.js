@@ -498,6 +498,72 @@ async function fireTest () {
     return {tap: tap.damage, full: full.damage};
 }
 
+async function grokTest () {
+    // Grok's ideas: practice fight, healing apple, sound on/off, how to play, debug overlay
+    const {vm} = await boot();
+    const T = tools(vm);
+    await T.step(10);
+    T.click('Help Button');
+    await T.step(3);
+    if (!T.sprite('Help Card').visible) fail('grok: ? did not show the how-to-play card');
+    T.click('Help Card');
+    await T.step(2);
+    if (T.sprite('Help Card').visible) fail('grok: tapping the card did not close it');
+    T.click('Sound Button');
+    await T.step(3);
+    if (T.get('Sound On') !== 0 || vm.runtime.getTargetForStage().volume !== 0) fail('grok: sound did not turn off');
+    T.click('Sound Button');
+    await T.step(3);
+    if (vm.runtime.getTargetForStage().volume !== 100) fail('grok: sound did not turn back on');
+    T.click('Version');
+    await T.step(2);
+    if (T.get('Debug') !== 1) fail('grok: tapping the version did not open the debug overlay');
+    T.click('Version');
+    await T.step(2);
+    T.click('Practice Button');
+    await T.step(3);
+    T.click('Pick Nova');
+    let frames = 0;
+    while (T.get('Fight On') !== 1 && frames < 300) {
+        await T.step();
+        frames++;
+    }
+    if (T.get('Mode') !== 'practice' || T.get('Fight On') !== 1) return fail('grok: practice did not start');
+    for (let i = 0; i < 30 * 8; i++) await T.step();
+    if (T.get('Hero HP') !== T.get('Hero Max')) fail('grok: the practice dummy hit back');
+    T.set('Enemy HP', 2);
+    T.set('Hit Power', 5);
+    T.set('Enemy Stun Until', 0);
+    T.send('hero hits');
+    await T.step(5);
+    if (T.get('Fight On') !== 1 || T.get('Enemy HP') !== T.get('Enemy Max')) fail('grok: the practice dummy did not fill back up');
+    // the apple: arcade, hurt, wait for it, walk over it
+    T.click('Quit Button');
+    await T.step(5);
+    T.click('Arcade Button');
+    await T.step(3);
+    T.click('Pick Arthur');
+    frames = 0;
+    while (T.get('Fight On') !== 1 && frames < 300) {
+        await T.step();
+        frames++;
+    }
+    T.set('Enemy Stun Until', 1e12);
+    T.set('Hero HP', 40);
+    T.set('Hero Safe Until', 1e12);
+    const apple = T.sprite('Apple');
+    frames = 0;
+    while (!(apple.visible && apple.y < -40) && frames < 30 * 25) {
+        await T.step();
+        frames++;
+    }
+    if (!apple.visible) return fail('grok: no apple fell when hurt');
+    T.sprite('Hero').setXY(apple.x, -75);
+    await T.step(6);
+    if (T.get('Hero HP') !== 65) fail(`grok: the apple healed to ${T.get('Hero HP')}, expected 65`);
+    return {appleAfterSeconds: Math.round(frames / 30)};
+}
+
 async function ninjaTest () {
     const T = await startArcadeAt(7); // wave 7 is MASTER KAGE
     if (T.get('Enemy Name') !== 'kage') return fail(`ninja: wave 7 is ${T.get('Enemy Name')}`);
@@ -722,9 +788,13 @@ async function brawlTest () {
     await T.step(3);
     if (T.get('State') !== 'select') return fail('brawl: BRAWL did not open fighter select');
     T.set('Power Level', 4);
+    const STAGES = 10;
+    T.set('Stage Pick', 1);
     T.click('Pick Rocko');
     const out = {stages: [], matches: 0, wins: 0, kos: 0, maxDmg: 0, zoom: [9, 0], landed: false, rampOk: false};
-    for (let match = 0; match < 4; match++) {
+    out.cannon = false;
+    out.bounce = false;
+    for (let match = 0; match < STAGES; match++) {
         let frames = 0;
         let checked = false;
         while (T.get('Brawl On') !== 1 && frames < 300) {
@@ -781,6 +851,8 @@ async function brawlTest () {
             if (process.env.DEBUG_BRAWL && frames % 300 === 0) {
                 process.stdout.write(`t${frames / 30}s X ${X.map(Math.round)} Y ${Y.map(Math.round)} dmg ${dmg.map(Math.round)} stocks ${list('B Stock')} alive ${alive} zoom ${T.get('Zoom').toFixed(2)}\n`);
             }
+            if (T.sprite('Cannonball').visible) out.cannon = true;
+            if (T.get('Stage Key') === 'candy' && T.clones('Brawler').some(c => c.lookupVariableByNameAndType('VY').value > 16)) out.bounce = true;
             if (T.clones('Brawler').length > 4 || T.clones('Popup').length > 20) fail('brawl: too many clones');
         }
         if (T.get('State') !== 'over') return fail(`brawl: match ${match + 1} did not finish in 4 minutes`);
@@ -789,13 +861,16 @@ async function brawlTest () {
         await T.step(10);
         if (T.clones('Brawler').length !== 0 || T.clones('Brawl Platform').length !== 0) fail('brawl: clones left after the match');
         if (!T.sprite('Retry Button').visible) fail('brawl: no RETRY after the match');
+        T.set('Stage Pick', match + 2);
         T.click('Retry Button');
         await T.step(3);
     }
-    if (out.kos < 4) fail(`brawl: only ${out.kos} K.O.s in four matches`);
+    if (!out.cannon) fail('brawl: no cannonball on the Pirate Ship');
+    if (!out.bounce) fail('brawl: nobody bounced on Candy Land');
+    if (out.kos < STAGES) fail(`brawl: only ${out.kos} K.O.s in ${STAGES} matches`);
     if (!out.bolts) fail('brawl: POWER lightning never struck');
     if (out.zoom[0] < 0.49 || out.zoom[1] > 1.16 || out.zoom[1] - out.zoom[0] < 0.05) fail(`brawl: camera zoom ${out.zoom}`);
-    if (new Set(out.stages).size < 4) fail(`brawl: not every stage was played: ${out.stages}`);
+    if (new Set(out.stages).size < STAGES) fail(`brawl: not every stage was played: ${out.stages}`);
     T.click('Quit Button');
     await T.step(10);
     if (T.get('State') !== 'title' || T.clones('Brawler').length || T.get('Brawl Live') !== 0) {
@@ -819,6 +894,7 @@ async function brawlTest () {
     if (want('boss')) results.boss = await bossTest();
     if (want('power')) results.power = await powerTest();
     if (want('ninja')) results.ninja = await ninjaTest();
+    if (want('grok')) results.grok = await grokTest();
     if (want('brawl')) results.brawl = await brawlTest();
     if (want('mash')) await mashTest();
     if (want('weapons')) await weaponTest();
