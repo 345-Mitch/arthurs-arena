@@ -48,7 +48,7 @@ const FRAME = 1000 / 30;
 const problems = [];
 const fail = msg => problems.push(msg);
 
-async function boot () {
+async function boot (skipIntro = true) {
     const vm = new VirtualMachine();
     const errors = [];
     const origError = console.error;
@@ -74,6 +74,16 @@ async function boot () {
     fakeTimers = true;
     timers = [];
     vm.greenFlag();
+    if (skipIntro) {
+        // tests start at the title: tap through the paper intro
+        for (let i = 0; i < 3; i++) {
+            fakeNow += FRAME;
+            runTimers();
+            await settle();
+            vm.runtime._step();
+        }
+        vm.runtime.startHats('event_whenbroadcastreceived', {BROADCAST_OPTION: 'skip intro'});
+    }
     return {vm, errors};
 }
 
@@ -498,6 +508,32 @@ async function fireTest () {
     return {tap: tap.damage, full: full.damage};
 }
 
+async function introTest () {
+    const {vm} = await boot(false);
+    const T = tools(vm);
+    await T.step(5);
+    if (T.get('State') !== 'intro') return fail(`intro: green flag went to ${T.get('State')}, not the intro`);
+    if (T.sprite('Hero').visible || T.sprite('Story Button').visible) fail('intro: title things showed during the intro');
+    const pen = new Set();
+    let frames = 0;
+    while (T.get('State') === 'intro' && frames < 30 * 15) {
+        await T.step();
+        frames++;
+        if (T.sprite('Pencil').visible) pen.add(`${Math.round(T.sprite('Pencil').x)},${Math.round(T.sprite('Pencil').y)}`);
+    }
+    if (T.get('State') !== 'title') fail('intro: never reached the title');
+    if (pen.size < 20) fail(`intro: the pencil only visited ${pen.size} spots`);
+    if (T.sprite('Sketch').visible) fail('intro: the drawing stayed on the title screen');
+    // and skipping works
+    const again = await boot(false);
+    const T2 = tools(again.vm);
+    await T2.step(15);
+    T2.rt.startHats('event_whenstageclicked');
+    await T2.step(5);
+    if (T2.get('State') !== 'title' || T2.sprite('Sketch').visible) fail('intro: tapping did not skip to the title');
+    return {seconds: +(frames / 30).toFixed(1), pencilSpots: pen.size};
+}
+
 async function grokTest () {
     // Grok's ideas: practice fight, healing apple, sound on/off, how to play, debug overlay
     const {vm} = await boot();
@@ -895,6 +931,7 @@ async function brawlTest () {
     if (want('power')) results.power = await powerTest();
     if (want('ninja')) results.ninja = await ninjaTest();
     if (want('grok')) results.grok = await grokTest();
+    if (want('intro')) results.intro = await introTest();
     if (want('brawl')) results.brawl = await brawlTest();
     if (want('mash')) await mashTest();
     if (want('weapons')) await weaponTest();

@@ -5,8 +5,8 @@ Made by `tools/build_legends_sb3.py` from the same blocks that are inside
 
 ## Stage
 
-Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Bamboo, Dojo, Volcano, Castle, Arcade, Ending, brawl sky, brawl ramps, brawl pagoda, brawl pirate, brawl castle, brawl space, brawl snow, brawl candy, brawl factory, brawl towers
-Sounds: hit, big hit, hurt, jump, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, poof, shuriken, spike fall, win
+Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Bamboo, Dojo, Volcano, Castle, Arcade, Ending, Paper, brawl sky, brawl ramps, brawl pagoda, brawl pirate, brawl castle, brawl space, brawl snow, brawl candy, brawl factory, brawl towers
+Sounds: hit, big hit, hurt, scribble, page, jump, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, poof, shuriken, spike fall, win
 Sprite-only variables: New Level, Frames, Second, K, Pick, Min X, Max X, Min Y, Max Y, Alive, Zoom To
 
 ```
@@ -18,10 +18,10 @@ set [Weapon] to [none]
 hide variable [Score]
 hide variable [Wave]
 hide variable [Best]
-broadcast [show title]
+broadcast [intro]
 ```
 
-> Green flag. Best and Crown are kept, so a saved project remembers them.
+> Green flag. Best and Crown are kept, so a saved project remembers them. The paper intro plays first.
 
 ```
 when I receive [show title]
@@ -778,6 +778,30 @@ set [Want Drop] to [1]
 > BRAWL: down arrow drops through a thin platform.
 
 ```
+when stage clicked
+if <(State) = [intro]> then
+    broadcast [skip intro]
+end
+```
+
+> Tap during the intro to skip it.
+
+```
+when I receive [scribble]
+start sound (scribble)
+```
+
+```
+when I receive [color in]
+start sound (pickup)
+```
+
+```
+when I receive [page]
+start sound (page)
+```
+
+```
 when I receive [brawl start]
 set [State] to [brawl]
 set [Brawl On] to [0]
@@ -1477,6 +1501,247 @@ hide variable [P3 %]
 hide variable [P4 %]
 ```
 
+## Sketch
+
+Costumes: frame 1, frame 2, frame 3, frame 4, frame 5, frame 6, frame 7, frame 8, frame 9, frame 10, frame 11, frame 12, frame 13, frame 14, frame 15, frame 16, frame 17, frame 18, frame 19, frame 20, frame 21, frame 22, frame 23, frame 24, frame 25, frame 26, frame 27, frame 28, frame 29, frame 30, frame 31, frame 32, frame 33, frame 34, frame 35, frame 36, frame 37, frame 38, frame 39
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [intro]
+set [State] to [intro]
+switch backdrop to (Paper)
+go to x: [0] y: [0]
+set [ghost] effect to [0]
+show
+go to [front] layer
+wait [0.2] seconds
+switch costume to (frame 1)
+set [Pen X] to [-147.2]
+set [Pen Y] to [24]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 2)
+set [Pen X] to [-108.8]
+set [Pen Y] to [24]
+wait [0.03] seconds
+switch costume to (frame 3)
+set [Pen X] to [-128]
+set [Pen Y] to [-25.2]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 4)
+set [Pen X] to [-128]
+set [Pen Y] to [-52.8]
+wait [0.03] seconds
+switch costume to (frame 5)
+set [Pen X] to [-108.4]
+set [Pen Y] to [20.4]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 6)
+set [Pen X] to [-99.2]
+set [Pen Y] to [45.6]
+wait [0.03] seconds
+switch costume to (frame 7)
+set [Pen X] to [-147.6]
+set [Pen Y] to [20.4]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 8)
+set [Pen X] to [-156.8]
+set [Pen Y] to [45.6]
+wait [0.03] seconds
+switch costume to (frame 9)
+set [Pen X] to [-118.5]
+set [Pen Y] to [-86.1]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 10)
+set [Pen X] to [-111.2]
+set [Pen Y] to [-120]
+wait [0.03] seconds
+switch costume to (frame 11)
+set [Pen X] to [-137.5]
+set [Pen Y] to [-86.1]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 12)
+set [Pen X] to [-144.8]
+set [Pen Y] to [-120]
+wait [0.03] seconds
+switch costume to (frame 13)
+set [Pen X] to [-9.6]
+set [Pen Y] to [25.2]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 14)
+set [Pen X] to [28.8]
+set [Pen Y] to [25.2]
+wait [0.03] seconds
+switch costume to (frame 15)
+set [Pen X] to [4.7]
+set [Pen Y] to [-23.5]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 16)
+set [Pen X] to [0]
+set [Pen Y] to [-50.4]
+wait [0.03] seconds
+switch costume to (frame 17)
+set [Pen X] to [31.1]
+set [Pen Y] to [-4.8]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 18)
+set [Pen X] to [56.4]
+set [Pen Y] to [-2.4]
+wait [0.03] seconds
+switch costume to (frame 19)
+set [Pen X] to [-3.2]
+set [Pen Y] to [-16.1]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 20)
+set [Pen X] to [7.2]
+set [Pen Y] to [-4.8]
+wait [0.03] seconds
+switch costume to (frame 21)
+set [Pen X] to [17.5]
+set [Pen Y] to [-83.9]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 22)
+set [Pen X] to [28.8]
+set [Pen Y] to [-120]
+wait [0.03] seconds
+switch costume to (frame 23)
+set [Pen X] to [-14.6]
+set [Pen Y] to [-84.7]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 24)
+set [Pen X] to [-26.4]
+set [Pen Y] to [-120]
+wait [0.03] seconds
+switch costume to (frame 25)
+set [Pen X] to [96.8]
+set [Pen Y] to [21.6]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 26)
+set [Pen X] to [135.2]
+set [Pen Y] to [21.6]
+wait [0.03] seconds
+switch costume to (frame 27)
+set [Pen X] to [122.4]
+set [Pen Y] to [-25.9]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 28)
+set [Pen X] to [128]
+set [Pen Y] to [-52.8]
+wait [0.03] seconds
+switch costume to (frame 29)
+set [Pen X] to [132.3]
+set [Pen Y] to [-13.7]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 30)
+set [Pen X] to [142.4]
+set [Pen Y] to [-2.4]
+wait [0.03] seconds
+switch costume to (frame 31)
+set [Pen X] to [104.3]
+set [Pen Y] to [-11.7]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 32)
+set [Pen X] to [92]
+set [Pen Y] to [-26.4]
+wait [0.03] seconds
+switch costume to (frame 33)
+set [Pen X] to [157.8]
+set [Pen Y] to [-52.6]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 34)
+set [Pen X] to [186.8]
+set [Pen Y] to [-45.6]
+wait [0.03] seconds
+switch costume to (frame 35)
+set [Pen X] to [123.2]
+set [Pen Y] to [-86.4]
+broadcast [scribble]
+wait [0.03] seconds
+switch costume to (frame 36)
+set [Pen X] to [118.4]
+set [Pen Y] to [-120]
+wait [0.03] seconds
+switch costume to (frame 37)
+set [Pen X] to [999]
+broadcast [color in]
+wait [0.3] seconds
+switch costume to (frame 38)
+set [Pen X] to [999]
+broadcast [color in]
+wait [0.3] seconds
+switch costume to (frame 39)
+set [Pen X] to [999]
+broadcast [color in]
+wait [0.3] seconds
+wait [0.6] seconds
+broadcast [page]
+repeat [8]
+    change [ghost] effect by [12]
+    change x by [-40]
+    wait [0.03] seconds
+end
+hide
+set [Pen X] to [999]
+broadcast [show title]
+```
+
+> The intro: a pencil draws Arthur, Nova and Rocko on notebook paper, stroke by stroke, then colours them in and turns the page to the title. Tap anywhere to skip.
+
+```
+when I receive [skip intro]
+stop [other scripts in sprite]
+hide
+set [Pen X] to [999]
+broadcast [show title]
+```
+
+```
+when this sprite clicked
+if <(State) = [intro]> then
+    broadcast [skip intro]
+end
+```
+
+## Pencil
+
+Costumes: pencil
+
+```
+when green flag clicked
+hide
+forever
+    if <<(State) = [intro]> and <(Pen X) < [900]>> then
+        go to x: (Pen X) y: (Pen Y)
+        show
+        go to [front] layer
+    else
+        hide
+    end
+end
+```
+
+> The pencil follows the line being drawn.
+
 ## Ground Shake
 
 Costumes: shadow
@@ -1489,6 +1754,11 @@ show
 
 ```
 when I receive [brawl start]
+hide
+```
+
+```
+when I receive [intro]
 hide
 ```
 
@@ -2053,6 +2323,11 @@ say [I'm Arthur!] for [2] seconds
 
 ```
 when I receive [choose hero]
+hide
+```
+
+```
+when I receive [intro]
 hide
 ```
 

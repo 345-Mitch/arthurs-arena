@@ -46,6 +46,10 @@ Tap **LEVEL** on the title screen to change it. The game remembers your choice.
 
 In BRAWL, higher levels make the CPU fighters attack more often and hit harder.
 
+## The intro
+
+When the game starts, a pencil draws Arthur, Nova and Rocko on notebook paper, line by line, then colours them in and turns the page to the title. It takes about 3 seconds. Tap anywhere to skip it.
+
 ## The story
 
 > The Shadow King stole the Golden Crown of the Arena! Win it back, champion!
@@ -211,7 +215,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v1.7` in the bottom corner of the title.
+- **Version line:** `v1.8` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).

@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "1.7"
+VERSION = "1.8"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -758,6 +758,102 @@ def spike_shot_svg():
                            '<rect x="0" y="4" width="10" height="12" fill="#7f1d1d"/>')
 
 
+INTRO_FIGURES = [
+    # hero, pose, left edge of the 100x180 box on the page, scale
+    ("arthur", "win", 52, 1.2),
+    ("nova", "punch", 180, 1.2),
+    ("rocko", "kick", 308, 1.2),
+]
+INTRO_FEET = 300  # page y of the feet
+PENCIL = "#3f3f46"
+
+
+def paper_svg():
+    lines = "".join(f'<line x1="0" y1="{y}" x2="480" y2="{y}" stroke="#93c5fd" stroke-width="1.5"/>' for y in range(56, 360, 26))
+    return svg_doc(480, 360, '<rect width="480" height="360" fill="#fffdf5"/>' + lines
+                   + '<line x1="44" y1="0" x2="44" y2="360" stroke="#f87171" stroke-width="2"/>'
+                   + "".join(f'<circle cx="18" cy="{y}" r="7" fill="#e5e7eb"/>' for y in (60, 180, 300)))
+
+
+def pencil_svg():
+    """A yellow pencil leaning to the right; its tip (20, 72) is the rotation centre."""
+    return svg_doc(70, 78, ('<g transform="rotate(32 20 72)">'
+                            '<rect x="14" y="8" width="12" height="46" fill="#facc15" stroke="#a16207" stroke-width="1.5"/>'
+                            '<rect x="14" y="2" width="12" height="6" fill="#9ca3af"/><rect x="14" y="-6" width="12" height="8" rx="2" fill="#f472b6"/>'
+                            '<path d="M14 54 L20 72 L26 54 Z" fill="#fde68a" stroke="#a16207" stroke-width="1.5"/>'
+                            '<path d="M18 66 L20 72 L22 66 Z" fill="#27272a"/></g>'))
+
+
+def _figure_strokes(pose, ox, scale):
+    """Pencil strokes for one figure, in page coordinates, in drawing order."""
+    j = SKEL[pose]
+    oy = INTRO_FEET - 168 * scale
+
+    def pt(xy):
+        return (ox + xy[0] * scale, oy + xy[1] * scale)
+
+    hx, hy = pt(j["h"])
+    r = 16 * scale
+    head = [(hx + r * math.cos(a), hy + r * math.sin(a)) for a in [k * 2 * math.pi / 24 for k in range(25)]]
+    return [head, [pt(j["n"]), pt(j["c"]), pt(j["p"])], [pt(j["n"]), pt(j["ne"]), pt(j["nh"])],
+            [pt(j["n"]), pt(j["fe"]), pt(j["fh"])], [pt(j["p"]), pt(j["nk"]), pt(j["nf"])],
+            [pt(j["p"]), pt(j["fk"]), pt(j["ff"])]]
+
+
+def _partial(points, t):
+    """The first t (0..1) of a polyline, and where the pencil tip is."""
+    segs = list(zip(points, points[1:]))
+    lengths = [math.dist(a, b) for a, b in segs]
+    goal = sum(lengths) * t
+    out = [points[0]]
+    for (a, b), length in zip(segs, lengths):
+        if goal >= length:
+            out.append(b)
+            goal -= length
+        else:
+            f = goal / length if length else 0
+            out.append((a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f))
+            break
+    return out, out[-1]
+
+
+def intro_frames():
+    """Frames of the stick figures being drawn, stroke by stroke, then coloured in.
+    Returns (svg, pencil tip in stage coordinates or None)."""
+    strokes = []
+    for _hero, pose, ox, sc in INTRO_FIGURES:
+        strokes += _figure_strokes(pose, ox, sc)
+    frames = []
+
+    def sketch(done, partial=None):
+        body = []
+        for pts in done + ([partial] if partial else []):
+            path = " ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+            body.append(f'<polyline points="{path}" fill="none" stroke="{PENCIL}" stroke-width="4" stroke-linecap="round" '
+                        'stroke-linejoin="round" opacity="0.9"/>')
+            # a second, lighter line slightly off: it looks hand-drawn
+            path2 = " ".join(f"{x + 1.2:.1f},{y - 0.8:.1f}" for x, y in pts)
+            body.append(f'<polyline points="{path2}" fill="none" stroke="{PENCIL}" stroke-width="1.4" opacity="0.45"/>')
+        return svg_doc(480, 360, "".join(body))
+
+    done = []
+    for st in strokes:
+        for t in (0.5, 1.0):
+            part, tip = _partial(st, t)
+            frames.append((sketch(done, part), (round(tip[0] - 240, 1), round(180 - tip[1], 1))))
+        done.append(st)
+    # colour in, one fighter at a time
+    coloured = []
+    for hero, pose, ox, sc in INTRO_FIGURES:
+        h = next(x for x in HEROES if x["key"] == hero)
+        fig = fighter_svg(h["color"], pose, h["gear"])
+        inner = fig[fig.index(">") + 1: -len("</svg>")]
+        coloured.append(f'<g transform="translate({ox},{INTRO_FEET - 168 * sc}) scale({sc})">{inner}</g>')
+        pencil_left = sketch(done)[:-len("</svg>")]
+        frames.append((pencil_left + "".join(coloured) + "</svg>", None))
+    return frames
+
+
 def apple_svg():
     return svg_doc(60, 60, ('<circle cx="30" cy="34" r="27" fill="#fde68a" opacity="0.6"/>'
                             '<path d="M30 20 C14 12 6 30 12 44 C18 56 26 52 30 50 C34 52 42 56 48 44 C54 30 46 12 30 20 Z" '
@@ -897,6 +993,8 @@ SOUNDS = {
     "hit": [(0.09, 300, 80, "noise", 0.7)],
     "big hit": [(0.05, 500, 200, "noise", 0.9), (0.2, 120, 40, "sine", 0.9)],
     "hurt": [(0.16, 300, 120, "square", 0.35)],
+    "scribble": [(0.07, 3000, 2200, "noise", 0.18), (0.05, 2600, 2000, "noise", 0.12)],
+    "page": [(0.25, 1800, 300, "noise", 0.3)],
     "jump": [(0.12, 300, 700, "square", 0.25)],
     "swing": [(0.12, 900, 300, "noise", 0.35)],
     "pickup": [(0.08, 660, 660, "square", 0.3), (0.12, 990, 990, "square", 0.3)],
@@ -1243,6 +1341,9 @@ class Target:
 
     def on_click(self, *body, note=None):
         return self.script(self.blk("event_whenthisspriteclicked", top=True), list(body), note)
+
+    def on_stage_click(self, *body, note=None):
+        return self.script(self.blk("event_whenstageclicked", top=True), list(body), note)
 
     def on_key(self, key, *body, note=None):
         return self.script(self.blk("event_whenkeypressed", fields={"KEY_OPTION": [key, None]}, top=True), list(body), note)
@@ -2207,7 +2308,7 @@ def build():
         ("Hit Power", 5), ("Hurt Power", 6), ("Shot Y", GROUND + 18), ("Shot Dir", -1), ("Wave Dir", -1),
         ("Line", ""), ("Line Secs", 2), ("Skip", 0), ("Pop Text", ""), ("Banner", "fight"),
         ("Joy X", 0), ("Touch Pad", 0), ("Spikes", 0), ("Difficulty", 2), ("Enemy Weapon", "none"), ("Enemy Swing Until", 0),
-        ("Turn Until", 0), ("Turn Dir", 1), ("Sound On", 1), ("Debug", 0), ("FPS", 0), ("Minions", 0), ("Summon Count", 1), ("Smoke X", 0), ("Smoke Y", GROUND),
+        ("Turn Until", 0), ("Turn Dir", 1), ("Pen X", 999), ("Pen Y", 0), ("Sound On", 1), ("Debug", 0), ("FPS", 0), ("Minions", 0), ("Summon Count", 1), ("Smoke X", 0), ("Smoke Y", GROUND),
         ("Area X", 0), ("Area R", 0), ("Area Power", 0), ("Area Kind", "hit"), ("Fire Stop", 0),
         ("Power Level", 1), ("Power XP", 0), ("XP Gain", 0), ("Want Power", 0), ("Power Ready At", 0), ("Power Move", "none"),
         ("Bolt X", 0), ("Bolt Y", GROUND), ("Bolt Owner", "hero"), ("Bolt Power", 0), ("Bolt Size", 100),
@@ -2229,8 +2330,8 @@ def build():
     s.on_flag(
         s.set("State", "title"), s.set("Fight On", 0), s.set("Score", 0), s.set("Weapon", "none"),
         s.hide_var("Score"), s.hide_var("Wave"), s.hide_var("Best"),
-        s.broadcast("show title"),
-        note="Green flag. Best and Crown are kept, so a saved project remembers them.",
+        s.broadcast("intro"),
+        note="Green flag. Best and Crown are kept, so a saved project remembers them. The paper intro plays first.",
     )
     s.on_msg("show title", s.set("State", "title"), s.set("Fight On", 0), s.backdrop("Title"),
              s.clear_fx(), s.hide_var("Score"), s.hide_var("Wave"), s.show_var("Best"))
@@ -2484,10 +2585,53 @@ def build():
 
 
     # ------------------------------------------------------------ floor --
+    # ------------------------------------------------------------ intro --
+    stage.costume("Paper", paper_svg(), 240, 180)
+    sk = game.sprite("Sketch", x=0, y=0, rotation="don't rotate")
+    frames = intro_frames()
+    for i, (svg, _tip) in enumerate(frames, start=1):
+        sk.costume(f"frame {i}", svg, 240, 180)
+    pen = game.sprite("Pencil", x=0, y=0, rotation="don't rotate")
+    pen.costume("pencil", pencil_svg(), 20, 72)
+    KS = sk
+    steps = []
+    for i, (_svg, tip) in enumerate(frames, start=1):
+        steps.append(KS.wear(f"frame {i}"))
+        if tip is not None:
+            steps.append(KS.set("Pen X", tip[0]))
+            steps.append(KS.set("Pen Y", tip[1]))
+            if i % 2 == 1:
+                steps.append(KS.broadcast("scribble"))
+            steps.append(KS.wait(0.03))
+        else:
+            steps += [KS.set("Pen X", 999), KS.broadcast("color in"), KS.wait(0.3)]
+    KS.on_flag(KS.hide())
+    KS.on_msg(
+        "intro",
+        KS.set("State", "intro"), KS.backdrop("Paper"), KS.goto(0, 0), KS.effect("GHOST", 0), KS.show(), KS.front(),
+        KS.wait(0.2), *steps, KS.wait(0.6),
+        KS.broadcast("page"), KS.repeat(8, [KS.effect_by("GHOST", 12), KS.dx(-40), KS.wait(0.03)]),
+        KS.hide(), KS.set("Pen X", 999), KS.broadcast("show title"),
+        note="The intro: a pencil draws Arthur, Nova and Rocko on notebook paper, stroke by stroke, then colours them in "
+             "and turns the page to the title. Tap anywhere to skip.",
+    )
+    KS.on_msg("skip intro", KS.stop("other scripts in sprite"), KS.hide(), KS.set("Pen X", 999), KS.broadcast("show title"))
+    KS.on_click(KS.if_(eq(V("State"), "intro"), [KS.broadcast("skip intro")]))
+    s.on_stage_click(s.if_(eq(V("State"), "intro"), [s.broadcast("skip intro")]), note="Tap during the intro to skip it.")
+    s.on_msg("scribble", s.play("scribble"))
+    s.on_msg("color in", s.play("pickup"))
+    s.on_msg("page", s.play("page"))
+    PN = pen
+    PN.on_flag(PN.hide(), PN.forever([
+        PN.if_(and_(eq(V("State"), "intro"), lt(V("Pen X"), 900)), [PN.goto(V("Pen X"), V("Pen Y")), PN.show(), PN.front()],
+               [PN.hide()]),
+    ]), note="The pencil follows the line being drawn.")
+
     floor = game.sprite("Ground Shake", x=0, y=GROUND - 5, visible=True, rotation="don't rotate")
     floor.costume("shadow", floor_svg(), 240, 5)
     floor.on_flag(floor.goto(0, GROUND - 5), floor.show())
     floor.on_msg("brawl start", floor.hide())
+    floor.on_msg("intro", floor.hide())
     floor.on_msg("start fight", floor.show())
     floor.on_msg("show title", floor.show())
     floor.on_msg("shake", floor.repeat(3, [floor.goto(0, GROUND - 1), floor.wait(0.04), floor.goto(0, GROUND - 9), floor.wait(0.04)]),
@@ -2738,6 +2882,7 @@ def build():
     H.on_msg("show title", H.show(), H.clear_fx(), H.point(90), H.set("Hero Name", "arthur"), H.wear("arthur idle"),
              H.goto(-205, GROUND), H.size_to(90), H.front(), H.say("I'm Arthur!", 2))
     H.on_msg("choose hero", H.hide())
+    H.on_msg("intro", H.hide())
     H.on_msg("story scene", H.hide())
     H.on_msg("fighters ready", H.show(), H.clear_fx(), H.point(90), H.set("Facing", 1), pose("idle"),
              H.size_to(75), H.goto(-150, GROUND),
@@ -4116,6 +4261,8 @@ def listing(game):
                 text = f"({b['mutation']['proccode']})"
             elif op == "event_whenbroadcastreceived":
                 text = f"when I receive [{b['fields']['BROADCAST_OPTION'][0]}]"
+            elif op == "event_whenstageclicked":
+                text = "when stage clicked"
             elif op == "event_whenkeypressed":
                 text = f"when [{b['fields']['KEY_OPTION'][0]}] key pressed"
             elif op == "looks_seteffectto":
