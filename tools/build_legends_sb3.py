@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "2.2"
+VERSION = "2.3"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -108,6 +108,9 @@ WEAPONS = [
 BOOMERANG_HIT = 7
 
 PUNCH_REACH = 70
+WHIRL_HIT = 4          # each of the WHIRLWIND KICK's hits
+WHIRL_COOLDOWN = 1.2
+DOUBLE_TAP = 0.6       # second KICK within this many seconds = WHIRLWIND KICK
 JUMP_UP = 15        # first jump speed
 FLIP_UP = 11        # second jump (front flip) speed
 HERO_GRAV = 1.3
@@ -307,6 +310,14 @@ SKEL = {
                     fk=(78, 144), ff=(92, 152), nk=(80, 160), nf=(95, 166)),
     # ninjas
     # tucked into a ball for the front flip (it is drawn turning round in 4 steps)
+    "spin 1":  dict(h=(48, 44), n=(49, 62), c=(50, 84), p=(50, 106), fe=(36, 76), fh=(24, 70), ne=(62, 76), nh=(72, 68),
+                    fk=(44, 132), ff=(48, 154), nk=(74, 104), nf=(99, 100)),
+    "spin 2":  dict(h=(50, 44), n=(50, 62), c=(50, 84), p=(50, 106), fe=(40, 74), fh=(30, 64), ne=(60, 74), nh=(70, 64),
+                    fk=(46, 132), ff=(48, 154), nk=(58, 118), nf=(62, 128)),
+    "spin 3":  dict(h=(52, 44), n=(51, 62), c=(50, 84), p=(50, 106), fe=(64, 76), fh=(76, 70), ne=(38, 76), nh=(28, 68),
+                    fk=(56, 132), ff=(52, 154), nk=(26, 104), nf=(1, 100)),
+    "spin 4":  dict(h=(50, 44), n=(50, 62), c=(50, 84), p=(50, 106), fe=(60, 74), fh=(70, 64), ne=(40, 74), nh=(30, 64),
+                    fk=(54, 132), ff=(52, 154), nk=(42, 118), nf=(38, 128)),
     "tuck":    dict(h=(58, 82), n=(54, 96), c=(50, 106), p=(44, 120), fe=(58, 104), fh=(66, 116), ne=(62, 102), nh=(70, 114),
                     fk=(62, 112), ff=(56, 132), nk=(64, 116), nf=(58, 136)),
     # powering up: wide crouch, fists clenched, head back, yelling
@@ -961,7 +972,7 @@ def apple_svg():
 
 def help_svg():
     rows = [("◀ ▶  /  joystick", "walk (push up to jump)"), ("JUMP", "jump; tap again to flip"), ("PUNCH", "quick hit"),
-            ("KICK", "strong hit"), ("DODGE", "safe for a moment"), ("FIRE (hold)", "charge a fireball, let go"),
+            ("KICK", "strong hit; tap twice to spin"), ("DODGE", "safe for a moment"), ("FIRE (hold)", "charge a fireball, let go"),
             ("SUPER", "when the bar is full"), ("POWER", "your power-level move"), ("Walk over", "weapons and apples")]
     body = ['<rect x="6" y="6" width="428" height="308" rx="22" fill="#fffbeb" stroke="#0f172a" stroke-width="6"/>',
             '<path d="M6 60 L6 28 Q6 6 28 6 L412 6 Q434 6 434 28 L434 60 Z" fill="#2563eb"/>',
@@ -1095,6 +1106,7 @@ SOUNDS = {
     "scribble": [(0.07, 3000, 2200, "noise", 0.18), (0.05, 2600, 2000, "noise", 0.12)],
     "page": [(0.25, 1800, 300, "noise", 0.3)],
     "jump": [(0.12, 300, 700, "square", 0.25)],
+    "whirl": [(0.1, 1400, 500, "noise", 0.35), (0.1, 1400, 500, "noise", 0.3), (0.12, 1400, 400, "noise", 0.3)],
     "swing": [(0.12, 900, 300, "noise", 0.35)],
     "pickup": [(0.08, 660, 660, "square", 0.3), (0.12, 990, 990, "square", 0.3)],
     "super": [(0.45, 200, 1200, "square", 0.3)],
@@ -1955,7 +1967,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
     br = game.sprite("Brawler", size=BRAWL_SIZE, rotation="left-right")
     for k in BRAWL_KINDS:
         for pose in ("idle", "punch", "kick", "jump", "hurt", "special", "idle b", "walk 1", "walk 2", "walk 3", "walk 4",
-                     "fall", "hurt high"):
+                     "fall", "hurt high", "spin 1", "spin 2", "spin 3", "spin 4"):
             br.costume(f"{k['key']} {pose}", fighter_svg(k["color"], pose, k["gear"], "hurt" if pose == "hurt" else "smile",
                                                          glow="#ef4444" if pose == "special" else None), 50, 168)
         for f in range(4):
@@ -1966,7 +1978,8 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
                         ("Speed", 3), ("Punch", 4), ("Kick", 7), ("Weight", 1), ("Face", 1), ("Inv Until", 0),
                         ("Tgt", 0), ("Think", 0), ("Dir", 0), ("Want Atk", 0), ("Want Hop", 0), ("J", 0),
                         ("Surf", 0), ("NX", 0), ("NY", 0), ("Reach", 50), ("Power", 4), ("KB", 0), ("Move Dir", 0),
-                        ("Move Until", 0), ("Smash", 0), ("Dash", 9), ("Flip", 0), ("Best D", 0), ("D", 0), ("On Plat", 0), ("Drop", 0)):
+                        ("Move Until", 0), ("Smash", 0), ("Dash", 9), ("Flip", 0), ("Spin", 0), ("Whirl", 5),
+                        ("Kick At", 0), ("Whirl Ready At", 0), ("Best D", 0), ("D", 0), ("On Plat", 0), ("Drop", 0)):
         B.local(name, value)
 
     stats = []
@@ -1981,13 +1994,15 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
     def pose(name):
         return B.wear(join(V("Kind"), " " + name))
 
-    def attack(reach, base_key, smash=False):
-        """Hit every other fighter in reach in front of me."""
+    def attack(reach, base_key, smash=False, both=False):
+        """Hit every other fighter in reach in front of me (both=True: on both sides, knocked away from me)."""
         hit = [
             # knockback grows with the target's damage %, like a platform fighter
             B.set("KB", add(add(3, mul(V("Power"), 0.5)), mul(mul(add(item("B Dmg", V("J")), V("Power")), V("Power")), 0.019))),
             B.list_set("B Hit", V("J"), add(item("B Hit", V("J")), V("Power"))),
-            B.list_set("B KX", V("J"), mul(V("Face"), V("KB"))),
+            *([B.if_(gt(item("B X", V("J")), V("X")), [B.list_set("B KX", V("J"), V("KB"))],
+                     [B.list_set("B KX", V("J"), sub(0, V("KB")))])] if both else
+              [B.list_set("B KX", V("J"), mul(V("Face"), V("KB")))]),
             B.list_set("B KY", V("J"), add(mul(V("KB"), 0.6), 3)),
             B.if_(eq(V("My Id"), 1), [B.if_(lt(V("Super"), 100), [B.change("Super", 5)]),
                                        B.if_(gt(V("Super"), 100), [B.set("Super", 100)])]),
@@ -2002,7 +2017,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
                 B.if_(and_(not_(eq(V("J"), V("My Id"))), eq(item("B Alive", V("J")), 1),
                            lt(abs_(sub(item("B X", V("J")), V("X"))), V("Reach")),
                            lt(abs_(sub(item("B Y", V("J")), V("Y"))), 50),
-                           gt(mul(sub(item("B X", V("J")), V("X")), V("Face")), -12)), hit),
+                           *([] if both else [gt(mul(sub(item("B X", V("J")), V("X")), V("Face")), -12)])), hit),
             ]),
         ]
 
@@ -2018,7 +2033,12 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         # push the stick down (or the down arrow) to drop through a thin platform
         B.if_(or_(lt(V("Joy Y"), -0.6), eq(V("Want Drop"), 1)), [B.set("Want Drop", 0), B.if_(and_(eq(V("Ground"), 1), gt(V("On Plat"), V("Solid Count"))), [B.set("Drop", 8), B.set("Ground", 0)])]),
         B.if_(eq(V("Want Punch"), 1), [B.set("Want Punch", 0), B.set("Want Atk", 1)]),
-        B.if_(eq(V("Want Kick"), 1), [B.set("Want Kick", 0), B.set("Want Atk", 2)]),
+        B.if_(eq(V("Want Kick"), 1), [
+            B.set("Want Kick", 0),
+            B.if_(and_(lt(sub(TIMER, V("Kick At")), DOUBLE_TAP), gt(TIMER, V("Whirl Ready At"))),
+                  [B.set("Kick At", 0), B.set("Whirl Ready At", add(TIMER, WHIRL_COOLDOWN)), B.set("Want Atk", 5)],
+                  [B.set("Kick At", TIMER), B.set("Want Atk", 2)]),
+        ]),
         B.if_(eq(V("Want Super"), 1), [B.set("Want Super", 0), B.if_(eq(V("Super"), 100), [B.set("Want Atk", 3)])]),
         # POWER move: level 2 FLAME DASH, level 3+ lightning on everyone near you
         B.if_(eq(V("Want Power"), 1), [
@@ -2117,7 +2137,18 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
             B.if_(eq(V("Want Atk"), 4), [pose("special"), B.set("VX", mul(V("Face"), 15)), B.set("Dash", 9),
                                          *attack(64, "Dash", smash=True), B.set("Atk CD", 14),
                                          B.set("Pop Text", "FLAME DASH!"), B.broadcast("popup")]),
+            B.if_(eq(V("Want Atk"), 5), [
+                B.set("Spin", 15), B.set("VY", 7), B.set("VX", mul(V("Face"), 6)), B.set("Ground", 0), B.set("Whirl", 5),
+                *attack(58, "Whirl", both=True), B.set("Atk CD", 18),
+                B.set("Pop Text", "WHIRLWIND KICK!"), B.broadcast("popup"), B.broadcast("whirl sfx"),
+            ]),
             B.set("Pose Until", add(TIMER, 0.18)),
+        ]),
+        # the WHIRLWIND KICK keeps spinning and hits again half way
+        B.if_(gt(V("Spin"), 0), [
+            B.change("Spin", -1), B.set("Pose Until", add(TIMER, 0.05)),
+            B.wear(join(V("Kind"), join(" spin ", add(mod(floor_(div(V("Spin"), 2)), 4), 1)))),
+            B.if_(eq(V("Spin"), 8), [*attack(58, "Whirl", both=True)]),
         ]),
         # 4. move and land on platforms and ramps
         B.if_(gt(V("Drop"), 0), [B.change("Drop", -1)]),
@@ -2422,7 +2453,7 @@ def build():
         ("Hit Power", 5), ("Hurt Power", 6), ("Shot Y", GROUND + 18), ("Shot Dir", -1), ("Wave Dir", -1),
         ("Line", ""), ("Line Secs", 2), ("Skip", 0), ("Pop Text", ""), ("Banner", "fight"),
         ("Joy X", 0), ("Touch Pad", 0), ("Spikes", 0), ("Difficulty", 2), ("Enemy Weapon", "none"), ("Enemy Swing Until", 0),
-        ("Turn Until", 0), ("Turn Dir", 1), ("Summon Kind", "ninja"), ("Wave Phase", 0), ("Adv Stage", 1), ("Lap", 1),
+        ("Turn Until", 0), ("Turn Dir", 1), ("Kick At", 0), ("Whirl Ready At", 0), ("Summon Kind", "ninja"), ("Wave Phase", 0), ("Adv Stage", 1), ("Lap", 1),
         ("Beaten", 0), ("Wave Total", 0), ("Spawned", 0), ("Wave Num", 0), ("Hero Look", "arthur"), ("Powering", 0), ("Pen X", 999), ("Pen Y", 0), ("Sound On", 1), ("Debug", 0), ("FPS", 0), ("Minions", 0), ("Summon Count", 1), ("Smoke X", 0), ("Smoke Y", GROUND),
         ("Area X", 0), ("Area R", 0), ("Area Power", 0), ("Area Kind", "hit"), ("Fire Stop", 0),
         ("Power Level", 1), ("Power XP", 0), ("XP Gain", 0), ("Want Power", 0), ("Power Ready At", 0), ("Power Move", "none"),
@@ -2721,6 +2752,7 @@ def build():
     s.on_msg("shake", s.play("big hit"))
     s.on_msg("weapon get", s.play("pickup"))
     s.on_msg("swing sfx", s.play("swing"))
+    s.on_msg("whirl sfx", s.play("whirl"))
     s.on_msg("jump sfx", s.play("jump"))
     s.on_msg("super flash", s.play("super"),
              s.repeat(3, [s.effect("BRIGHTNESS", 40), s.wait(0.05), s.effect("BRIGHTNESS", 0), s.wait(0.05)]))
@@ -2880,7 +2912,8 @@ def build():
     for h in HEROES:
         for look, hair in (("", None), (" gold", "gold"), (" silver", "silver")):
             for pose in ("idle", "punch", "kick", "jump", "hurt", "win", "dodge", "special", "down", "charge",
-                         "idle b", "walk 1", "walk 2", "walk 3", "walk 4", "punch 1", "kick 1", "hurt high", "charge up"):
+                         "idle b", "walk 1", "walk 2", "walk 3", "walk 4", "punch 1", "kick 1", "hurt high", "charge up",
+                         "spin 1", "spin 2", "spin 3", "spin 4"):
                 face = "hurt" if pose == "hurt" else ("ko" if pose == "down" else ("yell" if pose == "charge up" else "smile"))
                 glow = {"special": "#facc15", "charge": "#fb923c"}.get(pose)
                 hero.costume(f"{h['key']}{look} {pose}", fighter_svg(h["color"], "aim" if pose == "charge" else pose, h["gear"],
@@ -2940,6 +2973,7 @@ def build():
 
     H.local("Last X", 0)
     H.local("HVY", 0)
+    H.local("Spin", 0)
     H.local("Jumps", 0)
     H.local("Flip", 0)
     H.local("Look", "")
@@ -2980,6 +3014,27 @@ def build():
         H.if_(in_reach(KICK_REACH), [land_hit()]), area(KICK_REACH * 0.55, V("Hit Power")),
         H.wait(0.22), H.move(-14), *H.clamp_x(-215, 215), break_check(), rest_pose(),
     ]
+    def whirl_hit():
+        return [H.set("Hit Power", WHIRL_HIT),
+                H.if_(lt(abs_(sub(V("Enemy X"), V("Hero X"))), add(64, V("Enemy Body"))), [land_hit()]),
+                area(64, WHIRL_HIT, at=V("Hero X"))]
+
+    whirl = [
+        # WHIRLWIND KICK: lift off, spin with one leg out, travel forward, hit on both sides up to 3 times
+        H.set("Hero Lock", 1), H.set("Whirl Ready At", add(TIMER, WHIRL_COOLDOWN)),
+        H.set("Pop Text", "WHIRLWIND KICK!"), H.broadcast("popup"), H.broadcast("whirl sfx"),
+        H.if_(eq(V("Hero Air"), 0), [H.dy(16)]),
+        H.set("Spin", 0),
+        H.repeat(15, [
+            H.change("Spin", 1),
+            H.wear(join(V("Hero Look"), join(" spin ", add(mod(floor_(div(V("Spin"), 2)), 4), 1)))),
+            H.move(7), *H.clamp_x(-215, 215),
+            H.if_(eq(mod(V("Spin"), 5), 1), whirl_hit()),
+        ]),
+        H.if_(eq(V("Hero Air"), 0), [H.set_y(GROUND)]),
+        rest_pose(), H.set("Hero Lock", 0),
+    ]
+
     dodge = [
         H.set("Hero Lock", 1), H.set("Hero Safe", 1), pose("dodge"), H.effect("GHOST", 45), H.broadcast("swing sfx"),
         H.repeat(6, [H.move(-10), *H.clamp_x(-215, 215)]),
@@ -3057,7 +3112,11 @@ def build():
                                                             H.broadcast("popup")])]),
                 ]),
                 H.if_(and_(eq(V("Want Punch"), 1), eq(V("Hero Lock"), 0)), [H.set("Want Punch", 0), *punch]),
-                H.if_(and_(eq(V("Want Kick"), 1), eq(V("Hero Lock"), 0)), [H.set("Want Kick", 0), *kick]),
+                H.if_(and_(eq(V("Want Kick"), 1), eq(V("Hero Lock"), 0)), [
+                    H.set("Want Kick", 0),
+                    H.if_(and_(lt(sub(TIMER, V("Kick At")), DOUBLE_TAP), gt(TIMER, V("Whirl Ready At"))),
+                          [H.set("Kick At", 0), *whirl], [H.set("Kick At", TIMER), *kick]),
+                ]),
                 H.if_(and_(eq(V("Want Dodge"), 1), eq(V("Hero Lock"), 0)), [
                     H.set("Want Dodge", 0), H.if_(eq(V("Hero Air"), 0), dodge),
                 ]),

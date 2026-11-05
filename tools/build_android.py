@@ -39,8 +39,8 @@ HTML = DIST / "arthurs-arena.html"
 APK = DIST / "arthurs-arena.apk"
 TOOLS = Path(os.environ.get("ARENA_TOOLS", Path.home() / ".cache" / "arthurs-arena-android"))
 
-VERSION_CODE = 13
-VERSION_NAME = "2.2"
+VERSION_CODE = 14
+VERSION_NAME = "2.3"
 MIN_SDK = 24  # Android 7.0 and newer
 TARGET_SDK = 34
 

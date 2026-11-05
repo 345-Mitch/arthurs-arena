@@ -149,7 +149,7 @@ The buttons are along the bottom of the screen.
 | JUMP | up arrow or space | Jump. **Tap again in the air** for a second, higher jump with a **front flip**. You can punch and kick in the air. |
 | DODGE | C | Hop backwards and turn see-through. Nothing can hurt you while you dodge. |
 | PUNCH | Z | Quick hit. With a boomerang, PUNCH throws it. |
-| KICK | X | Steps in and hits harder. |
+| KICK | X | Steps in and hits harder. **Tap twice quickly** (or hold KICK on the touch screen) for a **WHIRLWIND KICK**. |
 | FIRE | F (hold) | **Hold** to charge a fireball, **let go** to shoot it. See below. |
 | (BRAWL) drop down | down arrow | Push the joystick down to drop through a thin platform. |
 | POWER | G | Your POWER move (from power level 2). It recharges in about 6 seconds. |
@@ -179,6 +179,10 @@ The stick fighters move more like people now:
 - **SUPER meter.** The thin bar under your health fills when you land hits or get hurt. When it is full it flashes, the SUPER button turns gold, and you see **SUPER READY!** You can't be hurt during your SUPER.
 - **Perfect dodge.** If you DODGE just as an attack would have hit you, you see **PERFECT DODGE!** You take no damage, a big chunk of SUPER fills up, and you get 100 points. Try it when Brute charges!
 - **Tap ahead.** If you tap PUNCH while a kick is still going, the punch happens right after. Big fighting games call this an input buffer.
+
+## Whirlwind Kick
+
+Tap **KICK twice quickly**. Your fighter lifts off the ground and **spins** with one leg out, travelling forward and hitting up to **3 times**. Because it spins, it hits enemies on **both sides**, which is great against a ninja squad or an enemy wave. It needs about a second to recharge. It works in BRAWL too, knocking fighters away on both sides. (Careful: it's still a kick, so it hurts to spin into Spike Bot's spikes!)
 
 ## Fireball
 
@@ -237,7 +241,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v2.2` in the bottom corner of the title.
+- **Version line:** `v2.3` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).

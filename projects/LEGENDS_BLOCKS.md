@@ -6,7 +6,7 @@ Made by `tools/build_legends_sb3.py` from the same blocks that are inside
 ## Stage
 
 Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Bamboo, Dojo, Volcano, Castle, Arcade, Ending, Paper, brawl sky, brawl ramps, brawl pagoda, brawl pirate, brawl castle, brawl space, brawl snow, brawl candy, brawl factory, brawl towers
-Sounds: hit, big hit, hurt, ki roar, ki flare, transform, scribble, page, jump, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, poof, shuriken, spike fall, win
+Sounds: hit, big hit, hurt, ki roar, ki flare, transform, scribble, page, jump, whirl, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, poof, shuriken, spike fall, win
 Sprite-only variables: New Level, Frames, Second, Waves, Near, I, K, Pick, Min X, Max X, Min Y, Max Y, Alive, Zoom To
 
 ```
@@ -803,6 +803,11 @@ start sound (pickup)
 ```
 when I receive [swing sfx]
 start sound (swing)
+```
+
+```
+when I receive [whirl sfx]
+start sound (whirl)
 ```
 
 ```
@@ -2191,8 +2196,8 @@ go to x: [0] y: [-80]
 
 ## Hero
 
-Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur win, arthur dodge, arthur special, arthur down, arthur charge, arthur idle b, arthur walk 1, arthur walk 2, arthur walk 3, arthur walk 4, arthur punch 1, arthur kick 1, arthur hurt high, arthur charge up, arthur flip 1, arthur flip 2, arthur flip 3, arthur flip 4, arthur gold idle, arthur gold punch, arthur gold kick, arthur gold jump, arthur gold hurt, arthur gold win, arthur gold dodge, arthur gold special, arthur gold down, arthur gold charge, arthur gold idle b, arthur gold walk 1, arthur gold walk 2, arthur gold walk 3, arthur gold walk 4, arthur gold punch 1, arthur gold kick 1, arthur gold hurt high, arthur gold charge up, arthur gold flip 1, arthur gold flip 2, arthur gold flip 3, arthur gold flip 4, arthur silver idle, arthur silver punch, arthur silver kick, arthur silver jump, arthur silver hurt, arthur silver win, arthur silver dodge, arthur silver special, arthur silver down, arthur silver charge, arthur silver idle b, arthur silver walk 1, arthur silver walk 2, arthur silver walk 3, arthur silver walk 4, arthur silver punch 1, arthur silver kick 1, arthur silver hurt high, arthur silver charge up, arthur silver flip 1, arthur silver flip 2, arthur silver flip 3, arthur silver flip 4, nova idle, nova punch, nova kick, nova jump, nova hurt, nova win, nova dodge, nova special, nova down, nova charge, nova idle b, nova walk 1, nova walk 2, nova walk 3, nova walk 4, nova punch 1, nova kick 1, nova hurt high, nova charge up, nova flip 1, nova flip 2, nova flip 3, nova flip 4, nova gold idle, nova gold punch, nova gold kick, nova gold jump, nova gold hurt, nova gold win, nova gold dodge, nova gold special, nova gold down, nova gold charge, nova gold idle b, nova gold walk 1, nova gold walk 2, nova gold walk 3, nova gold walk 4, nova gold punch 1, nova gold kick 1, nova gold hurt high, nova gold charge up, nova gold flip 1, nova gold flip 2, nova gold flip 3, nova gold flip 4, nova silver idle, nova silver punch, nova silver kick, nova silver jump, nova silver hurt, nova silver win, nova silver dodge, nova silver special, nova silver down, nova silver charge, nova silver idle b, nova silver walk 1, nova silver walk 2, nova silver walk 3, nova silver walk 4, nova silver punch 1, nova silver kick 1, nova silver hurt high, nova silver charge up, nova silver flip 1, nova silver flip 2, nova silver flip 3, nova silver flip 4, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko win, rocko dodge, rocko special, rocko down, rocko charge, rocko idle b, rocko walk 1, rocko walk 2, rocko walk 3, rocko walk 4, rocko punch 1, rocko kick 1, rocko hurt high, rocko charge up, rocko flip 1, rocko flip 2, rocko flip 3, rocko flip 4, rocko gold idle, rocko gold punch, rocko gold kick, rocko gold jump, rocko gold hurt, rocko gold win, rocko gold dodge, rocko gold special, rocko gold down, rocko gold charge, rocko gold idle b, rocko gold walk 1, rocko gold walk 2, rocko gold walk 3, rocko gold walk 4, rocko gold punch 1, rocko gold kick 1, rocko gold hurt high, rocko gold charge up, rocko gold flip 1, rocko gold flip 2, rocko gold flip 3, rocko gold flip 4, rocko silver idle, rocko silver punch, rocko silver kick, rocko silver jump, rocko silver hurt, rocko silver win, rocko silver dodge, rocko silver special, rocko silver down, rocko silver charge, rocko silver idle b, rocko silver walk 1, rocko silver walk 2, rocko silver walk 3, rocko silver walk 4, rocko silver punch 1, rocko silver kick 1, rocko silver hurt high, rocko silver charge up, rocko silver flip 1, rocko silver flip 2, rocko silver flip 3, rocko silver flip 4
-Sprite-only variables: Last X, HVY, Jumps, Flip, Look, Line Until
+Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur win, arthur dodge, arthur special, arthur down, arthur charge, arthur idle b, arthur walk 1, arthur walk 2, arthur walk 3, arthur walk 4, arthur punch 1, arthur kick 1, arthur hurt high, arthur charge up, arthur spin 1, arthur spin 2, arthur spin 3, arthur spin 4, arthur flip 1, arthur flip 2, arthur flip 3, arthur flip 4, arthur gold idle, arthur gold punch, arthur gold kick, arthur gold jump, arthur gold hurt, arthur gold win, arthur gold dodge, arthur gold special, arthur gold down, arthur gold charge, arthur gold idle b, arthur gold walk 1, arthur gold walk 2, arthur gold walk 3, arthur gold walk 4, arthur gold punch 1, arthur gold kick 1, arthur gold hurt high, arthur gold charge up, arthur gold spin 1, arthur gold spin 2, arthur gold spin 3, arthur gold spin 4, arthur gold flip 1, arthur gold flip 2, arthur gold flip 3, arthur gold flip 4, arthur silver idle, arthur silver punch, arthur silver kick, arthur silver jump, arthur silver hurt, arthur silver win, arthur silver dodge, arthur silver special, arthur silver down, arthur silver charge, arthur silver idle b, arthur silver walk 1, arthur silver walk 2, arthur silver walk 3, arthur silver walk 4, arthur silver punch 1, arthur silver kick 1, arthur silver hurt high, arthur silver charge up, arthur silver spin 1, arthur silver spin 2, arthur silver spin 3, arthur silver spin 4, arthur silver flip 1, arthur silver flip 2, arthur silver flip 3, arthur silver flip 4, nova idle, nova punch, nova kick, nova jump, nova hurt, nova win, nova dodge, nova special, nova down, nova charge, nova idle b, nova walk 1, nova walk 2, nova walk 3, nova walk 4, nova punch 1, nova kick 1, nova hurt high, nova charge up, nova spin 1, nova spin 2, nova spin 3, nova spin 4, nova flip 1, nova flip 2, nova flip 3, nova flip 4, nova gold idle, nova gold punch, nova gold kick, nova gold jump, nova gold hurt, nova gold win, nova gold dodge, nova gold special, nova gold down, nova gold charge, nova gold idle b, nova gold walk 1, nova gold walk 2, nova gold walk 3, nova gold walk 4, nova gold punch 1, nova gold kick 1, nova gold hurt high, nova gold charge up, nova gold spin 1, nova gold spin 2, nova gold spin 3, nova gold spin 4, nova gold flip 1, nova gold flip 2, nova gold flip 3, nova gold flip 4, nova silver idle, nova silver punch, nova silver kick, nova silver jump, nova silver hurt, nova silver win, nova silver dodge, nova silver special, nova silver down, nova silver charge, nova silver idle b, nova silver walk 1, nova silver walk 2, nova silver walk 3, nova silver walk 4, nova silver punch 1, nova silver kick 1, nova silver hurt high, nova silver charge up, nova silver spin 1, nova silver spin 2, nova silver spin 3, nova silver spin 4, nova silver flip 1, nova silver flip 2, nova silver flip 3, nova silver flip 4, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko win, rocko dodge, rocko special, rocko down, rocko charge, rocko idle b, rocko walk 1, rocko walk 2, rocko walk 3, rocko walk 4, rocko punch 1, rocko kick 1, rocko hurt high, rocko charge up, rocko spin 1, rocko spin 2, rocko spin 3, rocko spin 4, rocko flip 1, rocko flip 2, rocko flip 3, rocko flip 4, rocko gold idle, rocko gold punch, rocko gold kick, rocko gold jump, rocko gold hurt, rocko gold win, rocko gold dodge, rocko gold special, rocko gold down, rocko gold charge, rocko gold idle b, rocko gold walk 1, rocko gold walk 2, rocko gold walk 3, rocko gold walk 4, rocko gold punch 1, rocko gold kick 1, rocko gold hurt high, rocko gold charge up, rocko gold spin 1, rocko gold spin 2, rocko gold spin 3, rocko gold spin 4, rocko gold flip 1, rocko gold flip 2, rocko gold flip 3, rocko gold flip 4, rocko silver idle, rocko silver punch, rocko silver kick, rocko silver jump, rocko silver hurt, rocko silver win, rocko silver dodge, rocko silver special, rocko silver down, rocko silver charge, rocko silver idle b, rocko silver walk 1, rocko silver walk 2, rocko silver walk 3, rocko silver walk 4, rocko silver punch 1, rocko silver kick 1, rocko silver hurt high, rocko silver charge up, rocko silver spin 1, rocko silver spin 2, rocko silver spin 3, rocko silver spin 4, rocko silver flip 1, rocko silver flip 2, rocko silver flip 3, rocko silver flip 4
+Sprite-only variables: Last X, HVY, Spin, Jumps, Flip, Look, Line Until
 
 ```
 when green flag clicked
@@ -2487,55 +2492,109 @@ forever
         end
         if <<(Want Kick) = [1]> and <(Hero Lock) = [0]>> then
             set [Want Kick] to [0]
-            switch costume to (join (Hero Look) [ kick 1])
-            wait [0.07] seconds
-            switch costume to (join (Hero Look) [ kick])
-            move [14] steps
-            if <(x position) < [-215]> then
-                set x to [-215]
-            end
-            if <(x position) > [215]> then
-                set x to [215]
-            end
-            set [Hit Power] to ((Kick Power) + (Weapon Bonus))
-            if <(Weapon Bonus) > [0]> then
-                change [Weapon Uses] by [-1]
-                broadcast [swing]
-            else
-                broadcast [swing sfx]
-            end
-            if <(abs of ((Enemy X) - (Hero X))) < (([82] + (Weapon Reach)) + (Enemy Body))> then
-                if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
-                    broadcast [spike ouch]
-                else
-                    broadcast [hero hits]
-                    if <(Weapon) = [hammer]> then
-                        broadcast [shake]
+            if <<((timer) - (Kick At)) < [0.6]> and <(timer) > (Whirl Ready At)>> then
+                set [Kick At] to [0]
+                set [Hero Lock] to [1]
+                set [Whirl Ready At] to ((timer) + [1.2])
+                set [Pop Text] to [WHIRLWIND KICK!]
+                broadcast [popup]
+                broadcast [whirl sfx]
+                if <(Hero Air) = [0]> then
+                    change y by [16]
+                end
+                set [Spin] to [0]
+                repeat [15]
+                    change [Spin] by [1]
+                    switch costume to (join (Hero Look) (join [ spin ] (((floor of ((Spin) / [2])) mod [4]) + [1])))
+                    move [7] steps
+                    if <(x position) < [-215]> then
+                        set x to [-215]
+                    end
+                    if <(x position) > [215]> then
+                        set x to [215]
+                    end
+                    if <((Spin) mod [5]) = [1]> then
+                        set [Hit Power] to [4]
+                        if <(abs of ((Enemy X) - (Hero X))) < ([64] + (Enemy Body))> then
+                            if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
+                                broadcast [spike ouch]
+                            else
+                                broadcast [hero hits]
+                                if <(Weapon) = [hammer]> then
+                                    broadcast [shake]
+                                end
+                            end
+                        end
+                        if <(Minions) > [0]> then
+                            set [Area X] to (Hero X)
+                            set [Area R] to [64]
+                            set [Area Power] to [4]
+                            set [Area Kind] to [hit]
+                            broadcast [area hit]
+                        end
                     end
                 end
-            end
-            if <(Minions) > [0]> then
-                set [Area X] to ((Hero X) + ((Facing) * [45.1]))
-                set [Area R] to [45.1]
-                set [Area Power] to (Hit Power)
-                set [Area Kind] to [hit]
-                broadcast [area hit]
-            end
-            wait [0.22] seconds
-            move [-14] steps
-            if <(x position) < [-215]> then
-                set x to [-215]
-            end
-            if <(x position) > [215]> then
-                set x to [215]
-            end
-            if <<<not <(Weapon) = [none]>> and <(Weapon Uses) < [1]>> and <(Boomerang Out) = [0]>> then
-                broadcast [weapon break]
-            end
-            if <(Hero Air) = [1]> then
-                switch costume to (join (Hero Look) [ jump])
+                if <(Hero Air) = [0]> then
+                    set y to [-75]
+                end
+                if <(Hero Air) = [1]> then
+                    switch costume to (join (Hero Look) [ jump])
+                else
+                    switch costume to (join (Hero Look) [ idle])
+                end
+                set [Hero Lock] to [0]
             else
-                switch costume to (join (Hero Look) [ idle])
+                set [Kick At] to (timer)
+                switch costume to (join (Hero Look) [ kick 1])
+                wait [0.07] seconds
+                switch costume to (join (Hero Look) [ kick])
+                move [14] steps
+                if <(x position) < [-215]> then
+                    set x to [-215]
+                end
+                if <(x position) > [215]> then
+                    set x to [215]
+                end
+                set [Hit Power] to ((Kick Power) + (Weapon Bonus))
+                if <(Weapon Bonus) > [0]> then
+                    change [Weapon Uses] by [-1]
+                    broadcast [swing]
+                else
+                    broadcast [swing sfx]
+                end
+                if <(abs of ((Enemy X) - (Hero X))) < (([82] + (Weapon Reach)) + (Enemy Body))> then
+                    if <<(Spikes) = [1]> and <(Weapon Bonus) = [0]>> then
+                        broadcast [spike ouch]
+                    else
+                        broadcast [hero hits]
+                        if <(Weapon) = [hammer]> then
+                            broadcast [shake]
+                        end
+                    end
+                end
+                if <(Minions) > [0]> then
+                    set [Area X] to ((Hero X) + ((Facing) * [45.1]))
+                    set [Area R] to [45.1]
+                    set [Area Power] to (Hit Power)
+                    set [Area Kind] to [hit]
+                    broadcast [area hit]
+                end
+                wait [0.22] seconds
+                move [-14] steps
+                if <(x position) < [-215]> then
+                    set x to [-215]
+                end
+                if <(x position) > [215]> then
+                    set x to [215]
+                end
+                if <<<not <(Weapon) = [none]>> and <(Weapon Uses) < [1]>> and <(Boomerang Out) = [0]>> then
+                    broadcast [weapon break]
+                end
+                if <(Hero Air) = [1]> then
+                    switch costume to (join (Hero Look) [ jump])
+                else
+                    switch costume to (join (Hero Look) [ idle])
+                end
             end
         end
         if <<(Want Dodge) = [1]> and <(Hero Lock) = [0]>> then
@@ -7014,8 +7073,8 @@ broadcast [show title]
 
 ## Brawler
 
-Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur special, arthur idle b, arthur walk 1, arthur walk 2, arthur walk 3, arthur walk 4, arthur fall, arthur hurt high, arthur flip 1, arthur flip 2, arthur flip 3, arthur flip 4, nova idle, nova punch, nova kick, nova jump, nova hurt, nova special, nova idle b, nova walk 1, nova walk 2, nova walk 3, nova walk 4, nova fall, nova hurt high, nova flip 1, nova flip 2, nova flip 3, nova flip 4, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko special, rocko idle b, rocko walk 1, rocko walk 2, rocko walk 3, rocko walk 4, rocko fall, rocko hurt high, rocko flip 1, rocko flip 2, rocko flip 3, rocko flip 4, rival idle, rival punch, rival kick, rival jump, rival hurt, rival special, rival idle b, rival walk 1, rival walk 2, rival walk 3, rival walk 4, rival fall, rival hurt high, rival flip 1, rival flip 2, rival flip 3, rival flip 4, ivy idle, ivy punch, ivy kick, ivy jump, ivy hurt, ivy special, ivy idle b, ivy walk 1, ivy walk 2, ivy walk 3, ivy walk 4, ivy fall, ivy hurt high, ivy flip 1, ivy flip 2, ivy flip 3, ivy flip 4, brute idle, brute punch, brute kick, brute jump, brute hurt, brute special, brute idle b, brute walk 1, brute walk 2, brute walk 3, brute walk 4, brute fall, brute hurt high, brute flip 1, brute flip 2, brute flip 3, brute flip 4, quake idle, quake punch, quake kick, quake jump, quake hurt, quake special, quake idle b, quake walk 1, quake walk 2, quake walk 3, quake walk 4, quake fall, quake hurt high, quake flip 1, quake flip 2, quake flip 3, quake flip 4, shadow idle, shadow punch, shadow kick, shadow jump, shadow hurt, shadow special, shadow idle b, shadow walk 1, shadow walk 2, shadow walk 3, shadow walk 4, shadow fall, shadow hurt high, shadow flip 1, shadow flip 2, shadow flip 3, shadow flip 4, ninja idle, ninja punch, ninja kick, ninja jump, ninja hurt, ninja special, ninja idle b, ninja walk 1, ninja walk 2, ninja walk 3, ninja walk 4, ninja fall, ninja hurt high, ninja flip 1, ninja flip 2, ninja flip 3, ninja flip 4
-Sprite-only variables: Is Clone, My Id, Kind, X, Y, VX, VY, Ground, Was Ground, Jumps, Stun, Atk CD, Pose Until, Speed, Punch, Kick, Weight, Face, Inv Until, Tgt, Think, Dir, Want Atk, Want Hop, J, Surf, NX, NY, Reach, Power, KB, Move Dir, Move Until, Smash, Dash, Flip, Best D, D, On Plat, Drop
+Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur special, arthur idle b, arthur walk 1, arthur walk 2, arthur walk 3, arthur walk 4, arthur fall, arthur hurt high, arthur spin 1, arthur spin 2, arthur spin 3, arthur spin 4, arthur flip 1, arthur flip 2, arthur flip 3, arthur flip 4, nova idle, nova punch, nova kick, nova jump, nova hurt, nova special, nova idle b, nova walk 1, nova walk 2, nova walk 3, nova walk 4, nova fall, nova hurt high, nova spin 1, nova spin 2, nova spin 3, nova spin 4, nova flip 1, nova flip 2, nova flip 3, nova flip 4, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko special, rocko idle b, rocko walk 1, rocko walk 2, rocko walk 3, rocko walk 4, rocko fall, rocko hurt high, rocko spin 1, rocko spin 2, rocko spin 3, rocko spin 4, rocko flip 1, rocko flip 2, rocko flip 3, rocko flip 4, rival idle, rival punch, rival kick, rival jump, rival hurt, rival special, rival idle b, rival walk 1, rival walk 2, rival walk 3, rival walk 4, rival fall, rival hurt high, rival spin 1, rival spin 2, rival spin 3, rival spin 4, rival flip 1, rival flip 2, rival flip 3, rival flip 4, ivy idle, ivy punch, ivy kick, ivy jump, ivy hurt, ivy special, ivy idle b, ivy walk 1, ivy walk 2, ivy walk 3, ivy walk 4, ivy fall, ivy hurt high, ivy spin 1, ivy spin 2, ivy spin 3, ivy spin 4, ivy flip 1, ivy flip 2, ivy flip 3, ivy flip 4, brute idle, brute punch, brute kick, brute jump, brute hurt, brute special, brute idle b, brute walk 1, brute walk 2, brute walk 3, brute walk 4, brute fall, brute hurt high, brute spin 1, brute spin 2, brute spin 3, brute spin 4, brute flip 1, brute flip 2, brute flip 3, brute flip 4, quake idle, quake punch, quake kick, quake jump, quake hurt, quake special, quake idle b, quake walk 1, quake walk 2, quake walk 3, quake walk 4, quake fall, quake hurt high, quake spin 1, quake spin 2, quake spin 3, quake spin 4, quake flip 1, quake flip 2, quake flip 3, quake flip 4, shadow idle, shadow punch, shadow kick, shadow jump, shadow hurt, shadow special, shadow idle b, shadow walk 1, shadow walk 2, shadow walk 3, shadow walk 4, shadow fall, shadow hurt high, shadow spin 1, shadow spin 2, shadow spin 3, shadow spin 4, shadow flip 1, shadow flip 2, shadow flip 3, shadow flip 4, ninja idle, ninja punch, ninja kick, ninja jump, ninja hurt, ninja special, ninja idle b, ninja walk 1, ninja walk 2, ninja walk 3, ninja walk 4, ninja fall, ninja hurt high, ninja spin 1, ninja spin 2, ninja spin 3, ninja spin 4, ninja flip 1, ninja flip 2, ninja flip 3, ninja flip 4
+Sprite-only variables: Is Clone, My Id, Kind, X, Y, VX, VY, Ground, Was Ground, Jumps, Stun, Atk CD, Pose Until, Speed, Punch, Kick, Weight, Face, Inv Until, Tgt, Think, Dir, Want Atk, Want Hop, J, Surf, NX, NY, Reach, Power, KB, Move Dir, Move Until, Smash, Dash, Flip, Spin, Whirl, Kick At, Whirl Ready At, Best D, D, On Plat, Drop
 
 ```
 define (fighter frame)   [run without screen refresh]
@@ -7068,7 +7127,14 @@ if <<(Brawl On) = [1]> and <not <(Stun) > [0]>>> then
         end
         if <(Want Kick) = [1]> then
             set [Want Kick] to [0]
-            set [Want Atk] to [2]
+            if <<((timer) - (Kick At)) < [0.6]> and <(timer) > (Whirl Ready At)>> then
+                set [Kick At] to [0]
+                set [Whirl Ready At] to ((timer) + [1.2])
+                set [Want Atk] to [5]
+            else
+                set [Kick At] to (timer)
+                set [Want Atk] to [2]
+            end
         end
         if <(Want Super) = [1]> then
             set [Want Super] to [0]
@@ -7343,7 +7409,103 @@ if <<(Want Atk) > [0]> and <not <(Atk CD) > [0]>>> then
         set [Pop Text] to [FLAME DASH!]
         broadcast [popup]
     end
+    if <(Want Atk) = [5]> then
+        set [Spin] to [15]
+        set [VY] to [7]
+        set [VX] to ((Face) * [6])
+        set [Ground] to [0]
+        set [Whirl] to [5]
+        set [Reach] to [58]
+        set [Power] to (Whirl)
+        if <(My Id) > [1]> then
+            if <(Difficulty) = [1]> then
+                set [Power] to (((Power) * [0.75]) * ([1] + ([0.1] * ((Power Level) - [1]))))
+            end
+            if <(Difficulty) = [2]> then
+                set [Power] to (((Power) * [1]) * ([1] + ([0.1] * ((Power Level) - [1]))))
+            end
+            if <(Difficulty) = [3]> then
+                set [Power] to (((Power) * [1.15]) * ([1] + ([0.1] * ((Power Level) - [1]))))
+            end
+            if <(Difficulty) = [4]> then
+                set [Power] to (((Power) * [1.3]) * ([1] + ([0.1] * ((Power Level) - [1]))))
+            end
+        end
+        set [J] to [0]
+        repeat [4]
+            change [J] by [1]
+            if <<<<not <(J) = (My Id)>> and <(item (J) of [B Alive]) = [1]>> and <(abs of ((item (J) of [B X]) - (X))) < (Reach)>> and <(abs of ((item (J) of [B Y]) - (Y))) < [50]>> then
+                set [KB] to (([3] + ((Power) * [0.5])) + ((((item (J) of [B Dmg]) + (Power)) * (Power)) * [0.019]))
+                replace item (J) of [B Hit] with ((item (J) of [B Hit]) + (Power))
+                if <(item (J) of [B X]) > (X)> then
+                    replace item (J) of [B KX] with (KB)
+                else
+                    replace item (J) of [B KX] with ([0] - (KB))
+                end
+                replace item (J) of [B KY] with (((KB) * [0.6]) + [3])
+                if <(My Id) = [1]> then
+                    if <(Super) < [100]> then
+                        change [Super] by [5]
+                    end
+                    if <(Super) > [100]> then
+                        set [Super] to [100]
+                    end
+                end
+                broadcast [brawl hit]
+            end
+        end
+        set [Atk CD] to [18]
+        set [Pop Text] to [WHIRLWIND KICK!]
+        broadcast [popup]
+        broadcast [whirl sfx]
+    end
     set [Pose Until] to ((timer) + [0.18])
+end
+if <(Spin) > [0]> then
+    change [Spin] by [-1]
+    set [Pose Until] to ((timer) + [0.05])
+    switch costume to (join (Kind) (join [ spin ] (((floor of ((Spin) / [2])) mod [4]) + [1])))
+    if <(Spin) = [8]> then
+        set [Reach] to [58]
+        set [Power] to (Whirl)
+        if <(My Id) > [1]> then
+            if <(Difficulty) = [1]> then
+                set [Power] to (((Power) * [0.75]) * ([1] + ([0.1] * ((Power Level) - [1]))))
+            end
+            if <(Difficulty) = [2]> then
+                set [Power] to (((Power) * [1]) * ([1] + ([0.1] * ((Power Level) - [1]))))
+            end
+            if <(Difficulty) = [3]> then
+                set [Power] to (((Power) * [1.15]) * ([1] + ([0.1] * ((Power Level) - [1]))))
+            end
+            if <(Difficulty) = [4]> then
+                set [Power] to (((Power) * [1.3]) * ([1] + ([0.1] * ((Power Level) - [1]))))
+            end
+        end
+        set [J] to [0]
+        repeat [4]
+            change [J] by [1]
+            if <<<<not <(J) = (My Id)>> and <(item (J) of [B Alive]) = [1]>> and <(abs of ((item (J) of [B X]) - (X))) < (Reach)>> and <(abs of ((item (J) of [B Y]) - (Y))) < [50]>> then
+                set [KB] to (([3] + ((Power) * [0.5])) + ((((item (J) of [B Dmg]) + (Power)) * (Power)) * [0.019]))
+                replace item (J) of [B Hit] with ((item (J) of [B Hit]) + (Power))
+                if <(item (J) of [B X]) > (X)> then
+                    replace item (J) of [B KX] with (KB)
+                else
+                    replace item (J) of [B KX] with ([0] - (KB))
+                end
+                replace item (J) of [B KY] with (((KB) * [0.6]) + [3])
+                if <(My Id) = [1]> then
+                    if <(Super) < [100]> then
+                        change [Super] by [5]
+                    end
+                    if <(Super) > [100]> then
+                        set [Super] to [100]
+                    end
+                end
+                broadcast [brawl hit]
+            end
+        end
+    end
 end
 if <(Drop) > [0]> then
     change [Drop] by [-1]

@@ -669,6 +669,40 @@ async function adventureBotRun () {
     return {minutes: +(frames / 1800).toFixed(1), retries: deaths, ninjaHits: bot.stats.ninjaHits || 0};
 }
 
+async function whirlTest () {
+    // tap KICK twice quickly: WHIRLWIND KICK (spins, up to 3 hits, both sides, then a short cooldown)
+    const T = await startArcadeAt(1);
+    if (T.get('Fight On') !== 1) return fail('whirl: fight did not start');
+    T.set('Enemy HP', 999); T.set('Enemy Max', 999); T.set('Hero Safe Until', 1e12); T.set('Enemy Stun Until', 0);
+    const ex = T.get('Enemy X');
+    T.sprite('Hero').setXY(ex > 0 ? ex - 70 : ex + 70, -75);
+    await T.step(3);
+    const hp = T.get('Enemy HP');
+    T.set('Want Kick', 1);
+    await T.step(4);
+    T.set('Want Kick', 1);
+    const spins = new Set();
+    let top = -999;
+    for (let i = 0; i < 40; i++) {
+        await T.step();
+        const c = T.costume('Hero');
+        if (c.includes(' spin ')) spins.add(c.split(' spin ')[1]);
+        top = Math.max(top, T.sprite('Hero').y);
+    }
+    const dealt = hp - T.get('Enemy HP');
+    if (spins.size < 4) fail(`whirl: only spin frames ${[...spins]}`);
+    if (top < -70) fail('whirl: the hero did not lift off');
+    if (dealt < 4 + 2 * 4) fail(`whirl: kick + whirlwind only did ${dealt}`);
+    if (T.get('Hero Lock') !== 0 || T.sprite('Hero').y !== -75) fail('whirl: hero not back on the ground and free');
+    // a single tap is still a normal kick
+    await T.step(60);
+    T.set('Want Kick', 1);
+    let single = false;
+    for (let i = 0; i < 25; i++) { await T.step(); if (T.costume('Hero').includes(' spin ')) single = true; }
+    if (single) fail('whirl: a single tap spun');
+    return {spinFrames: [...spins].sort(), dealt, liftedTo: Math.round(top + 75)};
+}
+
 async function introTest () {
     const {vm} = await boot(false);
     const T = tools(vm);
@@ -1103,6 +1137,7 @@ async function brawlTest () {
     if (want('intro')) results.intro = await introTest();
     if (want('powerup')) results.powerup = await powerUpTest();
     if (want('flip')) results.flip = await flipTest();
+    if (want('whirl')) results.whirl = await whirlTest();
     if (want('adventure')) results.adventure = await adventureTest();
     if (want('adventure')) results.adventureBot = await adventureBotRun();
     if (want('brawl')) results.brawl = await brawlTest();
