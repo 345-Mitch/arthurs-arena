@@ -27,7 +27,7 @@ Every fight you win gives you **XP**: +1 for a chapter or a wave, +2 for a boss 
 | 4 | 12 | blue, with sparks | **BLUE STORM**: three lightning bolts |
 | 5 | 18 | purple-white, with lots of sparks | **ULTRA STORM**: five bolts, the last one huge |
 
-- **Powering up (Dragon Ball style):** before every fight your fighter crouches, clenches their fists and yells **HAAAAA!**. The aura surges, the ground shakes and rocks rip up out of the floor. **The higher your power level, the bigger the show:** more rocks from further away, the ground shakes longer, and from level 2 the **ground cracks open** under your feet, a **shockwave** ring blasts out, and **giant boulders** tear loose and float up (at level 5 most of them are boulders). From **power level 3** they **transform**: a white flash, **SUPER ARTHUR!** (or Nova or Rocko), and **golden spiky hair** for the whole fight. At **level 5** it's **ULTRA**, with **silver hair**. Levelling up after a win plays the transformation too, a quick flare of power goes off when your SUPER bar fills, and every POWER move starts with a short power-up.
+- **Powering up (Dragon Ball style):** before every fight your fighter crouches, clenches their fists and yells **HAAAAA!**. The power **builds up**: the aura starts as a small flicker and swells into a blaze, streaks of energy shoot upward faster and faster, the screen darkens around you and you glow brighter, until a **burst of light rays** at the peak. Every power level makes it bigger: more flames and layers, more streaks, more rays, and lightning crackling in the aura from level 3. The aura surges, the ground shakes and rocks rip up out of the floor. **The higher your power level, the bigger the show:** more rocks from further away, the ground shakes longer, and from level 2 the **ground cracks open** under your feet, a **shockwave** ring blasts out, and **giant boulders** tear loose and float up (at level 5 most of them are boulders). From **power level 3** they **transform**: a white flash, **SUPER ARTHUR!** (or Nova or Rocko), and **golden spiky hair** for the whole fight. At **level 5** it's **ULTRA**, with **silver hair**. Levelling up after a win plays the transformation too, a quick flare of power goes off when your SUPER bar fills, and every POWER move starts with a short power-up.
 - **Your aura** shows your level. Each level is brighter, bigger and flickers faster. When your SUPER is full, or during a SUPER or POWER move, it **blazes** at full brightness.
 - **Every level** gives you +10 health and +1 damage on every hit.
 - **Enemies level up with you:** more health, harder hits, faster attacks. From level 3, **bosses call down lightning** too: a yellow mark shows where a bolt will strike, so move away or DODGE. They call more bolts at higher levels.
@@ -262,7 +262,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v3.5` in the bottom corner of the title.
+- **Version line:** `v3.6` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).

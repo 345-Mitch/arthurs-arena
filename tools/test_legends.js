@@ -541,6 +541,8 @@ async function powerUpTest () {
         await T.step(3);
         T.click('Pick Rocko');
         let rocks = 0, boulders = 0, crack = false, ring = false, powering = false, yelled = false, frames = 0;
+        let sparks = 0, rays = false, dim = false;
+        const ki = new Set(), auraFrames = new Set(), auraSizes = [];
         while (T.get('Fight On') !== 1 && frames < 30 * 10) {
             await T.step();
             frames++;
@@ -548,12 +550,28 @@ async function powerUpTest () {
             boulders = Math.max(boulders, T.clones('Debris').filter(c => c.getCostumes()[c.currentCostume].name === 'boulder').length);
             if (T.sprite('Ground Crack').visible) crack = true;
             if (T.sprite('Shockwave').visible) ring = true;
+            sparks = Math.max(sparks, T.clones('Ki Spark').length);
+            if (T.sprite('Ki Rays').visible) rays = true;
+            if (T.sprite('Ki Dim').visible) dim = true;
+            if (T.get('Powering') === 1) {
+                ki.add(Math.round(T.get('Ki')));
+                auraFrames.add(T.costume('Power Aura').split(' ')[1]);
+                // (no screen here, so sprites don't change size: read the aura's own Grow value)
+                auraSizes.push(Number(T.sprite('Power Aura').lookupVariableByNameAndType('Grow').value));
+            }
             if (T.get('Powering') === 1) powering = true;
             if (((T.sprite('Hero').getCustomState('Scratch.looks') || {}).text || '').startsWith('HAAA')) yelled = true;
         }
         const look = T.get('Hero Look');
         if (process.env.DEBUG_PU) process.stdout.write(`name ${T.get('Hero Name')} hero ${T.get('Hero')} look ${look} costume ${T.costume('Hero')} state ${T.get('State')}\n`);
-        out[level] = {look, rocks, boulders, crack, ring, powering, yelled, seconds: +(frames / 30).toFixed(1)};
+        const growth = auraSizes.length ? Math.round(Math.max(...auraSizes) / Math.min(...auraSizes) * 100) / 100 : 0;
+        out[level] = {look, rocks, boulders, crack, ring, powering, yelled, sparks, rays, dim, kiSteps: ki.size,
+                      auraFrames: [...auraFrames].sort().join(''), auraGrowth: growth, seconds: +(frames / 30).toFixed(1)};
+        if (ki.size < 8 || !ki.has(100)) fail(`powerup: level ${level} Ki did not build up step by step to 100 (${[...ki]})`);
+        if (auraFrames.size < 4) fail(`powerup: level ${level} aura used only frames ${[...auraFrames]}`);
+        if (growth < 1.6) fail(`powerup: level ${level} aura only grew x${growth} while powering up`);
+        if (!sparks || !rays || !dim) fail(`powerup: level ${level} missing sparks ${sparks}, rays ${rays}, dim ${dim}`);
+        if (T.get('Ki') !== 0 || T.clones('Ki Spark').length > 30) fail(`powerup: level ${level} Ki or sparks left over`);
         if (!powering || !yelled || rocks < 5) fail(`powerup: level ${level} show missing (powering ${powering}, yell ${yelled}, rocks ${rocks})`);
         const want = level >= 5 ? 'rocko silver' : level >= 3 ? 'rocko gold' : 'rocko';
         if (look !== want) fail(`powerup: level ${level} look is ${look}, expected ${want}`);
@@ -567,6 +585,7 @@ async function powerUpTest () {
         T.set('Joy X', 0);
         if (!T.costume('Hero').startsWith(want + ' ')) fail(`powerup: walking lost the look (${T.costume('Hero')})`);
     }
+    if (!(out[5].sparks > out[1].sparks)) fail(`powerup: no more energy sparks at level 5 (${out[1].sparks}) than level 1 (${out[5].sparks})`);
     if (!(out[5].rocks > out[3].rocks && out[3].rocks > out[1].rocks)) fail(`powerup: rocks do not grow with level ${out[1].rocks} ${out[3].rocks} ${out[5].rocks}`);
     return out;
 }

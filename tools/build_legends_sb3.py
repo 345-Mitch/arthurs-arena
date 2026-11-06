@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "3.5"
+VERSION = "3.6"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -591,30 +591,70 @@ def boss_weapon_svg(kind):
 
 
 def aura_svg(frame, level=1):
-    """Fire around a fighter (100 x 180 box, feet at 168). Colour, size and sparks grow with the power level."""
+    """Fire around a fighter (100 x 180 box, feet at 168), one of 4 animation frames. Each power level has more
+    and longer flames, more layers, a hotter core and (from level 3) crackling lightning."""
     _n, _key, c1, c2, _xp, _move = POWER_LEVELS[level - 1]
-    count = 12 + 2 * level
-    reach = 1 + 0.06 * (level - 1)
-    flames = []
-    for k in range(count):
-        a = k * 2 * math.pi / count + (0.22 if frame else 0)
-        cx, cy = 50 + 40 * math.cos(a), 98 + 76 * math.sin(a)
-        tx = 50 + (60 + 8 * (k % 2)) * reach * math.cos(a - 0.25)
-        ty = 98 + (96 + 8 * (k % 2)) * reach * math.sin(a - 0.25)
-        flames.append(f'<path d="M{cx - 9 * math.sin(a):.1f} {cy + 9 * math.cos(a):.1f} Q{tx:.1f} {ty:.1f} '
-                      f'{cx + 9 * math.sin(a):.1f} {cy - 9 * math.cos(a):.1f} Z" fill="{c1 if k % 2 else c2}"/>')
+    count = 12 + 3 * level
+    reach = 1 + 0.07 * (level - 1)
+    phase = frame * math.pi / 2
+
+    def ring(n, rx, ry, length, width, colors, spin, opacity):
+        out = []
+        for k in range(n):
+            a = k * 2 * math.pi / n + spin
+            # each flame tongue flickers longer and shorter from frame to frame, and leans upward
+            flick = 1 + 0.18 * math.sin(phase + k * 1.7) + 0.08 * math.sin(2 * phase + k * 0.9)
+            up = 1 + 0.25 * max(0.0, -math.sin(a))          # flames on top reach higher
+            cx, cy = 50 + rx * math.cos(a), 98 + ry * math.sin(a)
+            tx = 50 + (rx + length) * flick * reach * math.cos(a - 0.22)
+            ty = 98 + (ry + length * 1.5) * flick * up * reach * math.sin(a - 0.22) - 6 * flick
+            out.append(f'<path d="M{cx - width * math.sin(a):.1f} {cy + width * math.cos(a):.1f} Q{tx:.1f} {ty:.1f} '
+                       f'{cx + width * math.sin(a):.1f} {cy - width * math.cos(a):.1f} Z" fill="{colors[k % 2]}" opacity="{opacity}"/>')
+        return "".join(out)
+    layers = ""
+    if level >= 3:   # an outer layer of long, see-through flames
+        layers += ring(count - 4, 44, 80, 34, 11, (c1, c2), 0.4 + frame * 0.12, 0.45)
+    layers += ring(count, 40, 76, 22, 9, (c1, c2), frame * 0.22, 0.95)
+    if level >= 2:   # an inner layer of short bright flames
+        layers += ring(count // 2 + 2, 30, 64, 14, 6, (c2, "#ffffff"), 0.6 - frame * 0.18, 0.7)
+    core = f'<ellipse cx="50" cy="98" rx="{30 + 2 * level}" ry="{66 + 2 * level}" fill="{c2}" opacity="{0.22 + 0.05 * level:.2f}"/>'
+    if level >= 4:   # white-hot middle
+        core += '<ellipse cx="50" cy="104" rx="20" ry="52" fill="#ffffff" opacity="0.25"/>'
     sparks = ""
-    if level >= 4:  # little lightning sparks crackle in the aura
-        for k in range(3 if level == 4 else 5):
-            a = k * 2.1 + (0.7 if frame else 0)
-            x0, y0 = 50 + 44 * math.cos(a), 98 + 80 * math.sin(a)
-            sparks += (f'<path d="M{x0:.0f} {y0:.0f} l6 -10 l-5 2 l6 -12" stroke="#ffffff" stroke-width="2.5" '
-                       'fill="none" stroke-linejoin="round"/>')
-    return svg_doc(140, 220, (
-        '<g transform="translate(20,20)">'
-        f'<ellipse cx="50" cy="98" rx="46" ry="84" fill="{c1}" opacity="0.35"/>'
-        + "".join(flames) +
-        f'<ellipse cx="50" cy="98" rx="34" ry="70" fill="{c2}" opacity="0.3"/>' + sparks + '</g>'))
+    if level >= 3:   # lightning crackles in the aura, more each level, jumping about from frame to frame
+        for k in range({3: 1, 4: 3, 5: 6}[level]):
+            a = k * 2.4 + frame * 1.3
+            x0, y0 = 50 + 46 * math.cos(a), 98 + 82 * math.sin(a)
+            sparks += (f'<path d="M{x0:.0f} {y0:.0f} l{5 + frame} -9 l-5 2 l{6 - frame} -11 l-4 1 l5 -9" stroke="#ffffff" '
+                       'stroke-width="2.4" fill="none" stroke-linejoin="round"/>')
+    return svg_doc(150, 240, (
+        '<g transform="translate(25,30)">'
+        f'<ellipse cx="50" cy="98" rx="48" ry="86" fill="{c1}" opacity="0.32"/>'
+        + layers + core + sparks + '</g>'))
+
+
+def ki_spark_svg(level):
+    """A streak of energy that shoots up around a fighter powering up (in the colour of the power level)."""
+    _n, _key, c1, c2, *_r = POWER_LEVELS[level - 1]
+    return svg_doc(16, 60, (
+        f'<defs><linearGradient id="ks" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/>'
+        f'<stop offset="0.35" stop-color="{c2}"/><stop offset="1" stop-color="{c1}" stop-opacity="0"/></linearGradient></defs>'
+        '<path d="M8 2 Q13 20 10 58 L6 58 Q3 20 8 2 Z" fill="url(#ks)"/>'))
+
+
+def ki_rays_svg(level):
+    """A burst of light rays when the power-up reaches its peak: more rays each level."""
+    _n, _key, c1, c2, *_r = POWER_LEVELS[level - 1]
+    n = 8 + 3 * level
+    rays = []
+    for k in range(n):
+        a = k * 2 * math.pi / n
+        r = 118 if k % 2 else 90
+        x1, y1 = 120 + r * math.cos(a - 0.07), 120 + r * math.sin(a - 0.07)
+        x2, y2 = 120 + r * math.cos(a + 0.07), 120 + r * math.sin(a + 0.07)
+        rays.append(f'<polygon points="120,120 {x1:.1f},{y1:.1f} {x2:.1f},{y2:.1f}" fill="{c2 if k % 2 else c1}" opacity="0.8"/>')
+    return svg_doc(240, 240, "".join(rays) + f'<circle cx="120" cy="120" r="26" fill="#ffffff" opacity="0.85"/>'
+                   f'<circle cx="120" cy="120" r="40" fill="{c2}" opacity="0.4"/>')
 
 
 def _old_aura_svg(frame):
@@ -3049,7 +3089,7 @@ def build():
         ("Power Level", 1), ("Power XP", 0), ("XP Gain", 0), ("Want Power", 0), ("Power Ready At", 0), ("Power Move", "none"),
         ("Bolt X", 0), ("Bolt Y", GROUND), ("Bolt Owner", "hero"), ("Bolt Power", 0), ("Bolt Size", 100),
         ("Fire Held", 0), ("Charge", 0), ("Fire Power", 0), ("Fireball Out", 0),
-        ("Pop Seq", 0), ("Enemy Says", ""), ("Page HUD", 0), ("HUD Info", hud_info()), ("Game Version", VERSION), ("Punch Held", 0), ("Kick Held", 0), ("Melee Charge", 0), ("Glow DX", 0), ("Glow DY", 60), ("Glow Kind", "punch"),
+        ("Pop Seq", 0), ("Ki", 0), ("Enemy Says", ""), ("Page HUD", 0), ("HUD Info", hud_info()), ("Game Version", VERSION), ("Punch Held", 0), ("Kick Held", 0), ("Melee Charge", 0), ("Glow DX", 0), ("Glow DY", 60), ("Glow Kind", "punch"),
         ("Swirl On", 0),
         ("Shot X", 999), ("Shot Live", 0), ("Shot Cancel", 0), ("Boom X", 0),
     ]:
@@ -3501,6 +3541,76 @@ def build():
         ]),
         note="Whirling motion lines round the WHIRLWIND and HELICOPTER KICKs.",
     )
+    # energy streaks that stream up around the hero while powering up: more, bigger and faster as Ki builds
+    ks = game.sprite("Ki Spark", size=60, rotation="don't rotate")
+    for n, *_r in POWER_LEVELS:
+        ks.costume(f"lv{n}", ki_spark_svg(n), 8, 30)
+    KS2 = ks
+    KS2.local("Is Clone", 0)
+    KS2.local("Rise", 8)
+    KS2.local("Spread", 30)
+    KS2.define(
+        "spawn ki",
+        KS2.set("Spread", add(26, mul(7, V("Power Level")))),
+        KS2.repeat(add(1, floor_(mul(add(1, V("Power Level")), div(add(20, V("Ki")), 100)))), [
+            KS2.goto(add(V("Hero X"), rnd(mul(-1, V("Spread")), V("Spread"))), add(V("Hero Y"), rnd(-5, 45))),
+            KS2.clone(),
+        ]),
+    )
+    KS2.on_flag(
+        KS2.hide(), KS2.set("Is Clone", 0),
+        KS2.forever([
+            KS2.if_(and_(eq(V("Is Clone"), 0), gt(V("Powering"), 0), eq(V("State"), "fight")), [KS2.call("spawn ki")]),
+        ]),
+        note="While powering up, streaks of energy shoot upward round the hero. More of them, bigger and faster as the "
+             "power builds, and more each power level.",
+    )
+    KS2.on_clone(
+        KS2.set("Is Clone", 1), KS2.wear(join("lv", V("Power Level"))), KS2.size_to(rnd(45, add(70, mul(14, V("Power Level"))))),
+        KS2.set("Rise", add(rnd(5, 9), add(V("Power Level"), div(V("Ki"), 25)))), KS2.effect("GHOST", 10), KS2.show(), KS2.front(),
+        KS2.repeat(add(8, V("Power Level")), [KS2.dy(V("Rise")), KS2.effect_by("GHOST", 9)]),
+        KS2.delete_clone(),
+    )
+    for m in ("show title", "choose hero", "story scene", "brawl start", "enemy down", "hero down"):
+        KS2.on_msg(m, KS2.if_(eq(V("Is Clone"), 1), [KS2.delete_clone()]))
+
+    # the screen darkens round the hero as the power builds (it sits behind every sprite, over the backdrop only)
+    dim = game.sprite("Ki Dim", size=100, rotation="don't rotate")
+    dim.costume("dark", svg_doc(480, 360, '<rect width="480" height="360" fill="#000000"/>'), 240, 180)
+    KD = dim
+    KD.local("Dim", 0)
+    KD.on_flag(
+        KD.hide(), KD.set("Dim", 0),
+        KD.forever([
+            KD.if_(and_(eq(V("Powering"), 1), eq(V("State"), "fight")), [
+                KD.set("Dim", mul(V("Ki"), add(0.14, mul(0.05, V("Power Level"))))),
+                KD.goto(0, 0), KD.effect("GHOST", sub(100, V("Dim"))), KD.show(), KD.back(),
+            ], [
+                # fade back out afterwards
+                KD.if_(gt(V("Dim"), 0), [KD.change("Dim", -3), KD.effect("GHOST", sub(100, V("Dim")))], [KD.hide()]),
+            ]),
+        ]),
+        note="While powering up the backdrop darkens a little more each moment (and more each power level), "
+             "so the aura blazes out of the dark.",
+    )
+
+    # a burst of light rays when the power-up peaks (and when the hero transforms)
+    rays = game.sprite("Ki Rays", size=30, rotation="all around")
+    for n, *_r in POWER_LEVELS:
+        rays.costume(f"lv{n}", ki_rays_svg(n), 120, 120)
+    KR = rays
+    KR.on_flag(KR.hide())
+    KR.on_msg(
+        "ki burst",
+        KR.wear(join("lv", V("Power Level"))), KR.goto(V("Hero X"), add(V("Hero Y"), 62)), KR.size_to(20), KR.point(90),
+        KR.effect("GHOST", 15), KR.show(), KR.front(),
+        KR.repeat(add(10, V("Power Level")), [KR.size_by(add(10, mul(5, V("Power Level")))), KR.turn(4), KR.effect_by("GHOST", 7)]),
+        KR.hide(),
+        note="The peak of a power-up: a burst of light rays, bigger with more rays each power level.",
+    )
+    for m in ("show title", "choose hero", "story scene", "brawl start"):
+        KR.on_msg(m, KR.hide())
+
     pf = game.sprite("Power Fist", size=50, rotation="don't rotate")
     pf.costume("punch", power_glow_svg("#fffbeb", "#facc15", "#f97316"), 40, 40)
     pf.costume("kick", power_glow_svg("#f0f9ff", "#38bdf8", "#6366f1"), 40, 40)
@@ -3992,21 +4102,28 @@ def build():
     H.on_msg(
         "power up show",
         H.set("Hero Lock", 1), pose("charge up"), H.say("Hmmmm...", 0.45),
-        H.set("Powering", 1), H.broadcast("ki rise"), H.say("HAAAAAA!"),
+        H.set("Ki", 0), H.set("Powering", 1), H.broadcast("ki rise"), H.say("HAAAAAA!"),
         H.if_(gt(V("Power Level"), 1), [H.broadcast("shockwave")]),
-        # the higher the power level, the longer and harder the power-up
-        H.repeat(add(9, V("Power Level")), [H.dx(add(1, V("Power Level"))), H.wait(0.04), H.dx(mul(-1, add(1, V("Power Level")))), H.wait(0.04)]),
+        # the power builds (Ki 0 to 100): the aura swells, sparks stream up, the hero glows brighter.
+        # The higher the power level, the longer, harder and brighter it is.
+        H.repeat(add(9, V("Power Level")), [
+            H.change("Ki", div(100, add(9, V("Power Level")))),
+            H.effect("BRIGHTNESS", mul(V("Ki"), add(0.08, mul(0.05, V("Power Level"))))),
+            H.dx(add(1, V("Power Level"))), H.wait(0.04), H.dx(mul(-1, add(1, V("Power Level")))), H.wait(0.04)]),
+        H.set("Ki", 100), H.broadcast("ki burst"),
         # level 3 and up: transform! golden hair (silver at level 5)
         H.if_(gt(V("Power Level"), 2), [
             H.if_(gt(V("Power Level"), 4), [H.set("Hero Look", join(V("Hero Name"), " silver"))],
                   [H.set("Hero Look", join(V("Hero Name"), " gold"))]),
             H.if_(gt(V("Power Level"), 4), [H.set("Pop Text", join("ULTRA ", join(V("Hero Title"), "!")))],
                   [H.set("Pop Text", join("SUPER ", join(V("Hero Title"), "!")))]),
-            pose("charge up"), H.broadcast("transform"), H.broadcast("shockwave"),
+            pose("charge up"), H.broadcast("transform"), H.broadcast("shockwave"), H.broadcast("ki burst"),
         ]),
         H.repeat(4, [H.dx(2), H.wait(0.04), H.dx(-2), H.wait(0.04)]),
-        H.say(""), H.set("Powering", 0), pose("idle"), H.set("Hero Lock", 0),
-        note="Powering up, Dragon Ball style: crouch, yell HAAAAA!, the aura flares, the ground shakes and rocks float up. "
+        H.say(""), H.set("Powering", 0), H.set("Ki", 0), H.effect("BRIGHTNESS", 0), pose("idle"), H.set("Hero Lock", 0),
+        note="Powering up, Dragon Ball style: crouch, yell HAAAAA!, and the power builds: the aura grows from a flicker to a "
+             "blaze, energy streams upward, the screen darkens and the hero glows, then a burst of light. "
+             "The ground shakes and rocks float up. "
              "From power level 3 the hair turns golden (silver at level 5) for the rest of the fight.",
     )
     H.on_msg(
@@ -4762,14 +4879,18 @@ def build():
     # ------------------------------------------------------- power aura --
     aura = game.sprite("Power Aura", size=75, rotation="don't rotate")
     for n, *_r in POWER_LEVELS:
-        aura.costume(f"lv{n} 1", aura_svg(0, n), 70, 188)
-        aura.costume(f"lv{n} 2", aura_svg(1, n), 70, 188)
+        for fr in range(4):
+            aura.costume(f"lv{n} {fr + 1}", aura_svg(fr, n), 75, 198)
     AU = aura
     AU.local("Lit", 0)
     AU.local("Grow", 1)
     powered = or_(eq(V("Super"), 100), eq(V("Hero Safe"), 2), eq(V("Charge"), 100), eq(V("Melee Charge"), 100))
-    flicker = AU.if_(eq(mod(round_(mul(TIMER, add(8, mul(3, V("Power Level"))))), 2), 0),
-                     [AU.wear(join("lv", join(V("Power Level"), " 1")))], [AU.wear(join("lv", join(V("Power Level"), " 2")))])
+    # 4 flame frames; higher levels (and a power-up building up) flicker faster
+    rate = add(add(8, mul(3, V("Power Level"))), div(V("Ki"), 6))
+
+    def frame_wear():
+        return AU.wear(join("lv", join(V("Power Level"), join(" ", add(mod(floor_(mul(TIMER, rate)), 4), 1)))))
+    flicker = frame_wear()
     AU.on_flag(
         AU.hide(),
         AU.forever([
@@ -4779,8 +4900,15 @@ def build():
             AU.effect("GHOST", sub(sub(88, mul(13, V("Power Level"))), mul(30, V("Lit")))),
             AU.effect("BRIGHTNESS", add(mul(5, V("Power Level")), mul(20, V("Lit")))),
             AU.set("Grow", add(add(0.92, mul(0.05, V("Power Level"))), mul(0.12, V("Lit")))),
-            # powering up: the aura surges and pulses, Dragon Ball style
-            AU.if_(gt(V("Powering"), 0), [AU.change("Grow", add(0.35, mul(0.12, mod(round_(mul(TIMER, 12)), 2))))]),
+            # a quick flare (SUPER ready): the aura surges and pulses
+            AU.if_(eq(V("Powering"), 2), [AU.change("Grow", add(0.35, mul(0.12, mod(round_(mul(TIMER, 12)), 2))))]),
+            # powering up: the aura starts small and faint and builds as Ki rises, bigger and brighter each level
+            AU.if_(eq(V("Powering"), 1), [
+                AU.set("Grow", mul(add(0.5, mul(0.0075, V("Ki"))), add(1, mul(0.12, V("Power Level"))))),
+                AU.change("Grow", mul(mul(0.06, div(V("Ki"), 100)), mod(round_(mul(TIMER, 14)), 2))),
+                AU.effect("GHOST", sub(85, mul(V("Ki"), add(0.4, mul(0.09, V("Power Level")))))),
+                AU.effect("BRIGHTNESS", mul(V("Ki"), add(0.12, mul(0.06, V("Power Level"))))),
+            ]),
             AU.if_(eq(V("State"), "fight"), [
                 AU.goto(V("Hero X"), V("Hero Y")), AU.size_to(mul(75, V("Grow"))), flicker, AU.show(),
             ], [
@@ -4793,13 +4921,11 @@ def build():
                     ], [AU.hide()]),
                 ]),
             ]),
-            AU.if_(not_(eq(V("State"), "fight")), [
-                AU.if_(eq(mod(round_(mul(TIMER, add(8, mul(3, V("Power Level"))))), 2), 0),
-                       [AU.wear(join("lv", join(V("Power Level"), " 1")))], [AU.wear(join("lv", join(V("Power Level"), " 2")))]),
-            ]),
+            AU.if_(not_(eq(V("State"), "fight")), [frame_wear()]),
         ]),
         note="Your aura shows your POWER LEVEL: red, orange, gold, blue, then purple-white with lightning sparks. "
-             "Each level is brighter and bigger and flickers faster. It blazes when you are powered up "
+             "Each level has more flames and layers, is brighter and bigger and flickers faster. While powering up it "
+             "starts small and builds with Ki to a blaze. It blazes when you are powered up "
              "(SUPER full, during a SUPER or POWER move, or a full fireball charge).",
     )
 

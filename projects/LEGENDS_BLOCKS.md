@@ -2377,6 +2377,168 @@ end
 
 > Whirling motion lines round the WHIRLWIND and HELICOPTER KICKs.
 
+## Ki Spark
+
+Costumes: lv1, lv2, lv3, lv4, lv5
+Sprite-only variables: Is Clone, Rise, Spread
+
+```
+define (spawn ki)   [run without screen refresh]
+set [Spread] to ([26] + ([7] * (Power Level)))
+repeat ([1] + (floor of (([1] + (Power Level)) * (([20] + (Ki)) / [100]))))
+    go to x: ((Hero X) + (pick random ([-1] * (Spread)) to (Spread))) y: ((Hero Y) + (pick random [-5] to [45]))
+    create clone of (myself)
+end
+```
+
+```
+when green flag clicked
+hide
+set [Is Clone] to [0]
+forever
+    if <<<(Is Clone) = [0]> and <(Powering) > [0]>> and <(State) = [fight]>> then
+        (spawn ki)
+    end
+end
+```
+
+> While powering up, streaks of energy shoot upward round the hero. More of them, bigger and faster as the power builds, and more each power level.
+
+```
+when I start as a clone
+set [Is Clone] to [1]
+switch costume to (join [lv] (Power Level))
+set size to (pick random [45] to ([70] + ([14] * (Power Level)))) %
+set [Rise] to ((pick random [5] to [9]) + ((Power Level) + ((Ki) / [25])))
+set [ghost] effect to [10]
+show
+go to [front] layer
+repeat ([8] + (Power Level))
+    change y by (Rise)
+    change [ghost] effect by [9]
+end
+delete this clone
+```
+
+```
+when I receive [show title]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [choose hero]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [story scene]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [brawl start]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [enemy down]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+```
+when I receive [hero down]
+if <(Is Clone) = [1]> then
+    delete this clone
+end
+```
+
+## Ki Dim
+
+Costumes: dark
+Sprite-only variables: Dim
+
+```
+when green flag clicked
+hide
+set [Dim] to [0]
+forever
+    if <<(Powering) = [1]> and <(State) = [fight]>> then
+        set [Dim] to ((Ki) * ([0.14] + ([0.05] * (Power Level))))
+        go to x: [0] y: [0]
+        set [ghost] effect to ([100] - (Dim))
+        show
+        go to [back] layer
+    else
+        if <(Dim) > [0]> then
+            change [Dim] by [-3]
+            set [ghost] effect to ([100] - (Dim))
+        else
+            hide
+        end
+    end
+end
+```
+
+> While powering up the backdrop darkens a little more each moment (and more each power level), so the aura blazes out of the dark.
+
+## Ki Rays
+
+Costumes: lv1, lv2, lv3, lv4, lv5
+
+```
+when green flag clicked
+hide
+```
+
+```
+when I receive [ki burst]
+switch costume to (join [lv] (Power Level))
+go to x: (Hero X) y: ((Hero Y) + [62])
+set size to [20] %
+point in direction [90]
+set [ghost] effect to [15]
+show
+go to [front] layer
+repeat ([10] + (Power Level))
+    change size by ([10] + ([5] * (Power Level)))
+    turn right [4] degrees
+    change [ghost] effect by [7]
+end
+hide
+```
+
+> The peak of a power-up: a burst of light rays, bigger with more rays each power level.
+
+```
+when I receive [show title]
+hide
+```
+
+```
+when I receive [choose hero]
+hide
+```
+
+```
+when I receive [story scene]
+hide
+```
+
+```
+when I receive [brawl start]
+hide
+```
+
 ## Power Fist
 
 Costumes: punch, kick
@@ -3728,6 +3890,7 @@ when I receive [power up show]
 set [Hero Lock] to [1]
 switch costume to (join (Hero Look) [ charge up])
 say [Hmmmm...] for [0.45] seconds
+set [Ki] to [0]
 set [Powering] to [1]
 broadcast [ki rise]
 say [HAAAAAA!]
@@ -3735,11 +3898,15 @@ if <(Power Level) > [1]> then
     broadcast [shockwave]
 end
 repeat ([9] + (Power Level))
+    change [Ki] by ([100] / ([9] + (Power Level)))
+    set [brightness] effect to ((Ki) * ([0.08] + ([0.05] * (Power Level))))
     change x by ([1] + (Power Level))
     wait [0.04] seconds
     change x by ([-1] * ([1] + (Power Level)))
     wait [0.04] seconds
 end
+set [Ki] to [100]
+broadcast [ki burst]
 if <(Power Level) > [2]> then
     if <(Power Level) > [4]> then
         set [Hero Look] to (join (Hero Name) [ silver])
@@ -3754,6 +3921,7 @@ if <(Power Level) > [2]> then
     switch costume to (join (Hero Look) [ charge up])
     broadcast [transform]
     broadcast [shockwave]
+    broadcast [ki burst]
 end
 repeat [4]
     change x by [2]
@@ -3763,11 +3931,13 @@ repeat [4]
 end
 say []
 set [Powering] to [0]
+set [Ki] to [0]
+set [brightness] effect to [0]
 switch costume to (join (Hero Look) [ idle])
 set [Hero Lock] to [0]
 ```
 
-> Powering up, Dragon Ball style: crouch, yell HAAAAA!, the aura flares, the ground shakes and rocks float up. From power level 3 the hair turns golden (silver at level 5) for the rest of the fight.
+> Powering up, Dragon Ball style: crouch, yell HAAAAA!, and the power builds: the aura grows from a flicker to a blaze, energy streams upward, the screen darkens and the hero glows, then a burst of light. The ground shakes and rocks float up. From power level 3 the hair turns golden (silver at level 5) for the rest of the fight.
 
 ```
 when I receive [super ready]
@@ -5919,7 +6089,7 @@ hide
 
 ## Power Aura
 
-Costumes: lv1 1, lv1 2, lv2 1, lv2 2, lv3 1, lv3 2, lv4 1, lv4 2, lv5 1, lv5 2
+Costumes: lv1 1, lv1 2, lv1 3, lv1 4, lv2 1, lv2 2, lv2 3, lv2 4, lv3 1, lv3 2, lv3 3, lv3 4, lv4 1, lv4 2, lv4 3, lv4 4, lv5 1, lv5 2, lv5 3, lv5 4
 Sprite-only variables: Lit, Grow
 
 ```
@@ -5937,17 +6107,19 @@ forever
     set [ghost] effect to (([88] - ([13] * (Power Level))) - ([30] * (Lit)))
     set [brightness] effect to (([5] * (Power Level)) + ([20] * (Lit)))
     set [Grow] to (([0.92] + ([0.05] * (Power Level))) + ([0.12] * (Lit)))
-    if <(Powering) > [0]> then
+    if <(Powering) = [2]> then
         change [Grow] by ([0.35] + ([0.12] * ((round ((timer) * [12])) mod [2])))
+    end
+    if <(Powering) = [1]> then
+        set [Grow] to (([0.5] + ([0.0075] * (Ki))) * ([1] + ([0.12] * (Power Level))))
+        change [Grow] by (([0.06] * ((Ki) / [100])) * ((round ((timer) * [14])) mod [2]))
+        set [ghost] effect to ([85] - ((Ki) * ([0.4] + ([0.09] * (Power Level)))))
+        set [brightness] effect to ((Ki) * ([0.12] + ([0.06] * (Power Level))))
     end
     if <(State) = [fight]> then
         go to x: (Hero X) y: (Hero Y)
         set size to ([75] * (Grow)) %
-        if <((round ((timer) * ([8] + ([3] * (Power Level))))) mod [2]) = [0]> then
-            switch costume to (join [lv] (join (Power Level) [ 1]))
-        else
-            switch costume to (join [lv] (join (Power Level) [ 2]))
-        end
+        switch costume to (join [lv] (join (Power Level) (join [ ] (((floor of ((timer) * (([8] + ([3] * (Power Level))) + ((Ki) / [6])))) mod [4]) + [1]))))
         show
     else
         if <<<(State) = [brawl]> and <(Brawl Live) = [1]>> and <(item [1] of [B Alive]) = [1]>> then
@@ -5969,16 +6141,12 @@ forever
         end
     end
     if <not <(State) = [fight]>> then
-        if <((round ((timer) * ([8] + ([3] * (Power Level))))) mod [2]) = [0]> then
-            switch costume to (join [lv] (join (Power Level) [ 1]))
-        else
-            switch costume to (join [lv] (join (Power Level) [ 2]))
-        end
+        switch costume to (join [lv] (join (Power Level) (join [ ] (((floor of ((timer) * (([8] + ([3] * (Power Level))) + ((Ki) / [6])))) mod [4]) + [1]))))
     end
 end
 ```
 
-> Your aura shows your POWER LEVEL: red, orange, gold, blue, then purple-white with lightning sparks. Each level is brighter and bigger and flickers faster. It blazes when you are powered up (SUPER full, during a SUPER or POWER move, or a full fireball charge).
+> Your aura shows your POWER LEVEL: red, orange, gold, blue, then purple-white with lightning sparks. Each level has more flames and layers, is brighter and bigger and flickers faster. While powering up it starts small and builds with Ki to a blaze. It blazes when you are powered up (SUPER full, during a SUPER or POWER move, or a full fireball charge).
 
 ## Lightning
 
