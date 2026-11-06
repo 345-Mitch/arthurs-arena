@@ -36,6 +36,7 @@ const SAVE_JS = `
     }
     var restored = false;
     setInterval(function () {
+        if (window.NET && NET.active) return;   // Wi-Fi play runs on the host's copy of the game
         var vars = stageVars();
         if (!vars || !vars.Best) return;
         var saved = {};
@@ -208,6 +209,7 @@ const HUD_JS = `
     }
     function quitTap (e) {
         e.preventDefault();
+        if (window.NET && NET.active && NET.leave) { NET.leave(); return; }
         var t = vm.runtime.getSpriteTargetByName('Quit Button');
         if (t) vm.runtime.startHats('event_whenthisspriteclicked', null, t);
     }
@@ -280,6 +282,493 @@ const HUD_JS = `
         } catch (e) {}
         requestAnimationFrame(tick);
     })();
+})();
+`;
+
+const NET_JS = `
+(function () {
+    // Wi-Fi play: two copies of the app on the same Wi-Fi (or a phone's hotspot) play one BRAWL together.
+    // Both phones run the very same match ("lockstep"): each frame they swap only the buttons pressed,
+    // and with the same seed for "pick random" and a frame-by-frame clock they stay exactly in step.
+    var NET = window.NET = { active: false, capture: false, take: function () { return false; } };
+    var api = window.ArenaNet;
+    if (!api) return;   // only inside the Android app
+    var FRAME = 1000 / 30, DELAY = 4;   // my buttons count 4 frames later, so they have time to reach my friend
+    var PULSES = ['Want Punch', 'Want Kick', 'Want Jump', 'Want Dodge', 'Want Super', 'Want Power', 'Want Drop'];
+    var STATES = ['Joy X', 'Joy Y', 'Fire Held'];
+    var DROP = ['Punch Held', 'Kick Held'];
+    var KINDS = ['arthur', 'nova', 'rocko'];
+    var KEEP = ['Best', 'Crown', 'Power XP', 'Power Level', 'Difficulty', 'Sound On', 'Stage Pick'];
+    var local = { 'Joy X': 0, 'Joy Y': 0, 'Fire Held': 0 }, pulses = {};
+    NET.take = function (name, value) {
+        if (!NET.capture) return false;
+        if (PULSES.indexOf(name) !== -1) { if (Number(value) === 1) pulses[name] = 1; return true; }
+        if (STATES.indexOf(name) !== -1) { local[name] = Number(value) || 0; return true; }
+        return DROP.indexOf(name) !== -1;
+    };
+
+    // ---- the game's variables
+    var vars = null;
+    function rt () { return window.vm && vm.runtime; }
+    function v (name) {
+        if (!vars) {
+            var st = rt() && rt().getTargetForStage();
+            if (!st) return null;
+            vars = {};
+            Object.keys(st.variables).forEach(function (id) { vars[st.variables[id].name] = st.variables[id]; });
+        }
+        return vars[name] || null;
+    }
+    function get (name) { var x = v(name); return x ? x.value : null; }
+    function set (name, value) { var x = v(name); if (x) x.value = value; }
+    function list (name) { var x = v(name); return x && x.value instanceof Array ? x.value : []; }
+    function click (sprite) { var t = rt().getSpriteTargetByName(sprite); if (t) rt().startHats('event_whenthisspriteclicked', null, t); }
+    function title (kind) {
+        try { return JSON.parse(get('HUD Info'))[kind][0]; } catch (e) { return String(kind).toUpperCase(); }
+    }
+
+    // ---- the screen: a WI-FI button on the BRAWL fighter screen opens the panel
+    var css = [
+        '#netBtn{position:fixed;left:2vmin;top:12vmin;z-index:60;display:none;padding:1.4vmin 2.6vmin;border-radius:2vmin;',
+        ' background:#0ea5e9;color:#fff;font:900 2.8vmin Verdana,Arial,sans-serif;border:.5vmin solid #fff;box-shadow:0 .6vmin 0 rgba(0,0,0,.35)}',
+        '#netPanel{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(2,6,23,.6);',
+        ' font:900 2.7vmin Verdana,Arial,sans-serif;color:#0f172a}',
+        '#netPanel .card{background:#fffbeb;border:.8vmin solid #0f172a;border-radius:3vmin;padding:3vmin 4vmin;min-width:60vmin;max-width:86vw;text-align:center}',
+        '#netPanel h2{margin:0 0 2vmin;font-size:4.2vmin;color:#0369a1}',
+        '#netPanel p{margin:1.2vmin 0;font-weight:600;font-size:2.5vmin}',
+        '#netPanel .btns{display:flex;flex-wrap:wrap;gap:2vmin;justify-content:center;margin-top:2vmin}',
+        '#netPanel button{font:900 2.8vmin Verdana,Arial,sans-serif;color:#fff;border:.5vmin solid #0f172a;border-radius:2vmin;padding:1.6vmin 3vmin;',
+        ' background:#16a34a;box-shadow:0 .6vmin 0 rgba(0,0,0,.35)}',
+        '#netPanel button.grey{background:#64748b}#netPanel button.blue{background:#2563eb}#netPanel button.picked{outline:.8vmin solid #facc15}',
+        '#netPanel input{font:700 2.8vmin Verdana,Arial,sans-serif;padding:1vmin;border-radius:1.4vmin;border:.4vmin solid #0f172a;width:30vmin}'
+    ].join('');
+    var style = document.createElement('style');
+    style.textContent = css;
+    document.head.appendChild(style);
+    var btn = document.createElement('div');
+    btn.id = 'netBtn';
+    btn.textContent = '📶 PLAY A FRIEND';
+    document.body.appendChild(btn);
+    var panel = document.createElement('div');
+    panel.id = 'netPanel';
+    document.body.appendChild(panel);
+
+    var S = { view: 'off', role: '', peer: '', myPick: '', peerPick: '', myName: '', ready: { me: false, peer: false }, note: '' };
+    function show (view, note) { S.view = view; S.note = note || ''; draw(); }
+    function button (label, cls, fn) {
+        var b = document.createElement('button');
+        b.textContent = label;
+        if (cls) b.className = cls;
+        b.addEventListener('click', function (e) { e.preventDefault(); fn(); });
+        return b;
+    }
+    function draw () {
+        panel.style.display = S.view === 'off' ? 'none' : 'flex';
+        if (S.view === 'off') return;
+        var card = document.createElement('div'), btns = document.createElement('div');
+        card.className = 'card';
+        btns.className = 'btns';
+        var h = document.createElement('h2'), p = document.createElement('p');
+        card.appendChild(h);
+        card.appendChild(p);
+        var st = {};
+        try { st = JSON.parse(api.state()); } catch (e) {}
+        if (S.view === 'menu') {
+            h.textContent = '📶 PLAY A FRIEND';
+            p.textContent = 'Both phones need Arthur\\'s Arena and the same Wi-Fi (or one phone\\'s hotspot). One taps HOST, the other taps JOIN.';
+            btns.appendChild(button('HOST A GAME', 'blue', host));
+            btns.appendChild(button('JOIN A GAME', '', find));
+            btns.appendChild(button('CLOSE', 'grey', leave));
+        } else if (S.view === 'hosting') {
+            h.textContent = 'WAITING FOR A FRIEND…';
+            p.innerHTML = 'Tell your friend to tap <b>JOIN A GAME</b>.<br>Your game is <b>' + S.myName + '</b>' + (st.ip ? ' (' + st.ip + ')' : '');
+            btns.appendChild(button('CANCEL', 'grey', leave));
+        } else if (S.view === 'joining') {
+            h.textContent = 'JOIN A GAME';
+            p.textContent = (st.found || []).length ? 'Tap your friend\\'s game:' : 'Looking for games on this Wi-Fi…';
+            (st.found || []).forEach(function (g) {
+                btns.appendChild(button(g.name, 'blue', function () { api.join(g.host, g.port); show('connecting'); }));
+            });
+            var row = document.createElement('p');
+            row.innerHTML = 'Not there? Type the number on your friend\\'s screen: ';
+            var input = document.createElement('input');
+            input.placeholder = '192.168.1.5';
+            input.inputMode = 'decimal';
+            row.appendChild(input);
+            row.appendChild(button('JOIN', '', function () { if (input.value.trim()) { api.join(input.value.trim(), 0); show('connecting'); } }));
+            card.appendChild(btns);
+            card.appendChild(row);
+            btns = document.createElement('div');
+            btns.className = 'btns';
+            btns.appendChild(button('CANCEL', 'grey', leave));
+        } else if (S.view === 'connecting') {
+            h.textContent = 'JOINING…';
+            p.textContent = st.status === 'error' ? 'Could not join: ' + st.error : 'Connecting to your friend…';
+            btns.appendChild(button('CANCEL', 'grey', leave));
+        } else if (S.view === 'pick') {
+            h.textContent = 'CONNECTED! 🎉';
+            p.textContent = 'Pick your fighter' + (S.role === 'host' ? ' (you are fighter 1, your friend is fighter 2):' : ' (your friend is fighter 1, you are fighter 2):');
+            KINDS.forEach(function (k) {
+                btns.appendChild(button(title(k), S.myPick === k ? 'blue picked' : 'blue', function () {
+                    S.myPick = k; send({ t: 'pick', kind: k }); draw(); maybeStart();
+                }));
+            });
+            if (S.role === 'host') {
+                var names = [];
+                try { names = JSON.parse(get('Stage Names')); } catch (e) {}
+                var pick = Number(get('Stage Pick')) || 0;
+                btns.appendChild(button('STAGE: ' + (pick ? names[pick - 1] : 'RANDOM'), 'grey', function () {
+                    set('Stage Pick', (pick + 1) % (names.length + 1)); draw();
+                }));
+            }
+            var w = document.createElement('p');
+            w.textContent = S.peerPick ? 'Your friend picked ' + title(S.peerPick) + '.' : 'Waiting for your friend to pick…';
+            card.appendChild(btns);
+            card.appendChild(w);
+            btns = document.createElement('div');
+            btns.className = 'btns';
+            btns.appendChild(button('LEAVE', 'grey', leave));
+        } else if (S.view === 'after') {
+            h.textContent = S.note || 'GOOD GAME!';
+            p.textContent = 'Play again with your friend?';
+            btns.appendChild(button(S.ready.me ? 'WAITING…' : 'REMATCH', '', function () {
+                S.ready.me = true; send({ t: 'again' }); draw(); maybeStart();
+            }));
+            btns.appendChild(button('LEAVE', 'grey', leave));
+        } else if (S.view === 'message') {
+            h.textContent = 'WI-FI PLAY';
+            p.textContent = S.note;
+            btns.appendChild(button('OK', '', function () { show('off'); }));
+        }
+        card.appendChild(btns);
+        panel.innerHTML = '';
+        panel.appendChild(card);
+    }
+    btn.addEventListener('click', function (e) { e.preventDefault(); show('menu'); });
+
+    function host () {
+        S.role = 'host';
+        S.myName = 'ARENA ' + (10 + Math.floor(Math.random() * 90));
+        api.host(S.myName);
+        show('hosting');
+    }
+    function find () { S.role = 'guest'; api.find(); show('joining'); }
+    function send (msg) { api.send(JSON.stringify(msg)); }
+    function leave () {
+        if (lastStatus === 'connected') send({ t: 'bye' });   // tell my friend before hanging up
+        if (L) stopLockstep(false);
+        api.stop();
+        S.role = ''; S.myPick = ''; S.peerPick = ''; S.ready = { me: false, peer: false };
+        show('off');
+    }
+    NET.leave = function () { leave(); click('Quit Button'); };
+    NET.frame = function () { return L ? L.f : -1; };
+
+    // ---- starting a match: the host sends the seed, the fighters and a copy of its game; both start together
+    function maybeStart () {
+        if (S.role !== 'host' || L) return;
+        var fresh = S.view === 'pick' && S.myPick && S.peerPick;
+        var again = S.view === 'after' && S.ready.me && S.ready.peer;
+        if (!fresh && !again) return;
+        var seed = Math.floor(Math.random() * 4294967295);
+        rt().stopAll();
+        var cfg = { seed: seed, host: S.myPick, guest: S.peerPick, stage: Number(get('Stage Pick')) || 0 };
+        send({ t: 'start', cfg: cfg, snap: snapshot() });
+        startLockstep('host', cfg, null);
+    }
+    function snapshot () {
+        var out = [];
+        rt().targets.forEach(function (t) {
+            if (!t.isOriginal) return;
+            var vs = {};
+            Object.keys(t.variables).forEach(function (id) {
+                var x = t.variables[id].value;
+                vs[id] = x instanceof Array ? x.slice() : x;
+            });
+            out.push({ n: t.isStage ? '' : t.sprite.name, x: t.x, y: t.y, d: t.direction, s: t.size, c: t.currentCostume, vis: t.visible,
+                       rs: t.rotationStyle, fx: Object.assign({}, t.effects), vars: vs });
+        });
+        return out;
+    }
+    function applySnapshot (snap) {
+        snap.forEach(function (o) {
+            var t = o.n === '' ? rt().getTargetForStage() : rt().getSpriteTargetByName(o.n);
+            if (!t) return;
+            if (!t.isStage) {
+                t.setRotationStyle(o.rs);
+                t.setXY(o.x, o.y, true);
+                t.setDirection(o.d);
+                t.setSize(o.s);
+                t.setVisible(o.vis);
+            }
+            t.setCostume(o.c);
+            Object.keys(o.fx || {}).forEach(function (k) { t.setEffect(k, o.fx[k]); });
+            Object.keys(o.vars).forEach(function (id) {
+                if (!t.variables[id]) return;
+                var x = o.vars[id];
+                t.variables[id].value = x instanceof Array ? x.slice() : x;
+            });
+        });
+    }
+
+    // ---- lockstep
+    var L = null, saved = null;
+    function seeded (seed) {
+        var a = seed >>> 0;
+        return function () {
+            a = (a + 0x6D2B79F5) >>> 0;
+            var t = a;
+            t = Math.imul(t ^ (t >>> 15), t | 1);
+            t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+    function startLockstep (role, cfg, snap) {
+        var r = rt();
+        var mine = {};
+        KEEP.forEach(function (k) { mine[k] = get(k); });
+        saved = { random: Math.random, now: Date.now, st: window.setTimeout, ct: window.clearTimeout, mine: mine };
+        L = { role: role, cfg: cfg, f: 0, inputs: {}, hashes: {}, timers: [], tid: 1, passes: 0, acc: 0, last: performance.now(),
+              clock: saved.now.call(Date), busy: false, waitSince: 0 };
+        // identical starting point on both phones
+        Math.random = seeded(cfg.seed);
+        Date.now = function () { return L.clock; };
+        window.setTimeout = function (fn, ms) {
+            var args = Array.prototype.slice.call(arguments, 2), id = L.tid++;
+            L.timers.push({ at: L.clock + (Number(ms) || 0), fn: fn, args: args, id: id });
+            return id;
+        };
+        window.clearTimeout = function (id) { L.timers = L.timers.filter(function (t) { return t.id !== id; }); };
+        r.frameLoop.stop();
+        Object.defineProperty(r, 'redrawRequested', {
+            configurable: true,
+            get: function () { return L.passes++ > 0; },
+            set: function (x) { if (!x) L.passes = 0; }
+        });
+        r.stopAll();
+        if (snap) applySnapshot(snap);
+        set('Sound On', mine['Sound On']);           // sound is up to each phone
+        set('My Slot', role === 'host' ? 1 : 2);     // only changes which fighter this screen marks as "you"
+        local = { 'Joy X': 0, 'Joy Y': 0, 'Fire Held': 0 };
+        pulses = {};
+        for (var f = 0; f < DELAY; f++) L.inputs[f] = { host: '0,0,0,0', guest: '0,0,0,0' };
+        NET.active = true;
+        NET.capture = true;
+        r.greenFlag();
+        S.ready = { me: false, peer: false };
+        show('off');
+        requestAnimationFrame(pump);
+    }
+    function encode () {
+        var bits = 0;
+        PULSES.forEach(function (p, i) { if (pulses[p]) bits |= 1 << i; });
+        pulses = {};
+        return [Math.round(local['Joy X'] * 100) / 100, Math.round(local['Joy Y'] * 100) / 100, local['Fire Held'] ? 1 : 0, bits].join(',');
+    }
+    function applyInputs (code, pre) {
+        var p = code.split(',');
+        set(pre + 'Joy X', Number(p[0]));
+        set(pre + 'Joy Y', Number(p[1]));
+        set(pre + 'Fire Held', Number(p[2]));
+        var bits = Number(p[3]);
+        PULSES.forEach(function (name, i) { if (bits & (1 << i)) set(pre + name, 1); });
+    }
+    function setup (f) {
+        // the same opening moves on both phones: skip the intro, open BRAWL, pick the host's fighter
+        var c = L.cfg;
+        if (f === 2) rt().startHats('event_whenbroadcastreceived', { BROADCAST_OPTION: 'skip intro' });
+        if (f === 6) click('Brawl Button');
+        if (f === 10) {
+            set('Net Players', 2);
+            set('P2 Kind', c.guest);
+            set('Stage Pick', c.stage);
+            click('Pick ' + c.host.charAt(0).toUpperCase() + c.host.slice(1));
+        }
+    }
+    function stateHash () {
+        var parts = [list('B X'), list('B Y'), list('B Dmg'), list('B Stock')].map(function (l) {
+            return l.map(function (x) { return Math.round(Number(x) * 10); }).join(',');
+        });
+        parts.push(Math.round(Number(get('Cam X')) * 10), get('Brawl Stage'), get('State'));
+        var s = parts.join('|'), h = 0;
+        for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+        return h;
+    }
+    var macro = (function () {
+        var ch = new MessageChannel(), q = [];
+        ch.port1.onmessage = function () { var fn = q.shift(); if (fn) fn(); };
+        return function (fn) { q.push(fn); ch.port2.postMessage(0); };
+    })();
+    function frameReady () { var i = L.inputs[L.f]; return i && i.host !== undefined && i.guest !== undefined; }
+    function doFrame (done) {
+        // 1. my buttons for a few frames ahead go to my friend (and to me)
+        var mine = encode(), ahead = L.f + DELAY;
+        L.inputs[ahead] = L.inputs[ahead] || {};
+        L.inputs[ahead][L.role] = mine;
+        send({ t: 'in', f: ahead, d: mine });
+        // 2. both players' buttons for this frame go into the game
+        var inp = L.inputs[L.f];
+        applyInputs(inp.host, '');
+        applyInputs(inp.guest, 'P2 ');
+        setup(L.f);
+        // 3. the clock moves one frame; timers that are due fire
+        L.clock += FRAME;
+        var due = L.timers.filter(function (t) { return t.at <= L.clock; });
+        L.timers = L.timers.filter(function (t) { return t.at > L.clock; });
+        due.forEach(function (t) { try { t.fn.apply(null, t.args); } catch (e) {} });
+        // 4. let promises settle, then run one frame of the game
+        macro(function () {
+            if (!L) return;   // left the match in the meantime
+            rt()._step();
+            if (!L) return;
+            delete L.inputs[L.f];
+            if (L.f % 30 === 0) {
+                var h = stateHash();
+                L.hashes[L.f] = L.hashes[L.f] || {};
+                L.hashes[L.f].me = h;
+                send({ t: 'hash', f: L.f, h: h });
+                checkHash(L.f);
+            }
+            L.f++;
+            if (get('State') === 'over') { matchOver(); return; }
+            done();
+        });
+    }
+    function checkHash (f) {
+        var h = L && L.hashes[f];
+        if (!h || h.me === undefined || h.peer === undefined) return;
+        if (h.me !== h.peer) {
+            send({ t: 'desync', f: f });
+            stopLockstep(false);
+            click('Quit Button');
+            show('message', 'The two phones got out of step, so the match stopped. Sorry! Tap PLAY A FRIEND to try again.');
+            return;
+        }
+        delete L.hashes[f];
+    }
+    function pump (now) {
+        if (!L) return;
+        pollNet();   // the friend's buttons, every frame
+        if (!L) return;
+        L.acc = Math.min(L.acc + (now - L.last), 6 * FRAME);
+        L.last = now;
+        if (!L.busy) {
+            var steps = 0;
+            var next = function () {
+                if (!L) return;
+                if (L.acc < FRAME || steps >= 3) { L.busy = false; return; }
+                if (!frameReady()) {
+                    L.busy = false;
+                    if (!L.waitSince) L.waitSince = now;
+                    return;
+                }
+                L.waitSince = 0;
+                steps++;
+                L.acc -= FRAME;
+                doFrame(next);
+            };
+            L.busy = true;
+            next();
+        }
+        requestAnimationFrame(pump);
+    }
+    function matchOver () {
+        var won = Number(get('Brawl Winner')) === Number(get('My Slot'));
+        stopLockstep(true, won);
+        show('after', won ? 'YOU WIN! 🏆' : 'GOOD GAME!');
+    }
+    function stopLockstep (finished, won) {
+        if (!L) return;
+        var r = rt();
+        var timers = L.timers, mine = saved.mine;
+        Math.random = saved.random;
+        Date.now = saved.now;
+        window.setTimeout = saved.st;
+        window.clearTimeout = saved.ct;
+        delete r.redrawRequested;
+        r.redrawRequested = false;
+        L = null;
+        NET.active = false;
+        NET.capture = false;
+        set('Net Players', 0);
+        set('My Slot', 1);
+        // my own saved progress comes back (the match used the host's), plus XP if I won
+        KEEP.forEach(function (k) { set(k, mine[k]); });
+        if (finished && won) { set('XP Gain', 2); r.startHats('event_whenbroadcastreceived', { BROADCAST_OPTION: 'gain xp' }); }
+        timers.forEach(function (t) { window.setTimeout.apply(null, [t.fn, 0].concat(t.args)); });
+        r.frameLoop.start();
+    }
+
+    // ---- messages from the friend's phone
+    function receive (m) {
+        if (m.t === 'hello') {
+            if (m.v !== get('Game Version')) {
+                leave();
+                show('message', 'Both phones need the same version of the game (yours is v' + get('Game Version') + ', your friend\\'s is v' + m.v + ').');
+                return;
+            }
+            S.peer = m.name || 'friend';
+        } else if (m.t === 'pick') {
+            S.peerPick = m.kind;
+            if (S.view === 'pick') draw();
+            maybeStart();
+        } else if (m.t === 'start' && S.role === 'guest') {
+            S.myPick = m.cfg.guest;
+            rt().stopAll();
+            startLockstep('guest', m.cfg, m.snap);
+        } else if (m.t === 'in' && L) {
+            L.inputs[m.f] = L.inputs[m.f] || {};
+            L.inputs[m.f][L.role === 'host' ? 'guest' : 'host'] = m.d;
+        } else if (m.t === 'hash' && L) {
+            L.hashes[m.f] = L.hashes[m.f] || {};
+            L.hashes[m.f].peer = m.h;
+            checkHash(m.f);
+        } else if (m.t === 'again') {
+            S.ready.peer = true;
+            if (S.view === 'after') draw();
+            maybeStart();
+        } else if (m.t === 'desync' && L) {
+            stopLockstep(false);
+            click('Quit Button');
+            show('message', 'The two phones got out of step, so the match stopped. Sorry! Tap PLAY A FRIEND to try again.');
+        } else if (m.t === 'bye') {
+            var was = !!L;
+            if (L) stopLockstep(false);
+            api.stop();
+            S.role = '';
+            if (was) click('Quit Button');
+            show('message', 'Your friend left the game.');
+        }
+    }
+    function pollNet () {
+        var lines = api.poll();
+        if (lines) lines.split('\\n').forEach(function (l) {
+            if (!l) return;
+            try { receive(JSON.parse(l)); } catch (e) {}
+        });
+    }
+    var lastStatus = 'idle';
+    setInterval(function () {
+        pollNet();
+        var st = {};
+        try { st = JSON.parse(api.state()); } catch (e) {}
+        if (st.status !== lastStatus) {
+            if (st.status === 'connected') {
+                send({ t: 'hello', v: get('Game Version'), name: S.myName || 'friend' });
+                S.myPick = ''; S.peerPick = '';
+                show('pick');
+            } else if (st.status === 'lost' && S.role) {
+                if (L) { stopLockstep(false); click('Quit Button'); }
+                S.role = '';
+                show('message', 'Lost the connection to your friend.');
+            }
+            lastStatus = st.status;
+        }
+        if (S.view === 'joining' || S.view === 'connecting') draw();
+        // the WI-FI button sits on the BRAWL fighter screen
+        var onSelect = get('State') === 'select' && get('Mode') === 'brawl' && !L;
+        btn.style.display = onSelect && S.view === 'off' ? 'block' : 'none';
+    }, 250);
 })();
 `;
 
@@ -358,7 +847,10 @@ const PAD_JS = `
         }
         return vars[name] || null;
     }
-    function set (name, value) { var x = v(name); if (x) x.value = value; }
+    function set (name, value) {
+        if (window.NET && NET.take(name, value)) return;   // Wi-Fi play: the lockstep engine sends it
+        var x = v(name); if (x) x.value = value;
+    }
     function get (name) { var x = v(name); return x ? x.value : null; }
     function buzz () { if (navigator.vibrate) { try { navigator.vibrate(12); } catch (e) {} } }
 
@@ -485,7 +977,7 @@ const PAD_JS = `
     o.app.windowTitle = "Arthur's Arena";
     o.app.packageName = 'arthurs-arena';
     o.cloudVariables.mode = 'local';
-    o.custom.js = SAVE_JS + EXT_JS + HUD_JS + PAD_JS;
+    o.custom.js = SAVE_JS + EXT_JS + HUD_JS + NET_JS + PAD_JS;
     const result = await packager.package();
     fs.mkdirSync(path.dirname(OUT), {recursive: true});
     fs.writeFileSync(OUT, result.data);

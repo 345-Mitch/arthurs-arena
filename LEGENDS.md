@@ -92,6 +92,7 @@ Tap **BRAWL**, pick your fighter, and fight three CPU fighters at once (ninjas c
   - **Dino Valley:** ride in the saddle of a big **T-Rex** up high, or a **Triceratops** down on the ground, as they walk back and forth under a volcano. **Raptors** sprint across the valley floor, so jump! A long-necked dinosaur walks in the distance and pterosaurs glide in the sky
   - **Highway:** a bridge with ramps and a **flatbed truck** you can ride. **Trucks** speed along the road, so jump!
   - **Fishing Pond:** two docks and a **raft** that floats between them. Fall in the water and you're out! **Fish** leap up out of the pond
+- **Play a friend over Wi-Fi** (Android app): on the BRAWL fighter screen tap **📶 PLAY A FRIEND**; one phone hosts, the other joins, and your friend plays fighter 2. `ANDROID.md` explains it.
 - **Damage %:** the number at the top shows each fighter's damage. The higher it is, the further they fly when hit.
 - **Lives:** the dots show lives (3 each). Get knocked off the screen and you lose one, then drop back in from the sky.
 - **Win:** be the last fighter standing. The match ends if you lose all three lives.
@@ -261,7 +262,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v3.4` in the bottom corner of the title.
+- **Version line:** `v3.5` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).

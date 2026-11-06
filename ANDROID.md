@@ -20,6 +20,25 @@ During a fight the names, health bars, SUPER bar and score sit in a bar across t
 
 Menus (STORY, ARCADE, picking a fighter, SKIP, RETRY, HOME, ✕) are still tapped on the game screen. On a computer, the game keeps its own buttons and the keyboard works too.
 
+## Play a friend over Wi-Fi
+
+Two phones or tablets with the app can play one BRAWL together: you are fighter 1, your friend is fighter 2, and two computer fighters join in.
+
+1. Both phones on the **same Wi-Fi**. No Wi-Fi? Turn on one phone's **hotspot** and join it with the other. No internet is used.
+2. On both phones: **BRAWL**, then the fighter screen shows **📶 PLAY A FRIEND** (top left). Tap it.
+3. One phone taps **HOST A GAME**. The other taps **JOIN A GAME** and then the game that appears (for example *ARENA 42*). If it doesn't appear, type the number shown on the host's screen (like `192.168.1.5`) and tap JOIN.
+4. Each phone picks a fighter. The host can also pick the STAGE. The match starts as soon as both have picked.
+   It's friend against friend (with two computer fighters causing trouble): as soon as one of you is out of lives, the other wins.
+5. After the match tap **REMATCH** on both phones to go again, or **LEAVE**. The ✕ at the top also leaves (your friend is told).
+
+How it works: both phones run exactly the same match at the same time ("lockstep"). Each frame they swap only the buttons pressed, and they use the same random numbers, so the match is the same on both screens. Your buttons count about a tenth of a second after you press them, so they have time to reach the other phone. Both phones must have the **same version** of the game; the app checks. Bluetooth isn't used: the game runs in a web view, which can't use Bluetooth, but a phone's hotspot works the same way without a router.
+
+Things to know:
+
+- Your own progress (Best, power level, the Golden Crown) is kept. A Wi-Fi match is played with the host's power level and difficulty, and a win gives you power XP as usual.
+- If the phones ever get out of step (rare), the match stops with a message; tap PLAY A FRIEND to go again.
+- Only BRAWL can be played over Wi-Fi.
+
 ## Install it (do this on each phone or tablet)
 
 1. On the phone or tablet, open this link in Chrome:
@@ -41,7 +60,7 @@ To update later, install the new APK the same way. It installs over the old one 
 ## Good to know
 
 - Scratch on its own only follows one finger, so the joystick and buttons are part of the app's page, not Scratch sprites. They set the same variables the Scratch buttons do (`Want Punch` and so on, plus `Joy X` for walking). `Touch Pad` = 1 tells the game to hide its own buttons.
-- Version 3.4 (health bars and score in a bar across the top of the screen) installs over earlier versions and keeps the Best score, difficulty, power level and sound setting.
+- Version 3.5 (play a friend over Wi-Fi) installs over earlier versions and keeps the Best score, difficulty, power level and sound setting.
 - The Android back button closes the game.
 - The app is signed with a debug key (`android/debug.keystore`, password `arthursarena`). That's fine for installing at home. The Play Store would need a private key.
 
@@ -60,3 +79,6 @@ How the app is made:
 
 - `tools/package_html.js` turns the `.sb3` into one offline web page with the TurboWarp packager. It also adds a few lines that save Best and Crown on the device.
 - `android/` holds the app: the manifest, the icon, and one screen (`MainActivity.smali`) that shows that page full screen.
+- `android/java/.../ArenaNet.java` is the Wi-Fi helper the page calls as `window.ArenaNet`: it hosts a game (a TCP server on port 47123, advertised on the local network with Android's network service discovery), finds games, joins one, and passes lines of text both ways. It is compiled with `javac` against small stand-ins for the few Android classes it uses (`android/stubs`), then `dx` turns it into `classes2.dex`. The app now asks for network permissions (Wi-Fi state, multicast for finding games, and internet for the local connection).
+- The lockstep engine is in `tools/package_html.js` (`NET_JS`). The host sends a seed and a copy of its game; both phones then drive the game themselves, frame by frame, with a frame clock instead of the real clock, seeded `pick random`, and one pass of the scripts per frame. Every second they compare a checksum of the fighters.
+- `tools/test_wifi.js` plays a Wi-Fi BRAWL between two copies of the page in a browser, with a stand-in for `ArenaNet`, and checks they stay in step (`WIFI_FULL=1` plays a whole match and a rematch).

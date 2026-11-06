@@ -1864,7 +1864,10 @@ add [quake] to [B Pool]
 add [shadow] to [B Pool]
 add [ninja] to [B Pool]
 add (Hero Name) to [B Kind]
-repeat [3]
+if <(Net Players) = [2]> then
+    add (P2 Kind) to [B Kind]
+end
+repeat ([3] - ([1] * <(Net Players) = [2]>))
     set [Pick] to (pick random [1] to (length of [B Pool]))
     add (item (Pick) of [B Pool]) to [B Kind]
     delete (Pick) of [B Pool]
@@ -1886,6 +1889,19 @@ set [Cam Y] to [0]
 set [Zoom] to [0.8]
 set [Super] to [0]
 set [Brawl Winner] to [0]
+set [P2 Joy X] to [0]
+set [P2 Joy Y] to [0]
+set [P2 Want Jump] to [0]
+set [P2 Want Drop] to [0]
+set [P2 Want Punch] to [0]
+set [P2 Want Kick] to [0]
+set [P2 Want Super] to [0]
+set [P2 Want Power] to [0]
+set [P2 Want Dodge] to [0]
+set [P2 Fire Held] to [0]
+set [P2 Super] to [0]
+set [P2 Charge] to [0]
+set [P2 Power Ready At] to [0]
 hide variable [Score]
 hide variable [Wave]
 hide variable [Best]
@@ -1983,12 +1999,33 @@ if <(Alive) > [0]> then
     change [Cam X] by (((((Min X) + (Max X)) / [2]) - (Cam X)) * [0.1])
     change [Cam Y] by ((((((Min Y) + (Max Y)) / [2]) + [35]) - (Cam Y)) * [0.1])
 end
-if <<(Brawl On) = [1]> and <<(item [1] of [B Alive]) = [0]> or <(Alive) < [2]>>> then
+if <<<(Brawl On) = [1]> and <not <(Net Players) = [2]>>> and <<(item [1] of [B Alive]) = [0]> or <(Alive) < [2]>>> then
     set [Brawl On] to [0]
     if <(item [1] of [B Alive]) = [1]> then
         set [Brawl Winner] to [1]
     else
         set [Brawl Winner] to [0]
+    end
+    broadcast [brawl end]
+end
+if <<<(Brawl On) = [1]> and <(Net Players) = [2]>> and <<<(item [1] of [B Alive]) = [0]> or <(item [2] of [B Alive]) = [0]>> or <(Alive) < [2]>>> then
+    set [Brawl On] to [0]
+    set [Brawl Winner] to [0]
+    if <(item [1] of [B Alive]) = [1]> then
+        set [Brawl Winner] to [1]
+    end
+    if <(item [2] of [B Alive]) = [1]> then
+        set [Brawl Winner] to [2]
+    end
+    if <<(item [1] of [B Alive]) = [1]> and <(item [2] of [B Alive]) = [1]>> then
+        set [Brawl Winner] to [0]
+        set [K] to [0]
+        repeat [4]
+            change [K] by [1]
+            if <(item (K) of [B Alive]) = [1]> then
+                set [Brawl Winner] to (K)
+            end
+        end
     end
     broadcast [brawl end]
 end
@@ -2014,7 +2051,7 @@ wait [1.8] seconds
 if <not <(State) = [brawl]>> then
     stop [this script]
 end
-if <(Brawl Winner) = [1]> then
+if <(Brawl Winner) = (My Slot)> then
     start sound (win)
     change [Score] by ([1000] * (Difficulty))
     set [XP Gain] to [2]
@@ -6057,12 +6094,12 @@ end
 ```
 when I receive [brawl bolt]
 if <(Is Clone) = [0]> then
-    set [J] to [1]
-    repeat [3]
+    set [J] to [0]
+    repeat [4]
         change [J] by [1]
-        if <<(item (J) of [B Alive]) = [1]> and <(abs of ((item (J) of [B X]) - (item [1] of [B X]))) < ([110] * ((Power Level) - [1]))>> then
+        if <<<not <(J) = (Bolt From)>> and <(item (J) of [B Alive]) = [1]>> and <(abs of ((item (J) of [B X]) - (item (Bolt From) of [B X]))) < ([110] * ((Power Level) - [1]))>> then
             replace item (J) of [B Hit] with ((item (J) of [B Hit]) + ([6] + ([2] * (Power Level))))
-            if <(item (J) of [B X]) > (item [1] of [B X])> then
+            if <(item (J) of [B X]) > (item (Bolt From) of [B X])> then
                 set [Pw] to [1]
             else
                 set [Pw] to [-1]
@@ -6823,7 +6860,7 @@ else
     switch costume to (game over)
 end
 if <(Mode) = [brawl]> then
-    if <(Brawl Winner) = [1]> then
+    if <(Brawl Winner) = (My Slot)> then
         switch costume to (brawl win)
     else
         switch costume to (brawl lose)
@@ -8143,6 +8180,7 @@ if <<(Brawl On) = [1]> and <not <(Stun) > [0]>>> then
                 else
                     set [Pop Text] to [THUNDER!]
                     broadcast [popup]
+                    set [Bolt From] to (My Id)
                     broadcast [brawl bolt]
                 end
             end
@@ -8165,6 +8203,7 @@ if <<(Brawl On) = [1]> and <not <(Stun) > [0]>>> then
                 set [BF X] to ((X) + ([20] * (Face)))
                 set [BF Y] to ((Y) + [40])
                 set [BF Dir] to (Face)
+                set [BF Owner] to (My Id)
                 set [BF Power] to ((Charge) + [1])
                 broadcast [brawl fire]
                 set [Fire Power] to (Charge)
@@ -8173,56 +8212,141 @@ if <<(Brawl On) = [1]> and <not <(Stun) > [0]>>> then
             set [Charge] to [0]
         end
     else
-        if <<<(Tgt) = [0]> or <(pick random [1] to [20]) = [1]>> or <(item (Tgt) of [B Alive]) = [0]>> then
-            set [Best D] to [99999]
-            set [J] to [0]
-            repeat [4]
-                change [J] by [1]
-                if <<not <(J) = (My Id)>> and <(item (J) of [B Alive]) = [1]>> then
-                    set [D] to ((abs of ((item (J) of [B X]) - (X))) + (abs of ((item (J) of [B Y]) - (Y))))
-                    if <(D) < (Best D)> then
-                        set [Best D] to (D)
-                        set [Tgt] to (J)
-                    end
+        if <<(My Id) = [2]> and <(Net Players) = [2]>> then
+            if <(abs of (P2 Joy X)) > [0.2]> then
+                set [Dir] to (P2 Joy X)
+            else
+                if <(timer) < (Move Until)> then
+                    set [Dir] to (Move Dir)
+                else
+                    set [Dir] to [0]
                 end
             end
-        end
-        set [Dir] to [0]
-        if <<<(X) < [-300]> or <(X) > [300]>> or <(Y) < [-150]>> then
-            if <(X) > [0]> then
-                set [Dir] to [-1]
-            else
-                set [Dir] to [1]
-            end
-            if <<(VY) < [0]> and <(Jumps) < [2]>> then
+            if <(P2 Want Jump) = [1]> then
+                set [P2 Want Jump] to [0]
                 set [Want Hop] to [1]
             end
-        else
-            if <(Tgt) > [0]> then
-                set [D] to ((item (Tgt) of [B X]) - (X))
-                if <(abs of (D)) > [38]> then
-                    if <(D) > [0]> then
-                        set [Dir] to [1]
+            if <<(P2 Joy Y) < [-0.6]> or <(P2 Want Drop) = [1]>> then
+                set [P2 Want Drop] to [0]
+                if <<(Ground) = [1]> and <(On Plat) > (Solid Count)>> then
+                    set [Drop] to [8]
+                    set [Ground] to [0]
+                end
+            end
+            if <(P2 Want Punch) = [1]> then
+                set [P2 Want Punch] to [0]
+                set [Want Atk] to [1]
+            end
+            if <(P2 Want Kick) = [1]> then
+                set [P2 Want Kick] to [0]
+                if <<((timer) - (Kick At)) < [0.6]> and <(timer) > (Whirl Ready At)>> then
+                    set [Kick At] to [0]
+                    set [Whirl Ready At] to ((timer) + [1.2])
+                    set [Want Atk] to [5]
+                else
+                    set [Kick At] to (timer)
+                    set [Want Atk] to [2]
+                end
+            end
+            if <(P2 Want Super) = [1]> then
+                set [P2 Want Super] to [0]
+                if <(P2 Super) = [100]> then
+                    set [Want Atk] to [3]
+                end
+            end
+            if <(P2 Want Power) = [1]> then
+                set [P2 Want Power] to [0]
+                if <<(Power Level) > [1]> and <(timer) > (P2 Power Ready At)>> then
+                    set [P2 Power Ready At] to ((timer) + [6])
+                    broadcast [power flash]
+                    if <(Power Level) = [2]> then
+                        set [Want Atk] to [4]
                     else
-                        set [Dir] to [-1]
+                        set [Pop Text] to [THUNDER!]
+                        broadcast [popup]
+                        set [Bolt From] to (My Id)
+                        broadcast [brawl bolt]
                     end
                 end
-                if <((item (Tgt) of [B Y]) - (Y)) > [45]> then
-                    if <<(Ground) = [1]> and <(pick random [1] to [6]) = [1]>> then
-                        set [Want Hop] to [1]
-                    end
-                    if <<<(Ground) = [0]> and <(Jumps) = [1]>> and <(VY) < [1]>> then
-                        set [Want Hop] to [1]
+            end
+            if <(P2 Want Dodge) = [1]> then
+                set [P2 Want Dodge] to [0]
+                set [Inv Until] to ((timer) + [0.45])
+                set [VX] to ((Face) * [-6])
+            end
+            if <<(P2 Fire Held) = [1]> or <key (f) pressed?>> then
+                if <(P2 Charge) < [100]> then
+                    change [P2 Charge] by [3.5]
+                end
+                if <(P2 Charge) > [99]> then
+                    set [P2 Charge] to [100]
+                end
+                set [Dir] to ((Dir) * [0.4])
+            else
+                if <<(P2 Charge) > [0]> and <(BF Power) = [0]>> then
+                    set [BF X] to ((X) + ([20] * (Face)))
+                    set [BF Y] to ((Y) + [40])
+                    set [BF Dir] to (Face)
+                    set [BF Owner] to (My Id)
+                    set [BF Power] to ((P2 Charge) + [1])
+                    broadcast [brawl fire]
+                    set [Fire Power] to (P2 Charge)
+                    broadcast [fire]
+                end
+                set [P2 Charge] to [0]
+            end
+        else
+            if <<<(Tgt) = [0]> or <(pick random [1] to [20]) = [1]>> or <(item (Tgt) of [B Alive]) = [0]>> then
+                set [Best D] to [99999]
+                set [J] to [0]
+                repeat [4]
+                    change [J] by [1]
+                    if <<not <(J) = (My Id)>> and <(item (J) of [B Alive]) = [1]>> then
+                        set [D] to ((abs of ((item (J) of [B X]) - (X))) + (abs of ((item (J) of [B Y]) - (Y))))
+                        if <(D) < (Best D)> then
+                            set [Best D] to (D)
+                            set [Tgt] to (J)
+                        end
                     end
                 end
-                if <<((item (Tgt) of [B Y]) - (Y)) < [-50]> and <(pick random [1] to [15]) = [1]>> then
-                    if <<(Ground) = [1]> and <(On Plat) > (Solid Count)>> then
-                        set [Drop] to [8]
-                        set [Ground] to [0]
-                    end
+            end
+            set [Dir] to [0]
+            if <<<(X) < [-300]> or <(X) > [300]>> or <(Y) < [-150]>> then
+                if <(X) > [0]> then
+                    set [Dir] to [-1]
+                else
+                    set [Dir] to [1]
                 end
-                if <<<(abs of (D)) < [48]> and <(abs of ((item (Tgt) of [B Y]) - (Y))) < [45]>> and <(pick random [0.0] to [1.0]) < (Think)>> then
-                    set [Want Atk] to (pick random [1] to [2])
+                if <<(VY) < [0]> and <(Jumps) < [2]>> then
+                    set [Want Hop] to [1]
+                end
+            else
+                if <(Tgt) > [0]> then
+                    set [D] to ((item (Tgt) of [B X]) - (X))
+                    if <(abs of (D)) > [38]> then
+                        if <(D) > [0]> then
+                            set [Dir] to [1]
+                        else
+                            set [Dir] to [-1]
+                        end
+                    end
+                    if <((item (Tgt) of [B Y]) - (Y)) > [45]> then
+                        if <<(Ground) = [1]> and <(pick random [1] to [6]) = [1]>> then
+                            set [Want Hop] to [1]
+                        end
+                        if <<<(Ground) = [0]> and <(Jumps) = [1]>> and <(VY) < [1]>> then
+                            set [Want Hop] to [1]
+                        end
+                    end
+                    if <<((item (Tgt) of [B Y]) - (Y)) < [-50]> and <(pick random [1] to [15]) = [1]>> then
+                        if <<(Ground) = [1]> and <(On Plat) > (Solid Count)>> then
+                            set [Drop] to [8]
+                            set [Ground] to [0]
+                        end
+                    end
+                    if <<<(abs of (D)) < [48]> and <(abs of ((item (Tgt) of [B Y]) - (Y))) < [45]>> and <(pick random [0.0] to [1.0]) < (Think)>> then
+                        set [Want Atk] to (pick random [1] to [2])
+                    end
                 end
             end
         end
@@ -8298,6 +8422,14 @@ if <<(Want Atk) > [0]> and <not <(Atk CD) > [0]>>> then
                         set [Super] to [100]
                     end
                 end
+                if <<(My Id) = [2]> and <(Net Players) = [2]>> then
+                    if <(P2 Super) < [100]> then
+                        change [P2 Super] by [5]
+                    end
+                    if <(P2 Super) > [100]> then
+                        set [P2 Super] to [100]
+                    end
+                end
                 broadcast [brawl hit]
             end
         end
@@ -8337,6 +8469,14 @@ if <<(Want Atk) > [0]> and <not <(Atk CD) > [0]>>> then
                         set [Super] to [100]
                     end
                 end
+                if <<(My Id) = [2]> and <(Net Players) = [2]>> then
+                    if <(P2 Super) < [100]> then
+                        change [P2 Super] by [5]
+                    end
+                    if <(P2 Super) > [100]> then
+                        set [P2 Super] to [100]
+                    end
+                end
                 broadcast [brawl hit]
             end
         end
@@ -8344,7 +8484,11 @@ if <<(Want Atk) > [0]> and <not <(Atk CD) > [0]>>> then
     end
     if <(Want Atk) = [3]> then
         switch costume to (join (Kind) [ special])
-        set [Super] to [0]
+        if <(My Id) = [2]> then
+            set [P2 Super] to [0]
+        else
+            set [Super] to [0]
+        end
         set [Smash] to [16]
         set [Reach] to [70]
         set [Power] to (Smash)
@@ -8362,6 +8506,14 @@ if <<(Want Atk) > [0]> and <not <(Atk CD) > [0]>>> then
                     end
                     if <(Super) > [100]> then
                         set [Super] to [100]
+                    end
+                end
+                if <<(My Id) = [2]> and <(Net Players) = [2]>> then
+                    if <(P2 Super) < [100]> then
+                        change [P2 Super] by [5]
+                    end
+                    if <(P2 Super) > [100]> then
+                        set [P2 Super] to [100]
                     end
                 end
                 broadcast [brawl smash]
@@ -8391,6 +8543,14 @@ if <<(Want Atk) > [0]> and <not <(Atk CD) > [0]>>> then
                     end
                     if <(Super) > [100]> then
                         set [Super] to [100]
+                    end
+                end
+                if <<(My Id) = [2]> and <(Net Players) = [2]>> then
+                    if <(P2 Super) < [100]> then
+                        change [P2 Super] by [5]
+                    end
+                    if <(P2 Super) > [100]> then
+                        set [P2 Super] to [100]
                     end
                 end
                 broadcast [brawl smash]
@@ -8442,6 +8602,14 @@ if <<(Want Atk) > [0]> and <not <(Atk CD) > [0]>>> then
                         set [Super] to [100]
                     end
                 end
+                if <<(My Id) = [2]> and <(Net Players) = [2]>> then
+                    if <(P2 Super) < [100]> then
+                        change [P2 Super] by [5]
+                    end
+                    if <(P2 Super) > [100]> then
+                        set [P2 Super] to [100]
+                    end
+                end
                 broadcast [brawl hit]
             end
         end
@@ -8491,6 +8659,14 @@ if <(Spin) > [0]> then
                     end
                     if <(Super) > [100]> then
                         set [Super] to [100]
+                    end
+                end
+                if <<(My Id) = [2]> and <(Net Players) = [2]>> then
+                    if <(P2 Super) < [100]> then
+                        change [P2 Super] by [5]
+                    end
+                    if <(P2 Super) > [100]> then
+                        set [P2 Super] to [100]
                     end
                 end
                 broadcast [brawl hit]
@@ -8617,7 +8793,7 @@ else
 end
 set size to ([45] * (Zoom)) %
 go to x: (((X) - (Cam X)) * (Zoom)) y: (((Y) - (Cam Y)) * (Zoom))
-if <(My Id) = [1]> then
+if <(My Id) = (My Slot)> then
     set [P1 Screen X] to (x position)
     set [P1 Screen Y] to (y position)
     set [P1 Screen Size] to (size)
@@ -8730,6 +8906,9 @@ set [Jumps] to [0]
 if <(My Id) = [1]> then
     set [Charge] to [0]
 end
+if <(My Id) = [2]> then
+    set [P2 Charge] to [0]
+end
 clear graphic effects
 switch costume to (join (Kind) [ jump])
 show
@@ -8813,10 +8992,10 @@ define (fireball frame)   [run without screen refresh]
 change [BF X] by (([8] + ((Power) / [25])) * (BF Dir))
 set size to (([30] + ((Power) * [0.7])) * (Zoom)) %
 go to x: (((BF X) - (Cam X)) * (Zoom)) y: (((BF Y) - (Cam Y)) * (Zoom))
-set [J] to [1]
-repeat [3]
+set [J] to [0]
+repeat [4]
     change [J] by [1]
-    if <<<<(Done) = [0]> and <(item (J) of [B Alive]) = [1]>> and <(abs of ((item (J) of [B X]) - (BF X))) < [24]>> and <(abs of (((item (J) of [B Y]) + [38]) - (BF Y))) < [44]>> then
+    if <<<<<(Done) = [0]> and <not <(J) = (BF Owner)>>> and <(item (J) of [B Alive]) = [1]>> and <(abs of ((item (J) of [B X]) - (BF X))) < [24]>> and <(abs of (((item (J) of [B Y]) + [38]) - (BF Y))) < [44]>> then
         set [Done] to [1]
         replace item (J) of [B Hit] with ((item (J) of [B Hit]) + ([3] + (round ((Power) / [10]))))
         replace item (J) of [B KX] with ((BF Dir) * ([4] + (((Power) * ((item (J) of [B Dmg]) + [20])) / [500])))

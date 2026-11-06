@@ -7,7 +7,7 @@ Arthur's stickman fighting game, built in Scratch, with an Android tablet in min
 `projects/arthurs-arena-legends.sb3` is the full game:
 
 - **ADVENTURE mode**: stage after stage of small enemies (grunts, ninjas, small robots), then a boss, then on to the next stage, with tougher laps after the last.
-- **BRAWL mode** (like a platform fighter): four fighters at once on stages with platforms and ramps, a camera that follows and zooms, damage %, knock-outs and lives.
+- **BRAWL mode** (like a platform fighter), now also **with a friend over Wi-Fi** on two phones: four fighters at once on stages with platforms and ramps, a camera that follows and zooms, damage %, knock-outs and lives.
 - **Power levels 1 to 5**: win fights to level up. You get a new aura colour (red, orange, gold, blue, purple-white) and a new POWER move: FLAME DASH, then lightning strikes from the sky. Enemies and bosses get stronger with you, and bosses call down lightning too.
 - **Levels**: EASY, NORMAL, HARD and CHAMPION. NORMAL makes fights about twice as long as before.
 - **A paper intro**: a pencil draws the fighters and a ninja on notebook paper, then colours them in (with a SKIP button).
@@ -43,6 +43,6 @@ python3 tools/build_legends_sb3.py
 python3 tools/build_bosses_sb3.py
 ```
 
-`tools/test_legends.js` plays the Legends project in Scratch's own engine. See `LEGENDS.md` for how to run it.
+`tools/test_legends.js` plays the Legends project in Scratch's own engine. See `LEGENDS.md` for how to run it. `tools/test_wifi.js` plays a Wi-Fi BRAWL between two copies of the game page in a browser.
 
 The original template is [Stickman Battle](https://scratch.mit.edu/projects/732904827) by onigirikun_2009. `STARTER_GUIDE.md` is the longer plan. `CODEX_REVIEW.md` records the review notes from 2026-11-03.

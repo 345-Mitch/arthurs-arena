@@ -21,7 +21,7 @@
 #       public void onWindowFocusChanged(boolean f) { super...; if (f) hideBars(); }
 #       protected void onPause()  { super.onPause();  web.onPause();  }
 #       protected void onResume() { super.onResume(); web.onResume(); hideBars(); }
-#       protected void onDestroy() { web.destroy(); super.onDestroy(); }
+#       protected void onDestroy() { web.destroy(); net.stop(); super.onDestroy(); }
 #       private void hideBars() {    // immersive full screen
 #           getWindow().getDecorView().setSystemUiVisibility(0x1706);
 #       }
@@ -31,6 +31,9 @@
 .super Landroid/app/Activity;
 
 .field private web:Landroid/webkit/WebView;
+
+# Wi-Fi play with a friend (classes2.dex, from android/java/.../ArenaNet.java)
+.field private net:Lcom/arthursarena/game/ArenaNet;
 
 .method public constructor <init>()V
     .registers 1
@@ -61,6 +64,13 @@
 
     const/high16 v3, -0x1000000
     invoke-virtual {v0, v3}, Landroid/webkit/WebView;->setBackgroundColor(I)V
+
+    # the game page can call window.ArenaNet to host or join a Wi-Fi game
+    new-instance v1, Lcom/arthursarena/game/ArenaNet;
+    invoke-direct {v1, p0}, Lcom/arthursarena/game/ArenaNet;-><init>(Landroid/content/Context;)V
+    iput-object v1, p0, Lcom/arthursarena/game/MainActivity;->net:Lcom/arthursarena/game/ArenaNet;
+    const-string v2, "ArenaNet"
+    invoke-virtual {v0, v1, v2}, Landroid/webkit/WebView;->addJavascriptInterface(Ljava/lang/Object;Ljava/lang/String;)V
 
     invoke-virtual {p0, v0}, Lcom/arthursarena/game/MainActivity;->setContentView(Landroid/view/View;)V
 
@@ -107,6 +117,10 @@
     if-eqz v0, :done
     invoke-virtual {v0}, Landroid/webkit/WebView;->destroy()V
     :done
+    iget-object v0, p0, Lcom/arthursarena/game/MainActivity;->net:Lcom/arthursarena/game/ArenaNet;
+    if-eqz v0, :nonet
+    invoke-virtual {v0}, Lcom/arthursarena/game/ArenaNet;->stop()V
+    :nonet
     invoke-super {p0}, Landroid/app/Activity;->onDestroy()V
     return-void
 .end method

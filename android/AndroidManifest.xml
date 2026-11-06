@@ -1,11 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Arthur's Arena for Android: one full-screen, landscape WebView that plays
-     assets/index.html (made by tools/package_html.js). No internet needed. -->
+     assets/index.html (made by tools/package_html.js). No internet needed;
+     ArenaNet lets two copies play over the local Wi-Fi. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.arthursarena.game">
 
     <!-- a tiny buzz when you press a touch button -->
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Wi-Fi play with a friend on the same Wi-Fi (or a phone's hotspot): no internet is used -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
 
     <application
         android:label="@string/app_name"

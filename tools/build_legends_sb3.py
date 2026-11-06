@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "3.4"
+VERSION = "3.5"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -1885,6 +1885,9 @@ BRAWL_STAGES = [
 ]
 ART_MARGIN = 72   # room either side of a picture platform for a head, a tail or a cab
 THICK = 18
+# the controls a second player sends in Wi-Fi play (P2 Joy X and so on), plus their own SUPER and fireball charge
+P2_VARS = ("Joy X", "Joy Y", "Want Jump", "Want Drop", "Want Punch", "Want Kick", "Want Super", "Want Power", "Want Dodge",
+           "Fire Held", "Super", "Charge", "Power Ready At")
 
 
 def _mottle(seed, n, xr, yr, color, rx=(2, 5), op=0.35):
@@ -2299,7 +2302,11 @@ def declare_brawl(game):
                         ("Solid Count", 1), ("Joy Y", 0), ("Want Drop", 0), ("Stage Grav", 1), ("Stage Grip", 0.45),
                         ("Stage Key", ""), ("Stage Pick", 0), ("CB X", 0), ("CB Y", 0), ("CB Dir", 1),
                         ("CB VX", 0), ("CB VY", 0), ("CB G", 0), ("CB W", 24), ("CB Kind", "ball"), ("CB Size", 60),
-                        ("P1 %", 0), ("P2 %", 0), ("P3 %", 0), ("P4 %", 0)):
+                        ("P1 %", 0), ("P2 %", 0), ("P3 %", 0), ("P4 %", 0),
+                        # Wi-Fi play: fighter 2 is a friend on another phone (Net Players = 2), driven by the P2 controls.
+                        # My Slot (1 or 2) only changes what this screen shows: which fighter wears the P1 arrow and aura.
+                        ("Net Players", 0), ("P2 Kind", "nova"), ("My Slot", 1), ("BF Owner", 1), ("Bolt From", 1),
+                        *[(f"P2 {n}", 0) for n in P2_VARS], ("Stage Names", json.dumps([st["name"] for st in BRAWL_STAGES]))):
         game.var(name, value)
 
 
@@ -2357,12 +2364,14 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         *load_stage,
         *[s.list_add("B Pool", k) for k in CPU_POOL],
         s.list_add("B Kind", V("Hero Name")),
-        s.repeat(N - 1, [s.set("Pick", rnd(1, listlen("B Pool"))), s.list_add("B Kind", item("B Pool", V("Pick"))),
+        s.if_(eq(V("Net Players"), 2), [s.list_add("B Kind", V("P2 Kind"))]),
+        s.repeat(sub(N - 1, mul(1, eq(V("Net Players"), 2))), [s.set("Pick", rnd(1, listlen("B Pool"))), s.list_add("B Kind", item("B Pool", V("Pick"))),
                          s.list_delete("B Pool", V("Pick"))]),
         s.list_clear("B SY"),
         s.repeat(N, [s.list_add("B SY", -9999), s.list_add("B X", 0), s.list_add("B Y", 0), s.list_add("B Dmg", 0), s.list_add("B Stock", STOCKS),
                      s.list_add("B Alive", 1), s.list_add("B Hit", 0), s.list_add("B KX", 0), s.list_add("B KY", 0)]),
         s.set("Cam X", 0), s.set("Cam Y", 0), s.set("Zoom", 0.8), s.set("Super", 0), s.set("Brawl Winner", 0),
+        *[s.set(f"P2 {n}", 0) for n in P2_VARS],
         s.hide_var("Score"), s.hide_var("Wave"), s.hide_var("Best"),
         s.if_(eq(V("Page HUD"), 0), [s.show_var(f"P{i} %") for i in range(1, N + 1)]),
         s.if_(not_(eq(V("State"), "brawl")), [s.stop()]),
@@ -2413,9 +2422,21 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
                     s.change("Cam X", mul(sub(div(add(V("Min X"), V("Max X")), 2), V("Cam X")), 0.1)),
                     s.change("Cam Y", mul(sub(add(div(add(V("Min Y"), V("Max Y")), 2), 35), V("Cam Y")), 0.1)),
                 ]),
-                s.if_(and_(eq(V("Brawl On"), 1), or_(eq(item("B Alive", 1), 0), lt(V("Alive"), 2))), [
+                s.if_(and_(eq(V("Brawl On"), 1), not_(eq(V("Net Players"), 2)), or_(eq(item("B Alive", 1), 0), lt(V("Alive"), 2))), [
                     s.set("Brawl On", 0),
                     s.if_(eq(item("B Alive", 1), 1), [s.set("Brawl Winner", 1)], [s.set("Brawl Winner", 0)]),
+                    s.broadcast("brawl end"),
+                ]),
+                # Wi-Fi play: friend against friend. As soon as one of them is out of lives the other one wins
+                # (or the last fighter standing wins, if the computer fighters knocked both out)
+                s.if_(and_(eq(V("Brawl On"), 1), eq(V("Net Players"), 2),
+                           or_(eq(item("B Alive", 1), 0), eq(item("B Alive", 2), 0), lt(V("Alive"), 2))), [
+                    s.set("Brawl On", 0), s.set("Brawl Winner", 0),
+                    s.if_(eq(item("B Alive", 1), 1), [s.set("Brawl Winner", 1)]),
+                    s.if_(eq(item("B Alive", 2), 1), [s.set("Brawl Winner", 2)]),
+                    s.if_(and_(eq(item("B Alive", 1), 1), eq(item("B Alive", 2), 1)), [s.set("Brawl Winner", 0),
+                        s.set("K", 0), s.repeat(N, [s.change("K", 1),
+                                                    s.if_(eq(item("B Alive", V("K")), 1), [s.set("Brawl Winner", V("K"))])])]),
                     s.broadcast("brawl end"),
                 ]),
     )
@@ -2431,7 +2452,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         "brawl end",
         s.play("ko"), s.set("Banner", "game"), s.broadcast("banner"), s.wait(1.8),
         s.if_(not_(eq(V("State"), "brawl")), [s.stop()]),
-        s.if_(eq(V("Brawl Winner"), 1), [
+        s.if_(eq(V("Brawl Winner"), V("My Slot")), [
             s.play("win"), s.change("Score", mul(1000, V("Difficulty"))),
             s.set("XP Gain", 2), s.broadcast("gain xp"),
             s.if_(gt(V("Score"), V("Best")), [s.set("Best", V("Score"))]),
@@ -2495,6 +2516,8 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
             B.list_set("B KY", V("J"), add(mul(V("KB"), 0.6), 3)),
             B.if_(eq(V("My Id"), 1), [B.if_(lt(V("Super"), 100), [B.change("Super", 5)]),
                                        B.if_(gt(V("Super"), 100), [B.set("Super", 100)])]),
+            B.if_(and_(eq(V("My Id"), 2), eq(V("Net Players"), 2)), [B.if_(lt(V("P2 Super"), 100), [B.change("P2 Super", 5)]),
+                                                                     B.if_(gt(V("P2 Super"), 100), [B.set("P2 Super", 100)])]),
             B.broadcast("brawl smash" if smash else "brawl hit"),
         ]
         return [
@@ -2515,45 +2538,49 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
                                              div(sub(item("Plat Y2", V("J")), item("Plat Y1", V("J"))),
                                                  sub(item("Plat X2", V("J")), item("Plat X1", V("J"))))))
 
-    player_input = [
-        B.if_(gt(abs_(V("Joy X")), 0.2), [B.set("Dir", V("Joy X"))],
-              [B.if_(lt(TIMER, V("Move Until")), [B.set("Dir", V("Move Dir"))], [B.set("Dir", 0)])]),
-        B.if_(eq(V("Want Jump"), 1), [B.set("Want Jump", 0), B.set("Want Hop", 1)]),
-        # push the stick down (or the down arrow) to drop through a thin platform
-        B.if_(or_(lt(V("Joy Y"), -0.6), eq(V("Want Drop"), 1)), [B.set("Want Drop", 0), B.if_(and_(eq(V("Ground"), 1), gt(V("On Plat"), V("Solid Count"))), [B.set("Drop", 8), B.set("Ground", 0)])]),
-        B.if_(eq(V("Want Punch"), 1), [B.set("Want Punch", 0), B.set("Want Atk", 1)]),
-        B.if_(eq(V("Want Kick"), 1), [
-            B.set("Want Kick", 0),
-            B.if_(and_(lt(sub(TIMER, V("Kick At")), DOUBLE_TAP), gt(TIMER, V("Whirl Ready At"))),
-                  [B.set("Kick At", 0), B.set("Whirl Ready At", add(TIMER, WHIRL_COOLDOWN)), B.set("Want Atk", 5)],
-                  [B.set("Kick At", TIMER), B.set("Want Atk", 2)]),
-        ]),
-        B.if_(eq(V("Want Super"), 1), [B.set("Want Super", 0), B.if_(eq(V("Super"), 100), [B.set("Want Atk", 3)])]),
-        # POWER move: level 2 FLAME DASH, level 3+ lightning on everyone near you
-        B.if_(eq(V("Want Power"), 1), [
-            B.set("Want Power", 0),
-            B.if_(and_(gt(V("Power Level"), 1), gt(TIMER, V("Power Ready At"))), [
-                B.set("Power Ready At", add(TIMER, POWER_COOLDOWN)), B.broadcast("power flash"),
-                B.if_(eq(V("Power Level"), 2), [B.set("Want Atk", 4)],
-                      [B.set("Pop Text", "THUNDER!"), B.broadcast("popup"), B.broadcast("brawl bolt")]),
+    def player_input_for(pre):
+        """The controls of a player: pre is "" for player 1, "P2 " for a Wi-Fi friend on fighter 2."""
+        def P(n):
+            return pre + n if n in P2_VARS else n
+        return [
+            B.if_(gt(abs_(V(P("Joy X"))), 0.2), [B.set("Dir", V(P("Joy X")))],
+                  [B.if_(lt(TIMER, V("Move Until")), [B.set("Dir", V("Move Dir"))], [B.set("Dir", 0)])]),
+            B.if_(eq(V(P("Want Jump")), 1), [B.set(P("Want Jump"), 0), B.set("Want Hop", 1)]),
+            # push the stick down (or the down arrow) to drop through a thin platform
+            B.if_(or_(lt(V(P("Joy Y")), -0.6), eq(V(P("Want Drop")), 1)), [B.set(P("Want Drop"), 0), B.if_(and_(eq(V("Ground"), 1), gt(V("On Plat"), V("Solid Count"))), [B.set("Drop", 8), B.set("Ground", 0)])]),
+            B.if_(eq(V(P("Want Punch")), 1), [B.set(P("Want Punch"), 0), B.set("Want Atk", 1)]),
+            B.if_(eq(V(P("Want Kick")), 1), [
+                B.set(P("Want Kick"), 0),
+                B.if_(and_(lt(sub(TIMER, V("Kick At")), DOUBLE_TAP), gt(TIMER, V("Whirl Ready At"))),
+                      [B.set("Kick At", 0), B.set("Whirl Ready At", add(TIMER, WHIRL_COOLDOWN)), B.set("Want Atk", 5)],
+                      [B.set("Kick At", TIMER), B.set("Want Atk", 2)]),
             ]),
-        ]),
-        B.if_(eq(V("Want Dodge"), 1), [B.set("Want Dodge", 0), B.set("Inv Until", add(TIMER, 0.45)),
-                                       B.set("VX", mul(V("Face"), -6))]),
-        # fireball: hold FIRE, let go to shoot
-        B.if_(or_(eq(V("Fire Held"), 1), ("keypressed", "f")), [
-            B.if_(lt(V("Charge"), 100), [B.change("Charge", 3.5)]),
-            B.if_(gt(V("Charge"), 99), [B.set("Charge", 100)]),
-            B.set("Dir", mul(V("Dir"), 0.4)),
-        ], [
-            B.if_(and_(gt(V("Charge"), 0), eq(V("BF Power"), 0)), [
-                B.set("BF X", add(V("X"), mul(20, V("Face")))), B.set("BF Y", add(V("Y"), 40)),
-                B.set("BF Dir", V("Face")), B.set("BF Power", add(V("Charge"), 1)), B.broadcast("brawl fire"),
-                B.set("Fire Power", V("Charge")), B.broadcast("fire"),
+            B.if_(eq(V(P("Want Super")), 1), [B.set(P("Want Super"), 0), B.if_(eq(V(P("Super")), 100), [B.set("Want Atk", 3)])]),
+            # POWER move: level 2 FLAME DASH, level 3+ lightning on everyone near you
+            B.if_(eq(V(P("Want Power")), 1), [
+                B.set(P("Want Power"), 0),
+                B.if_(and_(gt(V("Power Level"), 1), gt(TIMER, V(P("Power Ready At")))), [
+                    B.set(P("Power Ready At"), add(TIMER, POWER_COOLDOWN)), B.broadcast("power flash"),
+                    B.if_(eq(V("Power Level"), 2), [B.set("Want Atk", 4)],
+                          [B.set("Pop Text", "THUNDER!"), B.broadcast("popup"), B.set("Bolt From", V("My Id")), B.broadcast("brawl bolt")]),
+                ]),
             ]),
-            B.set("Charge", 0),
-        ]),
-    ]
+            B.if_(eq(V(P("Want Dodge")), 1), [B.set(P("Want Dodge"), 0), B.set("Inv Until", add(TIMER, 0.45)),
+                                           B.set("VX", mul(V("Face"), -6))]),
+            # fireball: hold FIRE, let go to shoot
+            B.if_(or_(eq(V(P("Fire Held")), 1), ("keypressed", "f")), [
+                B.if_(lt(V(P("Charge")), 100), [B.change(P("Charge"), 3.5)]),
+                B.if_(gt(V(P("Charge")), 99), [B.set(P("Charge"), 100)]),
+                B.set("Dir", mul(V("Dir"), 0.4)),
+            ], [
+                B.if_(and_(gt(V(P("Charge")), 0), eq(V("BF Power"), 0)), [
+                    B.set("BF X", add(V("X"), mul(20, V("Face")))), B.set("BF Y", add(V("Y"), 40)),
+                    B.set("BF Dir", V("Face")), B.set("BF Owner", V("My Id")), B.set("BF Power", add(V(P("Charge")), 1)), B.broadcast("brawl fire"),
+                    B.set("Fire Power", V(P("Charge"))), B.broadcast("fire"),
+                ]),
+                B.set(P("Charge"), 0),
+            ]),
+        ]
     cpu_input = [
         # pick the closest fighter now and then
         B.if_(or_(eq(V("Tgt"), 0), eq(rnd(1, 20), 1), eq(item("B Alive", V("Tgt")), 0)), [
@@ -2602,7 +2629,8 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         # 2. controls (player buttons or CPU brain); none while knocked back
         B.set("Want Atk", 0), B.set("Want Hop", 0), B.set("Dir", 0),
         B.if_(and_(eq(V("Brawl On"), 1), not_(gt(V("Stun"), 0))),
-              [B.if_(eq(V("My Id"), 1), player_input, cpu_input)]),
+              [B.if_(eq(V("My Id"), 1), player_input_for(""),
+                     [B.if_(and_(eq(V("My Id"), 2), eq(V("Net Players"), 2)), player_input_for("P2 "), cpu_input)])]),
         B.if_(gt(V("Stun"), 0), [B.change("Stun", -1), B.set("VX", mul(V("VX"), 0.96)),
                                  B.if_(lt(V("Stun"), 1), [B.effect("BRIGHTNESS", 0)])], [
             # Stage Grip: 0.45 normally, very low on ice so you slide
@@ -2620,7 +2648,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         B.if_(and_(gt(V("Want Atk"), 0), not_(gt(V("Atk CD"), 0))), [
             B.if_(eq(V("Want Atk"), 1), [pose("punch"), *attack(46, "Punch"), B.set("Atk CD", 9)]),
             B.if_(eq(V("Want Atk"), 2), [pose("kick"), *attack(56, "Kick"), B.set("Atk CD", 16)]),
-            B.if_(eq(V("Want Atk"), 3), [pose("special"), B.set("Super", 0), B.set("Smash", 16),
+            B.if_(eq(V("Want Atk"), 3), [pose("special"), B.if_(eq(V("My Id"), 2), [B.set("P2 Super", 0)], [B.set("Super", 0)]), B.set("Smash", 16),
                                          *attack(70, "Smash", smash=True), B.set("Atk CD", 20),
                                          B.set("Pop Text", "SMASH!"), B.broadcast("popup")]),
             B.if_(eq(V("Want Atk"), 4), [pose("special"), B.set("VX", mul(V("Face"), 15)), B.set("Dash", 9),
@@ -2704,7 +2732,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         B.if_(gt(V("Inv Until"), TIMER), [B.effect("GHOST", mul(40, mod(round_(mul(TIMER, 10)), 2)))], [B.effect("GHOST", 0)]),
         B.size_to(mul(BRAWL_SIZE, V("Zoom"))),
         B.goto(mul(sub(V("X"), V("Cam X")), V("Zoom")), mul(sub(V("Y"), V("Cam Y")), V("Zoom"))),
-        B.if_(eq(V("My Id"), 1), [B.set("P1 Screen X", XPOS), B.set("P1 Screen Y", YPOS), B.set("P1 Screen Size", SIZE)]),
+        B.if_(eq(V("My Id"), V("My Slot")), [B.set("P1 Screen X", XPOS), B.set("P1 Screen Y", YPOS), B.set("P1 Screen Size", SIZE)]),
     ]
 
     B.define("fighter frame", *physics,
@@ -2723,7 +2751,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         B.set("Is Clone", 1), B.set("Kind", item("B Kind", V("My Id"))), *stats, *ai_chance,
         B.set("X", sub(mul(V("My Id"), 110), 275)), B.set("Y", 220), B.set("VX", 0), B.set("VY", 0),
         B.set("Face", 1), B.if_(gt(V("X"), 0), [B.set("Face", -1)]), B.set("Smash", 16), B.set("Dash", 9),
-        B.set("Stun", 0), B.set("Jumps", 0), B.if_(eq(V("My Id"), 1), [B.set("Charge", 0)]), B.clear_fx(), pose("jump"), B.show(), B.front(),
+        B.set("Stun", 0), B.set("Jumps", 0), B.if_(eq(V("My Id"), 1), [B.set("Charge", 0)]), B.if_(eq(V("My Id"), 2), [B.set("P2 Charge", 0)]), B.clear_fx(), pose("jump"), B.show(), B.front(),
         B.until(eq(V("Brawl Live"), 0), [
             B.if_(eq(item("B Alive", V("My Id")), 1), [B.call("fighter frame")]),
         ]),
@@ -2758,10 +2786,10 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
             BF.change("BF X", mul(add(8, div(V("Power"), 25)), V("BF Dir"))),
             BF.size_to(mul(add(30, mul(V("Power"), 0.7)), V("Zoom"))),
             BF.goto(mul(sub(V("BF X"), V("Cam X")), V("Zoom")), mul(sub(V("BF Y"), V("Cam Y")), V("Zoom"))),
-            BF.set("J", 1),
-            BF.repeat(N - 1, [
+            BF.set("J", 0),
+            BF.repeat(N, [
                 BF.change("J", 1),
-                BF.if_(and_(eq(V("Done"), 0), eq(item("B Alive", V("J")), 1), lt(abs_(sub(item("B X", V("J")), V("BF X"))), 24),
+                BF.if_(and_(eq(V("Done"), 0), not_(eq(V("J"), V("BF Owner"))), eq(item("B Alive", V("J")), 1), lt(abs_(sub(item("B X", V("J")), V("BF X"))), 24),
                             lt(abs_(sub(add(item("B Y", V("J")), 38), V("BF Y"))), 44)), [
                     BF.set("Done", 1),
                     BF.list_set("B Hit", V("J"), add(item("B Hit", V("J")), add(3, round_(div(V("Power"), 10))))),
@@ -3021,7 +3049,7 @@ def build():
         ("Power Level", 1), ("Power XP", 0), ("XP Gain", 0), ("Want Power", 0), ("Power Ready At", 0), ("Power Move", "none"),
         ("Bolt X", 0), ("Bolt Y", GROUND), ("Bolt Owner", "hero"), ("Bolt Power", 0), ("Bolt Size", 100),
         ("Fire Held", 0), ("Charge", 0), ("Fire Power", 0), ("Fireball Out", 0),
-        ("Pop Seq", 0), ("Enemy Says", ""), ("Page HUD", 0), ("HUD Info", hud_info()), ("Punch Held", 0), ("Kick Held", 0), ("Melee Charge", 0), ("Glow DX", 0), ("Glow DY", 60), ("Glow Kind", "punch"),
+        ("Pop Seq", 0), ("Enemy Says", ""), ("Page HUD", 0), ("HUD Info", hud_info()), ("Game Version", VERSION), ("Punch Held", 0), ("Kick Held", 0), ("Melee Charge", 0), ("Glow DX", 0), ("Glow DY", 60), ("Glow Kind", "punch"),
         ("Swirl On", 0),
         ("Shot X", 999), ("Shot Live", 0), ("Shot Cancel", 0), ("Boom X", 0),
     ]:
@@ -4819,13 +4847,13 @@ def build():
     LT.on_msg(
         "brawl bolt",
         LT.if_(eq(V("Is Clone"), 0), [
-            LT.set("J", 1),
-            LT.repeat(3, [
+            LT.set("J", 0),
+            LT.repeat(4, [
                 LT.change("J", 1),
-                LT.if_(and_(eq(item("B Alive", V("J")), 1),
-                            lt(abs_(sub(item("B X", V("J")), item("B X", 1))), mul(110, sub(V("Power Level"), 1)))), [
+                LT.if_(and_(not_(eq(V("J"), V("Bolt From"))), eq(item("B Alive", V("J")), 1),
+                            lt(abs_(sub(item("B X", V("J")), item("B X", V("Bolt From")))), mul(110, sub(V("Power Level"), 1)))), [
                     LT.list_set("B Hit", V("J"), add(item("B Hit", V("J")), add(6, mul(2, V("Power Level"))))),
-                    LT.if_(gt(item("B X", V("J")), item("B X", 1)), [LT.set("Pw", 1)], [LT.set("Pw", -1)]),
+                    LT.if_(gt(item("B X", V("J")), item("B X", V("Bolt From"))), [LT.set("Pw", 1)], [LT.set("Pw", -1)]),
                     LT.list_set("B KX", V("J"), mul(add(3, div(item("B Dmg", V("J")), 12)), V("Pw"))),
                     LT.list_set("B KY", V("J"), add(9, div(item("B Dmg", V("J")), 9))),
                     LT.set("Bx", mul(sub(item("B X", V("J")), V("Cam X")), V("Zoom"))),
@@ -5065,7 +5093,7 @@ def build():
     K.on_msg("king angry", K.if_(eq(V("Enemy Type"), KING), [K.wear("angry")],
                                  [K.if_(eq(V("Enemy Type"), KAGE), [K.wear("kage angry")], [K.wear("overdrive")])]), K.size_to(80), K.goto(0, 60), K.show(), K.front(), K.wait(1.4), K.hide())
     K.on_msg("game over", K.if_(eq(V("Mode"), "arcade"), [K.wear("arcade over")], [K.wear("game over")]),
-             K.if_(eq(V("Mode"), "brawl"), [K.if_(eq(V("Brawl Winner"), 1), [K.wear("brawl win")], [K.wear("brawl lose")])]),
+             K.if_(eq(V("Mode"), "brawl"), [K.if_(eq(V("Brawl Winner"), V("My Slot")), [K.wear("brawl win")], [K.wear("brawl lose")])]),
              K.size_to(85), K.goto(0, -5), K.show(), K.front())
     for m in ("show title", "choose hero", "start fight", "fight on", "brawl start"):
         K.on_msg(m, K.hide(), K.size_to(100))

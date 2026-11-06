@@ -11,6 +11,9 @@ What it does:
 2. aapt2 packs android/AndroidManifest.xml, the icon and that HTML file.
 3. smali turns android/smali/.../MainActivity.smali into classes.dex.
    The app is a single full-screen WebView, so no Android SDK is needed.
+   The Wi-Fi play helper (android/java/.../ArenaNet.java) is compiled with javac
+   against small stand-ins for the Android classes it uses (android/stubs),
+   then dx turns it into classes2.dex.
 4. apksig signs it with android/debug.keystore (v2 signature, Android 7+).
 
 The tools come from Maven Central the first time and are cached in
@@ -39,8 +42,8 @@ HTML = DIST / "arthurs-arena.html"
 APK = DIST / "arthurs-arena.apk"
 TOOLS = Path(os.environ.get("ARENA_TOOLS", Path.home() / ".cache" / "arthurs-arena-android"))
 
-VERSION_CODE = 25
-VERSION_NAME = "3.4"
+VERSION_CODE = 26
+VERSION_NAME = "3.5"
 MIN_SDK = 24  # Android 7.0 and newer
 TARGET_SDK = 34
 
@@ -67,6 +70,7 @@ JARS = {
     "failureaccess.jar": "com/google/guava/failureaccess/1.0.1/failureaccess-1.0.1.jar",
     "jcommander.jar": "com/beust/jcommander/1.64/jcommander-1.64.jar",
     "jsr305.jar": "com/google/code/findbugs/jsr305/3.0.2/jsr305-3.0.2.jar",
+    "dx.jar": "com/jakewharton/android/repackaged/dalvik-dx/16.0.1/dalvik-dx-16.0.1.jar",
 }
 
 
@@ -162,12 +166,22 @@ def main():
          "--version-code", VERSION_CODE, "--version-name", VERSION_NAME, "-0", "html", BUILD / "res.zip"])
 
     print("4. app code (smali)")
-    cp = os.pathsep.join(str(TOOLS / j) for j in JARS if j not in ("apktool-lib.jar", "apksig.jar"))
+    cp = os.pathsep.join(str(TOOLS / j) for j in JARS if j not in ("apktool-lib.jar", "apksig.jar", "dx.jar"))
     run(["java", "-cp", cp, "org.jf.smali.Main", "assemble", "--api", MIN_SDK, "-o", BUILD / "classes.dex",
          ANDROID / "smali"])
 
-    print("5. align and sign")
-    aligned_copy(BUILD / "base.apk", BUILD / "unsigned.apk", {"classes.dex": (BUILD / "classes.dex").read_bytes()})
+    print("5. Wi-Fi play helper (javac + dx)")
+    stubs, classes = BUILD / "stubs", BUILD / "classes"
+    stubs.mkdir()
+    classes.mkdir()
+    run(["javac", "--release", "8", "-nowarn", "-d", stubs, *sorted((ANDROID / "stubs").rglob("*.java"))])
+    run(["javac", "--release", "8", "-nowarn", "-cp", stubs, "-d", classes, *sorted((ANDROID / "java").rglob("*.java"))])
+    run(["java", "-cp", TOOLS / "dx.jar", "com.android.dx.command.Main", "--dex", "--min-sdk-version=" + str(MIN_SDK),
+         "--output=" + str(BUILD / "classes2.dex"), classes])
+
+    print("6. align and sign")
+    aligned_copy(BUILD / "base.apk", BUILD / "unsigned.apk", {"classes.dex": (BUILD / "classes.dex").read_bytes(),
+                                                              "classes2.dex": (BUILD / "classes2.dex").read_bytes()})
     run(["javac", "-cp", TOOLS / "apksig.jar", "-d", BUILD, ANDROID / "signer" / "ApkSign.java"])
     DIST.mkdir(exist_ok=True)
     # apksig 2.3.0 touches a JDK-internal class even for v2; allow it on new Java.

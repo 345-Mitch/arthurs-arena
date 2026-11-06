@@ -1135,6 +1135,79 @@ async function spikeTest () {
     return {spikeDamageToHero: hurt};
 }
 
+function seeded (seed) {
+    // the same "random" numbers every run (mulberry32), like the app does for Wi-Fi play
+    let a = seed >>> 0;
+    return () => {
+        a = (a + 0x6D2B79F5) >>> 0;
+        let t = a;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+async function netMatch (seed, frames, script) {
+    // one Wi-Fi BRAWL as the app runs it: seeded randomness, fighter 2 played by the P2 controls
+    const realRandom = Math.random;
+    Math.random = seeded(seed);
+    try {
+        const {vm, errors} = await boot();
+        const T = tools(vm);
+        const list = name => vm.runtime.getTargetForStage().lookupVariableByNameAndType(name, 'list').value.slice();
+        await T.step(5);
+        T.set('Net Players', 2); T.set('P2 Kind', 'rocko'); T.set('Stage Pick', 1); T.set('Power Level', 3);
+        T.click('Brawl Button');
+        await T.step(3);
+        T.click('Pick Nova');
+        const trace = [];
+        for (let f = 0; f < frames; f++) {
+            script(T, f);
+            await T.step();
+            if (f % 30 === 0) trace.push([list('B X').map(Number).map(x => x.toFixed(2)), list('B Dmg').join(','), T.get('Cam X')].join('|'));
+        }
+        return {T, trace, kinds: list('B Kind'), errors, x: list('B X').map(Number), alive: list('B Alive').map(Number)};
+    } finally {
+        Math.random = realRandom;
+    }
+}
+
+async function netTest () {
+    // fighter 2 follows the P2 controls (not the computer), and the same seed + same inputs = the same match
+    const play = (T, f) => {
+        if (T.get('Brawl On') !== 1) return;
+        T.set('P2 Joy X', f % 120 < 60 ? 1 : -1);
+        if (f % 9 === 0) T.set('P2 Want Punch', 1);
+        if (f % 40 === 0) T.set('P2 Want Jump', 1);
+        T.set('Joy X', f % 90 < 45 ? -1 : 1);
+        if (f % 11 === 0) T.set('Want Kick', 1);
+    };
+    const a = await netMatch(1234, 30 * 25, play);
+    const b = await netMatch(1234, 30 * 25, play);
+    if (a.kinds[0] !== 'nova' || a.kinds[1] !== 'rocko') fail(`net: fighters are ${a.kinds}, expected nova then rocko`);
+    if (a.T.get('Net Players') !== 2) fail('net: Net Players was reset');
+    const same = a.trace.length === b.trace.length && a.trace.every((t, i) => t === b.trace[i]);
+    if (!same) {
+        const i = a.trace.findIndex((t, k) => t !== b.trace[k]);
+        fail(`net: two runs with the same seed and inputs split apart at frame ${i * 30}: ${a.trace[i]} vs ${b.trace[i]}`);
+    }
+    // fighter 2 really is steered: whenever it is not knocked back, it heads the way the P2 stick points
+    let agree = 0, frames = 0;
+    await netMatch(99, 30 * 10, (T, f) => {
+        if (T.get('Brawl On') !== 1) return;
+        const want = f % 60 < 30 ? 1 : -1;
+        T.set('P2 Joy X', want); T.set('Joy X', 0);
+        const b2 = T.clones('Brawler').find(k => Number(k.lookupVariableByNameAndType('My Id').value) === 2);
+        if (b2 && Number(b2.lookupVariableByNameAndType('Stun').value) <= 0 && f % 30 > 2) {
+            frames++;
+            if (Number(b2.lookupVariableByNameAndType('Dir').value) === want) agree++;
+        }
+    });
+    if (frames < 60 || agree / frames < 0.9) fail(`net: fighter 2 followed the P2 stick in only ${agree} of ${frames} frames`);
+    if (a.errors.length) fail(`net: engine errors ${a.errors.slice(0, 2)}`);
+    return {fighters: a.kinds, checkpoints: a.trace.length, deterministic: same, p2Steered: `${agree}/${frames}`};
+}
+
 async function brawlTest () {
     const {vm, errors} = await boot();
     const T = tools(vm);
@@ -1308,6 +1381,7 @@ async function brawlTest () {
     if (want('adventure')) results.adventure = await adventureTest();
     if (want('adventure')) results.adventureBot = await adventureBotRun();
     if (want('brawl')) results.brawl = await brawlTest();
+    if (want('net')) results.net = await netTest();
     if (want('mash')) await mashTest();
     if (want('weapons')) await weaponTest();
     const show = r => JSON.stringify(r, (k, v) => (v instanceof Set ? [...v] : v));
