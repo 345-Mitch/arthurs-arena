@@ -717,8 +717,8 @@ if <<(Mode) = [adventure]> and <(Wave Phase) = [1]>> then
         end
         wait [0.8] seconds
     end
-    set [Wave Phase] to [0]
     broadcast [load enemy] and wait
+    set [Wave Phase] to [0]
     set [Enemy X] to [170]
     start sound (alarm)
     set [Banner] to [boss]
@@ -5666,7 +5666,7 @@ end
 when I start as a clone
 set [Is Clone] to [1]
 set [Gap] to (pick random [26] to [58])
-set [HP] to ([7] + (Difficulty))
+set [HP] to (round (([7] + ([2] * (Difficulty))) * ([1] + ([0.35] * ((Power Level) - [1])))))
 set [Was Hit] to [0]
 set [Atk Until] to ((timer) + [0.6])
 set [Speed] to ([3] + ([0.5] * (Difficulty)))

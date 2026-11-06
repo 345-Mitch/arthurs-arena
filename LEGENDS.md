@@ -115,7 +115,7 @@ Tap **ADVENTURE** for a journey that keeps going, stage after stage:
 | 4 Volcano Gate | a mix | Quake |
 | 5 Shadow Castle | a mix | Shadow King |
 
-- **Waves:** each stage starts with waves of small enemies (up to 3 at a time). The bar at the top says **ENEMY WAVE** and shrinks as you beat them. Then the **BOSS FIGHT!** starts.
+- **Waves:** each stage starts with waves of small enemies (up to 3 at a time). The bar at the top says **ENEMY WAVE** and shrinks as you beat them. Then the **BOSS FIGHT!** starts. Small enemies get tougher as your power level goes up (like the bosses do), so even a powered-up hero needs a few hits for each one.
 - **Health:** it carries over from stage to stage. Beating a boss gives back 30 and 2 XP.
 - **Lap 2:** after the Shadow King it goes round again as **LAP 2**, then 3 and so on, with tougher enemies and more of them.
 - **Retry:** if you get knocked out, RETRY starts that stage again with full health.
@@ -262,7 +262,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v3.6` in the bottom corner of the title.
+- **Version line:** `v3.7` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).

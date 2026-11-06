@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "3.6"
+VERSION = "3.7"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -158,6 +158,7 @@ POWER_HP_PER_LEVEL = 10
 BOSS_WEAPONS = {"brute": "club", "megaspike": "mace", "ninja": "katana", "kage": "katana", "quake": "hammer",
                 "shadow": "dark sword"}
 MINION_HP = 7
+MINION_HP_PER_LEVEL = 0.35   # small enemies get tougher with your power level too (x2.4 at level 5)
 # ADVENTURE: stage after stage. Each stage = waves of small enemies, then its boss. After the last stage: LAP 2 (harder).
 ADVENTURE = [
     dict(name="TRAINING YARD", backdrop="Yard", kind="grunt", waves=(3, 4), boss=3),     # Brute
@@ -3361,8 +3362,8 @@ def build():
                 s.if_(eq(V("Fight On"), 0), [s.stop()]),
                 s.wait(0.8),
             ]),
-            # the boss arrives
-            s.set("Wave Phase", 0), s.broadcast("load enemy", wait=True), s.set("Enemy X", 170),
+            # the boss arrives (its health is loaded first, so no hit can land while the bar still says "0 left")
+            s.broadcast("load enemy", wait=True), s.set("Wave Phase", 0), s.set("Enemy X", 170),
             s.play("alarm"), s.set("Banner", "boss"), s.broadcast("banner"),
             s.broadcast("boss enter", wait=True), s.wait(0.6),
             s.broadcast("fight on"),
@@ -4697,7 +4698,8 @@ def build():
              "MASTER KAGE's NINJA SQUAD and the ADVENTURE waves both use this.",
     )
     NM.on_clone(
-        NM.set("Is Clone", 1), NM.set("Gap", rnd(26, 58)), NM.set("HP", add(MINION_HP, V("Difficulty"))), NM.set("Was Hit", 0),
+        NM.set("Is Clone", 1), NM.set("Gap", rnd(26, 58)), NM.set("HP", round_(mul(add(MINION_HP, mul(2, V("Difficulty"))), add(1, mul(MINION_HP_PER_LEVEL, sub(V("Power Level"), 1)))))),
+        NM.set("Was Hit", 0),
         NM.set("Atk Until", add(TIMER, 0.6)), NM.set("Speed", add(3, mul(0.5, V("Difficulty")))),
         NM.if_(eq(V("Kind"), "robot"), [NM.size_to(55), NM.change("Speed", 1.5), NM.change("HP", -2)], [NM.size_to(70)]),
         NM.if_(eq(V("Kind"), "grunt"), [NM.change("HP", 1)]),

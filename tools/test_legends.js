@@ -263,7 +263,29 @@ function watch (T, stats, label) {
     let lockFrames = 0;
     let boomFrames = 0;
     let lastPop = null;
+    // every fight: an enemy must never go down in one or two hits, and one hit must never take most of its health
+    let fight = null;
+    stats.fights = stats.fights || [];
     return () => {
+        const on = T.get('Fight On') === 1 && T.get('Wave Phase') === 0 && T.get('State') === 'fight';
+        const ehp = T.get('Enemy HP');
+        if (on && !fight) fight = {name: T.get('Enemy Name'), max: T.get('Enemy Max'), start: ehp, last: ehp, hits: 0, biggest: 0};
+        if (fight) {
+            if (ehp < fight.last) {
+                fight.hits++;
+                fight.biggest = Math.max(fight.biggest, fight.last - ehp);
+            }
+            fight.last = ehp;
+            if (!on) {
+                if (ehp < 1) {
+                    stats.fights.push(`${fight.name} ${fight.start}/${fight.max} in ${fight.hits} hits (biggest ${fight.biggest})`);
+                    if (fight.start < fight.max * 0.9 || fight.hits < 3 || fight.biggest > fight.max * 0.5) {
+                        fail(`${label}: ${fight.name} went down too fast: started ${fight.start}/${fight.max}, ${fight.hits} hits, biggest hit ${fight.biggest}`);
+                    }
+                }
+                fight = null;
+            }
+        }
         lockFrames = T.get('Hero Lock') === 1 ? lockFrames + 1 : 0;
         boomFrames = T.get('Boomerang Out') === 1 ? boomFrames + 1 : 0;
         if (lockFrames === 120) fail(`${label}: Hero Lock stuck on for 4 seconds (${T.costume('Hero')}, ${T.get('Pop Text')}, charge ${T.get('Melee Charge')}, air ${T.get('Hero Air')})`);
@@ -684,27 +706,77 @@ async function adventureTest () {
     return out;
 }
 
+async function minionHpTest () {
+    // small enemies get tougher with your power level, so a powered-up hero can't drop them all in one hit
+    const out = {};
+    for (const level of [1, 5]) {
+        const {vm} = await boot();
+        const T = tools(vm);
+        await T.step(10);
+        T.set('Power Level', level);
+        T.click('Adventure Button');
+        await T.step(3);
+        T.click('Pick Arthur');
+        let hp = [];
+        for (let i = 0; i < 30 * 30 && hp.length < 3; i++) {
+            await T.step();
+            hp = T.clones('Ninja Minion').map(c => Number(c.lookupVariableByNameAndType('HP').value)).filter(h => h > 0);
+        }
+        out[level] = Math.max(...hp);
+    }
+    // a powered-up kick (8 + power level) must not knock one out in a single hit at level 5
+    if (!(out[5] > 8 + 4 + 9)) fail(`minions: at power level 5 they only have ${out[5]} health`);
+    if (!(out[5] > out[1] * 2)) fail(`minions: health does not grow with power level (${out[1]} -> ${out[5]})`);
+    return out;
+}
+
 async function adventureBotRun () {
     // the bot plays ADVENTURE with the buttons only
     const {vm, errors} = await boot();
     const T = tools(vm);
     await T.step(10);
+    if (process.env.ADV_POWER) T.set('Power Level', Number(process.env.ADV_POWER));
     T.click('Adventure Button');
     await T.step(3);
     const bot = makeBot(T, 1);
     let frames = 0, deaths = 0;
+    // every boss fight: health when it starts, how many hits it took, how long it lasted
+    const bosses = [];
+    let boss = null, lastHp = null;
     while (T.get('Adv Stage') < 4 && frames < 30 * 60 * 10) {
         await T.step();
         frames++;
         bot.tick();
+        const inBoss = T.get('State') === 'fight' && T.get('Wave Phase') === 0 && T.get('Fight On') === 1;
+        if (process.env.DEBUG_ADV) {
+            const key = [T.get('Adv Stage'), T.get('Enemy Name'), T.get('Enemy HP'), T.get('Fight On'), T.get('Wave Phase'), T.get('State'), T.get('Minions')].join(' ');
+            if (key !== bot.lastKey) { process.stdout.write(`f${frames} ${key}\n`); bot.lastKey = key; }
+        }
+        const hp = T.get('Enemy HP');
+        if (inBoss && !boss) {
+            boss = {name: T.get('Enemy Name'), max: T.get('Enemy Max'), firstHp: hp, hits: 0, frames: 0};
+            lastHp = hp;
+        }
+        if (boss) {
+            boss.frames++;
+            if (hp < lastHp) boss.hits++;
+            lastHp = hp;
+            if (!inBoss) {
+                if (hp < 1) bosses.push({name: boss.name, max: boss.max, firstHp: boss.firstHp, hits: boss.hits, seconds: +(boss.frames / 30).toFixed(1)});
+                boss = null;
+            }
+        }
         if (T.get('State') === 'over' && T.sprite('Retry Button').visible) {
             deaths++;
             T.click('Retry Button');
         }
     }
     if (T.get('Adv Stage') < 4) fail(`adventure bot: only reached stage ${T.get('Adv Stage')} in 10 minutes (${deaths} retries)`);
+    for (const f of bosses) {
+        if (f.firstHp < f.max * 0.9 || f.hits < 4) fail(`adventure bot: boss ${f.name} went down too fast (started at ${f.firstHp}/${f.max}, ${f.hits} hits)`);
+    }
     if (errors.length) fail(`adventure bot: engine errors ${errors.slice(0, 2)}`);
-    return {minutes: +(frames / 1800).toFixed(1), retries: deaths, ninjaHits: bot.stats.ninjaHits || 0};
+    return {minutes: +(frames / 1800).toFixed(1), retries: deaths, ninjaHits: bot.stats.ninjaHits || 0, bosses};
 }
 
 async function whirlTest () {
@@ -1393,6 +1465,7 @@ async function brawlTest () {
     if (want('grok')) results.grok = await grokTest();
     if (want('intro')) results.intro = await introTest();
     if (want('powerup')) results.powerup = await powerUpTest();
+    if (want('minions')) results.minions = await minionHpTest();
     if (want('flip')) results.flip = await flipTest();
     if (want('whirl')) results.whirl = await whirlTest();
     if (want('heli')) results.heli = await heliTest();
