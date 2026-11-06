@@ -150,6 +150,139 @@ const EXT_JS = `
 })();
 `;
 
+const HUD_JS = `
+(function () {
+    // the health bars, names and score live in a bar across the very top of the screen, edge to edge,
+    // and the game is drawn just under it, so nothing covers the fight
+    var css = [
+        '#hud{position:fixed;left:0;right:0;top:0;height:10vmin;z-index:40;display:none;align-items:center;gap:2vmin;',
+        ' padding:0 2vmin;box-sizing:border-box;background:linear-gradient(rgba(10,10,25,.72),rgba(10,10,25,.38));',
+        ' font:900 2.5vmin Verdana,Arial,sans-serif;color:#fff;pointer-events:none;-webkit-user-select:none;user-select:none}',
+        '#hud.on{display:flex}',
+        '#hud .side{flex:1;display:flex;flex-direction:column;gap:.7vmin;min-width:0}',
+        '#hud .row{display:flex;align-items:center;gap:1.2vmin}',
+        '#hud .right .row{flex-direction:row-reverse}',
+        '#hud .tag{padding:.25vmin 1.4vmin;border-radius:1vmin;white-space:nowrap;border:.35vmin solid rgba(255,255,255,.75);',
+        ' text-shadow:0 .25vmin 0 rgba(0,0,0,.35)}',
+        '#hud .bar{flex:1;height:2.8vmin;background:#1e293b;border:.4vmin solid #0b1220;border-radius:1.6vmin;overflow:hidden;display:flex}',
+        '#hud .right .bar{justify-content:flex-end}',
+        '#hud .fill{height:100%;border-radius:1.2vmin;transition:width .12s linear}',
+        '#hud .sup{height:1.5vmin;margin-left:0}',
+        '#hud .sup.full .fill{animation:hudglow .35s infinite alternate}',
+        '@keyframes hudglow{from{filter:brightness(1)}to{filter:brightness(1.45)}}',
+        '#hud .mid{display:flex;align-items:center;gap:1.2vmin}',
+        '#hud .box{background:#e2e8f0;color:#334155;border-radius:1vmin;padding:.3vmin 1.2vmin;white-space:nowrap;font-size:2.3vmin}',
+        '#hud .box b{background:#f97316;color:#fff;border-radius:.8vmin;padding:0 1vmin;margin-left:.8vmin}',
+        '#hud .quit{pointer-events:auto;width:6vmin;height:6vmin;border-radius:50%;background:#334155;border:.45vmin solid #fff;',
+        ' display:flex;align-items:center;justify-content:center;font-size:2.8vmin;touch-action:none;cursor:pointer}',
+        '#hud .fighters{flex:1;display:flex;gap:1.5vmin;justify-content:space-between}',
+        '#hud .ftr{flex:1;display:flex;align-items:center;gap:1vmin;background:rgba(15,23,42,.8);border:.4vmin solid;border-radius:1.4vmin;',
+        ' padding:.4vmin 1vmin;min-width:0}',
+        '#hud .ftr.out{opacity:.4}',
+        '#hud .pct{background:#f97316;border-radius:.8vmin;padding:0 .8vmin;font-size:3vmin;min-width:7vmin;text-align:center}',
+        '#hud .nm{font-size:1.9vmin;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+        '#hud .dots{display:flex;gap:.5vmin}#hud .dots i{width:1.6vmin;height:1.6vmin;border-radius:50%;border:.3vmin solid #fff;display:block}'
+    ].join('');
+    var style = document.createElement('style');
+    style.textContent = css;
+    document.head.appendChild(style);
+    var hud = document.createElement('div');
+    hud.id = 'hud';
+    document.body.appendChild(hud);
+
+    var stage = null, vars = null, info = null, mode = '';
+    function v (name) {
+        if (!vars) {
+            stage = window.vm && vm.runtime.getTargetForStage && vm.runtime.getTargetForStage();
+            if (!stage) return null;
+            vars = {};
+            Object.keys(stage.variables).forEach(function (id) { vars[stage.variables[id].name] = stage.variables[id]; });
+        }
+        return vars[name] || null;
+    }
+    function get (name) { var x = v(name); return x ? x.value : null; }
+    function list (name) { var x = v(name); return x && x.value instanceof Array ? x.value : []; }
+    function who (key) {
+        if (!info) { try { info = JSON.parse(get('HUD Info')); } catch (e) { info = {}; } }
+        return info[key] || [String(key || '').toUpperCase(), '#334155'];
+    }
+    function quitTap (e) {
+        e.preventDefault();
+        var t = vm.runtime.getSpriteTargetByName('Quit Button');
+        if (t) vm.runtime.startHats('event_whenthisspriteclicked', null, t);
+    }
+    function healthColor (p) { return p > 60 ? '#16a34a' : (p > 30 ? '#eab308' : '#dc2626'); }
+    function build (m) {
+        mode = m;
+        if (m === 'fight') {
+            hud.innerHTML =
+                '<div class="side left"><div class="row"><span class="tag" id="hT"></span><div class="bar"><div class="fill" id="hF"></div></div></div>' +
+                '<div class="row"><span class="tag" style="visibility:hidden" id="hT2"></span><div class="bar sup" id="sB"><div class="fill" id="sF"></div></div></div></div>' +
+                '<div class="mid"><span class="box">Score<b id="sc">0</b></span><span class="box" id="wvB">Wave<b id="wv">1</b></span>' +
+                '<div class="quit" id="hq">✕</div></div>' +
+                '<div class="side right"><div class="row"><span class="tag" id="eT"></span><div class="bar"><div class="fill" id="eF"></div></div></div>' +
+                '<div class="row" style="visibility:hidden"><span class="tag" id="eT2"></span><div class="bar sup"></div></div></div>';
+        } else {
+            hud.innerHTML = '<div class="fighters" id="fs"></div><div class="mid"><div class="quit" id="hq">✕</div></div><div class="fighters" id="fs2"></div>';
+        }
+        document.getElementById('hq').addEventListener('pointerdown', quitTap);
+    }
+    function pct (a, b) { a = Number(a) || 0; b = Number(b) || 1; return Math.max(0, Math.min(100, a / b * 100)); }
+    function fight () {
+        if (mode !== 'fight') build('fight');
+        var h = who(get('Hero Name')), hT = document.getElementById('hT');
+        hT.textContent = get('Hero Title') || h[0]; hT.style.background = h[1];
+        document.getElementById('hT2').textContent = hT.textContent;
+        var hp = pct(get('Hero HP'), get('Hero Max')), hF = document.getElementById('hF');
+        hF.style.width = hp + '%'; hF.style.background = healthColor(hp);
+        var sp = pct(get('Super'), 100), sF = document.getElementById('sF');
+        sF.style.width = sp + '%'; sF.style.background = sp >= 100 ? '#fde047' : '#f59e0b';
+        document.getElementById('sB').classList.toggle('full', sp >= 100);
+        var squad = Number(get('Wave Phase')) === 1, e = squad ? ['ENEMY WAVE', '#b45309'] : who(get('Enemy Name'));
+        var eT = document.getElementById('eT');
+        eT.textContent = e[0]; eT.style.background = e[1];
+        document.getElementById('eT2').textContent = e[0];
+        var ep = pct(get('Enemy HP'), get('Enemy Max')), eF = document.getElementById('eF');
+        eF.style.width = ep + '%'; eF.style.background = healthColor(ep);
+        document.getElementById('sc').textContent = get('Score');
+        document.getElementById('wvB').style.display = get('Mode') === 'arcade' ? '' : 'none';
+        document.getElementById('wv').textContent = get('Wave');
+    }
+    function brawl () {
+        if (mode !== 'brawl') build('brawl');
+        var kinds = list('B Kind'), stock = list('B Stock'), alive = list('B Alive');
+        var html = ['', ''];
+        for (var i = 0; i < kinds.length && i < 4; i++) {
+            var k = who(kinds[i]), dots = '';
+            for (var d = 0; d < 3; d++) dots += '<i style="background:' + (d < Number(stock[i]) ? k[1] : '#334155') + '"></i>';
+            html[i < 2 ? 0 : 1] += '<div class="ftr' + (Number(alive[i]) === 1 ? '' : ' out') + '" style="border-color:' + k[1] + '">' +
+                '<span class="pct">' + Math.round(Number(get('P' + (i + 1) + ' %')) || 0) + '%</span>' +
+                '<span><div class="nm">' + k[0] + '</div><div class="dots">' + dots + '</div></span></div>';
+        }
+        document.getElementById('fs').innerHTML = html[0];
+        document.getElementById('fs2').innerHTML = html[1];
+    }
+    function reserveTop () {
+        var sc = window.scaffolding;
+        if (!sc || typeof sc.relayout !== 'function') return;
+        var top = Math.round(0.10 * Math.min(innerWidth, innerHeight));
+        if (sc._offsetFromTop !== top) { sc._offsetFromTop = top; sc.relayout(); }
+    }
+    (function tick () {
+        try {
+            if (get('State') !== null) {
+                reserveTop();
+                if (Number(get('Page HUD')) !== 1) v('Page HUD').value = 1;
+                var state = get('State'), on = state === 'fight' || (state === 'brawl' && Number(get('Brawl Live')) === 1);
+                hud.classList.toggle('on', on);
+                if (on) { if (state === 'fight') fight(); else brawl(); }
+            }
+        } catch (e) {}
+        requestAnimationFrame(tick);
+    })();
+})();
+`;
+
 const PAD_JS = `
 (function () {
     if (!('ontouchstart' in window) && !(navigator.maxTouchPoints > 0)) return; // computers keep the Scratch buttons
@@ -352,7 +485,7 @@ const PAD_JS = `
     o.app.windowTitle = "Arthur's Arena";
     o.app.packageName = 'arthurs-arena';
     o.cloudVariables.mode = 'local';
-    o.custom.js = SAVE_JS + EXT_JS + PAD_JS;
+    o.custom.js = SAVE_JS + EXT_JS + HUD_JS + PAD_JS;
     const result = await packager.package();
     fs.mkdirSync(path.dirname(OUT), {recursive: true});
     fs.writeFileSync(OUT, result.data);

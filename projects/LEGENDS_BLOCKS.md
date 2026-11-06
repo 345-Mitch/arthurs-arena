@@ -308,7 +308,7 @@ when I receive [start fight]
 set [Fight On] to [0]
 set [State] to [fight]
 broadcast [load enemy] and wait
-if <(Mode) = [arcade]> then
+if <<(Mode) = [arcade]> and <(Page HUD) = [0]>> then
     show variable [Wave]
 else
     if <not <(Mode) = [adventure]>> then
@@ -319,7 +319,9 @@ delete all of [M X]
 repeat [3]
     add [9999] to [M X]
 end
-show variable [Score]
+if <(Page HUD) = [0]> then
+    show variable [Score]
+end
 hide variable [Best]
 set [Minions] to [0]
 set [Combo] to [0]
@@ -1887,10 +1889,12 @@ set [Brawl Winner] to [0]
 hide variable [Score]
 hide variable [Wave]
 hide variable [Best]
-show variable [P1 %]
-show variable [P2 %]
-show variable [P3 %]
-show variable [P4 %]
+if <(Page HUD) = [0]> then
+    show variable [P1 %]
+    show variable [P2 %]
+    show variable [P3 %]
+    show variable [P4 %]
+end
 if <not <(State) = [brawl]>> then
     stop [this script]
 end
@@ -6176,7 +6180,7 @@ Costumes: track
 when green flag clicked
 hide
 forever
-    if <(State) = [fight]> then
+    if <<(State) = [fight]> and <(Page HUD) = [0]>> then
         go to x: [-228] y: [156]
         show
     else
@@ -6194,7 +6198,7 @@ Sprite-only variables: Pct
 when green flag clicked
 hide
 forever
-    if <(State) = [fight]> then
+    if <<(State) = [fight]> and <(Page HUD) = [0]>> then
         set [Pct] to (((Hero HP) / (Hero Max)) * [100])
         if <(Pct) < [1]> then
             set [Pct] to [1]
@@ -6225,7 +6229,7 @@ Costumes: track
 when green flag clicked
 hide
 forever
-    if <(State) = [fight]> then
+    if <<(State) = [fight]> and <(Page HUD) = [0]>> then
         go to x: [-228] y: [138]
         show
     else
@@ -6243,7 +6247,7 @@ Sprite-only variables: Pct
 when green flag clicked
 hide
 forever
-    if <(State) = [fight]> then
+    if <<(State) = [fight]> and <(Page HUD) = [0]>> then
         set [Pct] to (((Super) / [100]) * [100])
         if <(Pct) < [1]> then
             set [Pct] to [1]
@@ -6272,7 +6276,7 @@ Costumes: track
 when green flag clicked
 hide
 forever
-    if <(State) = [fight]> then
+    if <<(State) = [fight]> and <(Page HUD) = [0]>> then
         go to x: [228] y: [156]
         show
     else
@@ -6290,7 +6294,7 @@ Sprite-only variables: Pct
 when green flag clicked
 hide
 forever
-    if <(State) = [fight]> then
+    if <<(State) = [fight]> and <(Page HUD) = [0]>> then
         set [Pct] to (((Enemy HP) / (Enemy Max)) * [100])
         if <(Pct) < [1]> then
             set [Pct] to [1]
@@ -6321,7 +6325,7 @@ Costumes: arthur, nova, rocko
 when green flag clicked
 hide
 forever
-    if <(State) = [fight]> then
+    if <<(State) = [fight]> and <(Page HUD) = [0]>> then
         switch costume to (Hero Name)
         go to x: [-228] y: [174]
         show
@@ -6339,7 +6343,7 @@ Costumes: rival, ivy, brute, spikebot, megaspike, ninja, kage, quake, shadow, sq
 when green flag clicked
 hide
 forever
-    if <(State) = [fight]> then
+    if <<(State) = [fight]> and <(Page HUD) = [0]>> then
         if <(Wave Phase) = [1]> then
             switch costume to (squad)
         else
@@ -7996,16 +8000,20 @@ hide
 
 ```
 when I receive [fight on]
-go to x: [0] y: [165]
-show
-go to [front] layer
+if <(Page HUD) = [0]> then
+    go to x: [0] y: [165]
+    show
+    go to [front] layer
+end
 ```
 
 ```
 when I receive [brawl go]
-go to x: [0] y: [165]
-show
-go to [front] layer
+if <(Page HUD) = [0]> then
+    go to x: [0] y: [165]
+    show
+    go to [front] layer
+end
 ```
 
 ```
@@ -8978,6 +8986,11 @@ when I start as a clone
 set [Is Clone] to [1]
 show
 repeat until <(Brawl Live) = [0]>
+    if <(Page HUD) = [1]> then
+        hide
+    else
+        show
+    end
     switch costume to (join (item (My Id) of [B Kind]) (join [ ] (item (My Id) of [B Stock])))
     if <(item (My Id) of [B Alive]) = [1]> then
         set [ghost] effect to [0]

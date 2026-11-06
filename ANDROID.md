@@ -16,6 +16,8 @@ During a fight the app shows game-pad controls, and you can use both thumbs at o
 
 The space round the game is filled with the stage's own scenery (mirrored outward from the edges, a little darker), so there are no black bars. Screens with words on them, like the title, just stretch their edges instead.
 
+During a fight the names, health bars, SUPER bar and score sit in a bar across the very top of the screen, from edge to edge, with the ✕ in the middle; in BRAWL the four fighters' damage % and lives are there. The game is drawn just below, so nothing covers the fight.
+
 Menus (STORY, ARCADE, picking a fighter, SKIP, RETRY, HOME, ✕) are still tapped on the game screen. On a computer, the game keeps its own buttons and the keyboard works too.
 
 ## Install it (do this on each phone or tablet)
@@ -39,7 +41,7 @@ To update later, install the new APK the same way. It installs over the old one 
 ## Good to know
 
 - Scratch on its own only follows one finger, so the joystick and buttons are part of the app's page, not Scratch sprites. They set the same variables the Scratch buttons do (`Want Punch` and so on, plus `Joy X` for walking). `Touch Pad` = 1 tells the game to hide its own buttons.
-- Version 3.3 (the scenery fills the whole screen) installs over earlier versions and keeps the Best score, difficulty, power level and sound setting.
+- Version 3.4 (health bars and score in a bar across the top of the screen) installs over earlier versions and keeps the Best score, difficulty, power level and sound setting.
 - The Android back button closes the game.
 - The app is signed with a debug key (`android/debug.keystore`, password `arthursarena`). That's fine for installing at home. The Play Store would need a private key.
 

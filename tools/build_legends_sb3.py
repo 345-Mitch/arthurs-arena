@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "3.3"
+VERSION = "3.4"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -495,6 +495,18 @@ def button_svg(label, fill, ink="#ffffff", width=62, height=44, size=12):
         + text_el(label, width / 2, height / 2 + size * 0.38, size, ink)
     )
     return svg_doc(width, height, body)
+
+
+def hud_info():
+    """Names and colours of every fighter, for the app page's own health bars (JSON in the HUD Info variable)."""
+    info = {}
+    for k in BRAWL_KINDS:
+        info[k["key"]] = [k["tag"], k["color"]]
+    for e in ENEMIES:
+        info[e["key"]] = [e["tag"], e["color"] if e["n"] != KING else "#581c87"]
+    for h in HEROES:
+        info[h["key"]] = [h["name"], h["color"]]
+    return json.dumps(info, separators=(",", ":"))
 
 
 def bar_svg(width, height, fill):
@@ -2352,7 +2364,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
                      s.list_add("B Alive", 1), s.list_add("B Hit", 0), s.list_add("B KX", 0), s.list_add("B KY", 0)]),
         s.set("Cam X", 0), s.set("Cam Y", 0), s.set("Zoom", 0.8), s.set("Super", 0), s.set("Brawl Winner", 0),
         s.hide_var("Score"), s.hide_var("Wave"), s.hide_var("Best"),
-        *[s.show_var(f"P{i} %") for i in range(1, N + 1)],
+        s.if_(eq(V("Page HUD"), 0), [s.show_var(f"P{i} %") for i in range(1, N + 1)]),
         s.if_(not_(eq(V("State"), "brawl")), [s.stop()]),
         s.set("Brawl Live", 1), s.broadcast("brawl go"),
         s.wait(0.8), s.if_(not_(eq(V("State"), "brawl")), [s.stop()]),
@@ -2823,6 +2835,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
     HD.on_clone(
         HD.set("Is Clone", 1), HD.show(),
         HD.until(eq(V("Brawl Live"), 0), [
+            HD.if_(eq(V("Page HUD"), 1), [HD.hide()], [HD.show()]),
             HD.wear(join(item("B Kind", V("My Id")), join(" ", item("B Stock", V("My Id"))))),
             HD.if_(eq(item("B Alive", V("My Id")), 1), [HD.effect("GHOST", 0)], [HD.effect("GHOST", 60)]),
         ]),
@@ -3008,7 +3021,7 @@ def build():
         ("Power Level", 1), ("Power XP", 0), ("XP Gain", 0), ("Want Power", 0), ("Power Ready At", 0), ("Power Move", "none"),
         ("Bolt X", 0), ("Bolt Y", GROUND), ("Bolt Owner", "hero"), ("Bolt Power", 0), ("Bolt Size", 100),
         ("Fire Held", 0), ("Charge", 0), ("Fire Power", 0), ("Fireball Out", 0),
-        ("Pop Seq", 0), ("Enemy Says", ""), ("Punch Held", 0), ("Kick Held", 0), ("Melee Charge", 0), ("Glow DX", 0), ("Glow DY", 60), ("Glow Kind", "punch"),
+        ("Pop Seq", 0), ("Enemy Says", ""), ("Page HUD", 0), ("HUD Info", hud_info()), ("Punch Held", 0), ("Kick Held", 0), ("Melee Charge", 0), ("Glow DX", 0), ("Glow DY", 60), ("Glow Kind", "punch"),
         ("Swirl On", 0),
         ("Shot X", 999), ("Shot Live", 0), ("Shot Cancel", 0), ("Boom X", 0),
     ]:
@@ -3111,10 +3124,10 @@ def build():
         "start fight",
         s.set("Fight On", 0), s.set("State", "fight"),
         s.broadcast("load enemy", wait=True),
-        s.if_(eq(V("Mode"), "arcade"), [s.show_var("Wave")],
+        s.if_(and_(eq(V("Mode"), "arcade"), eq(V("Page HUD"), 0)), [s.show_var("Wave")],
               [s.if_(not_(eq(V("Mode"), "adventure")), [s.set("Hero HP", V("Hero Max"))])]),
         s.list_clear("M X"), s.repeat(3, [s.list_add("M X", 9999)]),
-        s.show_var("Score"), s.hide_var("Best"),
+        s.if_(eq(V("Page HUD"), 0), [s.show_var("Score")]), s.hide_var("Best"),
         s.set("Minions", 0), s.set("Combo", 0), s.set("Weapon", "none"), s.set("Weapon Uses", 0), s.set("Boomerang Out", 0),
         s.set("Hero Lock", 0), s.set("Hero Safe", 0), s.set("Hero Air", 0),
         s.set("Spikes", 0), s.set("Charge", 0), s.set("Fireball Out", 0), s.set("Shot Live", 0),
@@ -4884,7 +4897,7 @@ def build():
         b.on_flag(
             b.hide(),
             b.forever([
-                b.if_(eq(V("State"), "fight"), [
+                b.if_(and_(eq(V("State"), "fight"), eq(V("Page HUD"), 0)), [
                     b.set("Pct", mul(div(value, maximum), 100)),
                     b.if_(lt(V("Pct"), 1), [b.set("Pct", 1)]),
                     b.size_to(V("Pct")),
@@ -4902,7 +4915,7 @@ def build():
     def track(name, x, y, width, height, anchor_right=False):
         t = game.sprite(name, x=x, y=y, rotation="don't rotate")
         t.costume("track", bar_svg(width, height, "#334155"), width if anchor_right else 0, height / 2)
-        t.on_flag(t.hide(), t.forever([t.if_(eq(V("State"), "fight"), [t.goto(x, y), t.show()], [t.hide()])]))
+        t.on_flag(t.hide(), t.forever([t.if_(and_(eq(V("State"), "fight"), eq(V("Page HUD"), 0)), [t.goto(x, y), t.show()], [t.hide()])]))
         return t
 
     track("Hero Bar Back", -228, 156, 150, 16)
@@ -4916,7 +4929,7 @@ def build():
     for h in HEROES:
         hero_tag.costume(h["key"], tag_svg(h["name"], h["color"]), 0, 10)
     hero_tag.on_flag(hero_tag.hide(), hero_tag.forever([
-        hero_tag.if_(eq(V("State"), "fight"), [hero_tag.wear(V("Hero Name")), hero_tag.goto(-228, 174), hero_tag.show()],
+        hero_tag.if_(and_(eq(V("State"), "fight"), eq(V("Page HUD"), 0)), [hero_tag.wear(V("Hero Name")), hero_tag.goto(-228, 174), hero_tag.show()],
                      [hero_tag.hide()])]))
     enemy_tag = game.sprite("Enemy Tag", x=228, y=174, rotation="don't rotate")
     for e in ENEMIES:
@@ -4924,7 +4937,7 @@ def build():
         enemy_tag.costume(e["key"], tag_svg(word, e["color"] if e["n"] != KING else "#581c87"), 12 + 10 * len(word), 10)
     enemy_tag.costume("squad", tag_svg("ENEMY WAVE", "#b45309"), 12 + 10 * len("ENEMY WAVE"), 10)
     enemy_tag.on_flag(enemy_tag.hide(), enemy_tag.forever([
-        enemy_tag.if_(eq(V("State"), "fight"), [
+        enemy_tag.if_(and_(eq(V("State"), "fight"), eq(V("Page HUD"), 0)), [
             enemy_tag.if_(eq(V("Wave Phase"), 1), [enemy_tag.wear("squad")], [enemy_tag.wear(V("Enemy Name"))]),
             enemy_tag.goto(228, 174), enemy_tag.show()],
                       [enemy_tag.hide()])]))
@@ -5209,8 +5222,9 @@ def build():
     home.on_click(home.hide(), home.broadcast("show title"))
 
     quit_btn = button("Quit Button", "✕", "#334155", 0, 165, width=30, height=26, size=14)
-    quit_btn.on_msg("fight on", quit_btn.goto(0, 165), quit_btn.show(), quit_btn.front())
-    quit_btn.on_msg("brawl go", quit_btn.goto(0, 165), quit_btn.show(), quit_btn.front())
+    # the app page has its own ✕ in its top bar (Page HUD = 1); the Scratch editor uses this one
+    quit_btn.on_msg("fight on", quit_btn.if_(eq(V("Page HUD"), 0), [quit_btn.goto(0, 165), quit_btn.show(), quit_btn.front()]))
+    quit_btn.on_msg("brawl go", quit_btn.if_(eq(V("Page HUD"), 0), [quit_btn.goto(0, 165), quit_btn.show(), quit_btn.front()]))
     quit_btn.on_msg("brawl end", quit_btn.hide())
     quit_btn.on_msg("choose hero", quit_btn.goto(-218, -160), quit_btn.show(), quit_btn.front())
     for m in ("show title", "hero down", "enemy down", "story scene", "hero picked"):
