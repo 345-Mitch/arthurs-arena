@@ -157,7 +157,7 @@ const HUD_JS = `
     // and the game is drawn just under it, so nothing covers the fight
     var css = [
         '#hud{position:fixed;left:0;right:0;top:0;height:10vmin;z-index:40;display:none;align-items:center;gap:2vmin;',
-        ' padding:0 2vmin;box-sizing:border-box;background:linear-gradient(rgba(10,10,25,.72),rgba(10,10,25,.38));',
+        ' padding:0 2vmin;box-sizing:border-box;background:linear-gradient(rgba(10,10,25,.55),rgba(10,10,25,0));',
         ' font:900 2.5vmin Verdana,Arial,sans-serif;color:#fff;pointer-events:none;-webkit-user-select:none;user-select:none}',
         '#hud.on{display:flex}',
         '#hud .side{flex:1;display:flex;flex-direction:column;gap:.7vmin;min-width:0}',
@@ -264,16 +264,28 @@ const HUD_JS = `
         document.getElementById('fs').innerHTML = html[0];
         document.getElementById('fs2').innerHTML = html[1];
     }
-    function reserveTop () {
+    // the game fills the screen: as big as it fits, then zoomed in a little more so it reaches the edges
+    // (trimming at most a thin strip off the far edges, where nothing important happens). The top bar,
+    // joystick and buttons sit on top of it. Anything still left over shows the continued scenery.
+    var MAX_ZOOM_NARROW = 1.2;   // screens squarer than the game (tablets, foldables): may trim the far left/right
+    var MAX_ZOOM_WIDE = 1.12;    // screens wider than the game (phones): may trim a little top and bottom
+    function fillScreen () {
         var sc = window.scaffolding;
         if (!sc || typeof sc.relayout !== 'function') return;
-        var top = Math.round(0.10 * Math.min(innerWidth, innerHeight));
-        if (sc._offsetFromTop !== top) { sc._offsetFromTop = top; sc.relayout(); }
+        var W = innerWidth, H = innerHeight;
+        var fit = Math.min(W / 480, H / 360), cover = Math.max(W / 480, H / 360);
+        var scale = Math.min(cover, fit * (W / H < 4 / 3 ? MAX_ZOOM_NARROW : MAX_ZOOM_WIDE));
+        var x = Math.round((W - 480 * scale) / 2), y = Math.round((H - 360 * scale) / 2);
+        if (sc._offsetFromLeft !== x || sc._offsetFromRight !== x || sc._offsetFromTop !== y || sc._offsetFromBottom !== y) {
+            sc._offsetFromLeft = x; sc._offsetFromRight = x;
+            sc._offsetFromTop = y; sc._offsetFromBottom = y;
+            sc.relayout();
+        }
     }
     (function tick () {
         try {
             if (get('State') !== null) {
-                reserveTop();
+                fillScreen();
                 if (Number(get('Page HUD')) !== 1) v('Page HUD').value = 1;
                 var state = get('State'), on = state === 'fight' || (state === 'brawl' && Number(get('Brawl Live')) === 1);
                 hud.classList.toggle('on', on);
@@ -823,19 +835,7 @@ const PAD_JS = `
     ring('bP', 0, 1); ring('bK', 1, 0); ring('bJ', 0, -1); ring('bD', -1, 0);
     ring('bS', -1.15, -1.55); ring('bF', -2.15, 0.85); ring('bW', -2.3, -0.6);
 
-    // make room for the controls, but only about half of it: the game is drawn wider and the lower
-    // half of the joystick and the button cluster sits over the bottom of the game (mostly the floor)
-    var LEFT = 0.11, RIGHT = 0.19;
-    function reserve () {
-        var sc = window.scaffolding;
-        if (!sc || typeof sc.relayout !== 'function') return;
-        var m = Math.min(innerWidth, innerHeight), left = Math.round(LEFT * m), right = Math.round(RIGHT * m);
-        if (sc._offsetFromLeft !== left || sc._offsetFromRight !== right) {
-            sc._offsetFromLeft = left;
-            sc._offsetFromRight = right;
-            sc.relayout();
-        }
-    }
+    // (the game now fills the whole screen under the controls: see fillScreen in the top bar code)
 
     var vars = null;
     function v (name) {
@@ -934,7 +934,6 @@ const PAD_JS = `
     var bS = document.getElementById('bS');
     var bW = document.getElementById('bW');
     (function tick () {
-        reserve();
         if (get('State') !== null) {
             set('Touch Pad', 1);
             var fighting = get('State') === 'fight' || get('State') === 'brawl';

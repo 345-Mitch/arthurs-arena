@@ -4,7 +4,7 @@
 
 ## Controls on a phone or tablet
 
-During a fight the app shows game-pad controls, and you can use both thumbs at once. The joystick sits on the left and the buttons in a round cluster on the right. The fight is drawn wide between them, with the lower half of the controls over the bottom of the screen (mostly the floor).
+During a fight the app shows game-pad controls, and you can use both thumbs at once. The joystick sits on the left and the buttons in a round cluster on the right, on top of the game. The game fills the whole screen under them: as big as it fits, then zoomed in a little so it reaches the edges (on a squarish screen like a tablet or foldable it trims a thin strip off the far left and right; on a long phone a little off the top and bottom, and the scenery continues at the sides).
 
 - **Joystick (left thumb):** put your thumb anywhere in the bottom-left corner and the stick appears under it. Push left or right to walk; push further to walk faster. **Flick it up to jump.**
 - **Buttons (right thumb):** **PUNCH** (bottom), **KICK** (right), **JUMP** (top), **DODGE** (left). Tap for a quick hit. **Hold** PUNCH for a METEOR PUNCH or KICK for a SKY KICK, then let go. Tap KICK twice for a WHIRLWIND KICK (a HELICOPTER KICK in the air).
@@ -16,7 +16,7 @@ During a fight the app shows game-pad controls, and you can use both thumbs at o
 
 The space round the game is filled with the stage's own scenery (mirrored outward from the edges, a little darker), so there are no black bars. Screens with words on them, like the title, just stretch their edges instead.
 
-During a fight the names, health bars, SUPER bar and score sit in a bar across the very top of the screen, from edge to edge, with the ✕ in the middle; in BRAWL the four fighters' damage % and lives are there. The game is drawn just below, so nothing covers the fight.
+During a fight the names, health bars, SUPER bar and score sit in a see-through bar across the very top of the screen, from edge to edge, with the ✕ in the middle; in BRAWL the four fighters' damage % and lives are there.
 
 Menus (STORY, ARCADE, picking a fighter, SKIP, RETRY, HOME, ✕) are still tapped on the game screen. On a computer, the game keeps its own buttons and the keyboard works too.
 
@@ -60,7 +60,7 @@ To update later, install the new APK the same way. It installs over the old one 
 ## Good to know
 
 - Scratch on its own only follows one finger, so the joystick and buttons are part of the app's page, not Scratch sprites. They set the same variables the Scratch buttons do (`Want Punch` and so on, plus `Joy X` for walking). `Touch Pad` = 1 tells the game to hide its own buttons.
-- Version 3.7 (tougher small enemies when you're powered up) installs over earlier versions and keeps the Best score, difficulty, power level and sound setting.
+- Version 3.8 (the game fills the whole screen) installs over earlier versions and keeps the Best score, difficulty, power level and sound setting.
 - The Android back button closes the game.
 - The app is signed with a debug key (`android/debug.keystore`, password `arthursarena`). That's fine for installing at home. The Play Store would need a private key.
 
