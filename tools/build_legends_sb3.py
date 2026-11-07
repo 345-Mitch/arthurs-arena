@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "4.0"
+VERSION = "4.1"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -115,7 +115,7 @@ BOOMERANG_HIT = 7
 PUNCH_REACH = 70
 WHIRL_HIT = 4          # each of the WHIRLWIND KICK's hits
 WHIRL_COOLDOWN = 1.2
-DOUBLE_TAP = 0.6       # second KICK within this many seconds = WHIRLWIND KICK (HELICOPTER KICK in the air)
+DOUBLE_TAP = 0.8       # second KICK within this many seconds = WHIRLWIND KICK (HELICOPTER KICK in the air)
 HELI_HIT = 3           # each of the HELICOPTER KICK's hits (up to 6)
 HELI_FRAMES = 30       # how long the helicopter spins (frames)
 TALK_Y = 22             # the enemy's speech bubble starts this high (the health bars are near the top)
@@ -2537,7 +2537,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
                         ("Tgt", 0), ("Think", 0), ("Dir", 0), ("Want Atk", 0), ("Want Hop", 0), ("J", 0),
                         ("Surf", 0), ("NX", 0), ("NY", 0), ("Reach", 50), ("Power", 4), ("KB", 0), ("Move Dir", 0),
                         ("Move Until", 0), ("Smash", 0), ("Dash", 9), ("Flip", 0), ("Spin", 0), ("Whirl", 5),
-                        ("Kick At", 0), ("Whirl Ready At", 0), ("Best D", 0), ("D", 0), ("On Plat", 0), ("Drop", 0)):
+                        ("Kick At", 0), ("Kick Queued", 0), ("Whirl Ready At", 0), ("Best D", 0), ("D", 0), ("On Plat", 0), ("Drop", 0)):
         B.local(name, value)
 
     stats = []
@@ -2596,12 +2596,17 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
             B.if_(eq(V(P("Want Jump")), 1), [B.set(P("Want Jump"), 0), B.set("Want Hop", 1)]),
             # push the stick down (or the down arrow) to drop through a thin platform
             B.if_(or_(lt(V(P("Joy Y")), -0.6), eq(V(P("Want Drop")), 1)), [B.set(P("Want Drop"), 0), B.if_(and_(eq(V("Ground"), 1), gt(V("On Plat"), V("Solid Count"))), [B.set("Drop", 8), B.set("Ground", 0)])]),
-            B.if_(eq(V(P("Want Punch")), 1), [B.set(P("Want Punch"), 0), B.set("Want Atk", 1)]),
-            B.if_(eq(V(P("Want Kick")), 1), [
+            # PUNCH and KICK wait their turn while an attack is still going (a short input buffer), so a quick
+            # double KICK isn't lost and becomes the WHIRLWIND KICK
+            B.if_(and_(eq(V(P("Want Punch")), 1), not_(gt(V("Atk CD"), 0))), [B.set(P("Want Punch"), 0), B.set("Want Atk", 1)]),
+            # a second KICK tapped while the first kick is still going counts as a double tap, however slow the phone
+            B.if_(and_(eq(V(P("Want Kick")), 1), gt(V("Atk CD"), 0), gt(V("Kick At"), 0)), [B.set("Kick Queued", 1)]),
+            B.if_(and_(eq(V(P("Want Kick")), 1), not_(gt(V("Atk CD"), 0))), [
                 B.set(P("Want Kick"), 0),
-                B.if_(and_(lt(sub(TIMER, V("Kick At")), DOUBLE_TAP), gt(TIMER, V("Whirl Ready At"))),
+                B.if_(and_(or_(lt(sub(TIMER, V("Kick At")), DOUBLE_TAP), eq(V("Kick Queued"), 1)), gt(TIMER, V("Whirl Ready At"))),
                       [B.set("Kick At", 0), B.set("Whirl Ready At", add(TIMER, WHIRL_COOLDOWN)), B.set("Want Atk", 5)],
                       [B.set("Kick At", TIMER), B.set("Want Atk", 2)]),
+                B.set("Kick Queued", 0),
             ]),
             B.if_(eq(V(P("Want Super")), 1), [B.set(P("Want Super"), 0), B.if_(eq(V(P("Super")), 100), [B.set("Want Atk", 3)])]),
             # POWER move: level 2 FLAME DASH, level 3+ lightning on everyone near you
@@ -3791,6 +3796,7 @@ def build():
     H.local("Flip", 0)
     H.local("Look", "")
     H.local("Hold Until", 0)
+    H.local("Kick Queued", 0)
     H.on_flag(
         H.forever([
             H.set("Look", COSTUME),
@@ -3832,6 +3838,8 @@ def build():
         weapon_swing(),
         H.if_(in_reach(KICK_REACH), [land_hit()]), area(KICK_REACH * 0.55, V("Hit Power")),
         H.wait(0.22), H.move(-14), *H.clamp_x(-215, 215), break_check(), rest_pose(),
+        # KICK tapped again while this kick was going: that's a double tap (WHIRLWIND), however slow the phone
+        H.if_(eq(V("Want Kick"), 1), [H.set("Kick Queued", 1)]),
     ]
     def whirl_hit():
         return [H.set("Hit Power", WHIRL_HIT),
@@ -4017,8 +4025,9 @@ def build():
                 ]),
                 H.if_(and_(eq(V("Want Kick"), 1), eq(V("Hero Lock"), 0)), [
                     H.set("Want Kick", 0),
-                    H.if_(and_(lt(sub(TIMER, V("Kick At")), DOUBLE_TAP), gt(TIMER, V("Whirl Ready At"))),
-                          [H.set("Kick At", 0), H.if_(eq(V("Hero Air"), 1), heli, whirl)], [
+                    H.if_(and_(or_(lt(sub(TIMER, V("Kick At")), DOUBLE_TAP), eq(V("Kick Queued"), 1)), gt(TIMER, V("Whirl Ready At"))),
+                          [H.set("Kick At", 0), H.set("Kick Queued", 0), H.if_(eq(V("Hero Air"), 1), heli, whirl)], [
+                        H.set("Kick Queued", 0),
                         *still_held(kick_held),
                         H.if_(and_(kick_held, eq(V("Fight On"), 1)), [
                             *charge_melee(kick_held, "kick", "kick 1", 12, 40),

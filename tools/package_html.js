@@ -912,7 +912,7 @@ const PAD_JS = `
     // (Punch Held / Kick Held stay 1 until you let go)
     [['bP', 'Want Punch', 'Punch Held'], ['bK', 'Want Kick', 'Kick Held'], ['bJ', 'Want Jump', false],
      ['bD', 'Want Dodge', false], ['bS', 'Want Super', false], ['bW', 'Want Power', false]].forEach(function (b) {
-        var el = document.getElementById(b[0]);
+        var el = document.getElementById(b[0]), repeat = null;
         el.addEventListener('pointerdown', function (e) {
             e.preventDefault();
             el.setPointerCapture(e.pointerId);
@@ -920,8 +920,14 @@ const PAD_JS = `
             set(b[1], 1);
             buzz();
             if (b[2]) set(b[2], 1);
+            // BRAWL has no charge moves: holding PUNCH or KICK keeps attacking (and held KICK spins: WHIRLWIND)
+            if (b[2] && get('State') === 'brawl') repeat = setInterval(function () { set(b[1], 1); }, 230);
         });
-        function up () { el.classList.remove('down'); if (b[2]) set(b[2], 0); }
+        function up () {
+            el.classList.remove('down');
+            if (b[2]) set(b[2], 0);
+            if (repeat) { clearInterval(repeat); repeat = null; }
+        }
         el.addEventListener('pointerup', up);
         el.addEventListener('pointercancel', up);
     });

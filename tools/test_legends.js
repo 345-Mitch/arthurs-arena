@@ -663,6 +663,45 @@ async function flipTest () {
     return {once, twice, forward, still};
 }
 
+async function comboTest () {
+    // tap KICK twice (even a slow-ish double tap, like a child's) = WHIRLWIND KICK, in fights and in BRAWL
+    const out = {};
+    const T = await startArcadeAt(1);
+    T.set('Hero Safe Until', 1e12); T.set('Enemy Stun Until', 1e12);
+    for (const gap of [4, 14, 20]) {
+        await T.step(60);
+        T.set('Want Kick', 1); await T.step(gap); T.set('Want Kick', 1);
+        let spun = false;
+        for (let i = 0; i < 45 && !spun; i++) { await T.step(); spun = T.costume('Hero').includes(' spin '); }
+        out['fight ' + gap] = spun;
+        if (!spun) fail(`combo: a double KICK ${gap} frames apart did not spin in a fight`);
+    }
+    // BRAWL: the second KICK waits for the first kick to finish instead of being lost
+    const {vm} = await boot();
+    const B = tools(vm);
+    await B.step(10);
+    B.click('Brawl Button'); await B.step(3);
+    B.set('Stage Pick', 1);
+    B.click('Pick Arthur');
+    let n = 0;
+    while (B.get('Brawl On') !== 1 && n < 300) { await B.step(); n++; }
+    const p1 = () => B.clones('Brawler').find(c => Number(c.lookupVariableByNameAndType('My Id').value) === 1);
+    for (const gap of [3, 8, 14]) {
+        await B.step(60);
+        p1().lookupVariableByNameAndType('Inv Until').value = 1e12;
+        B.set('Want Kick', 1); await B.step(gap); B.set('Want Kick', 1);
+        let spun = false;
+        for (let i = 0; i < 45 && !spun; i++) {
+            await B.step();
+            const c = p1();
+            spun = c.getCostumes()[c.currentCostume].name.includes(' spin ');
+        }
+        out['brawl ' + gap] = spun;
+        if (!spun) fail(`combo: a double KICK ${gap} frames apart did not spin in BRAWL`);
+    }
+    return out;
+}
+
 async function recoveryTest () {
     // BRAWL: knocked off the side with both jumps used, a third jump (RECOVERY ROCKET) brings you back onto the stage
     const {vm} = await boot();
@@ -1528,6 +1567,7 @@ async function brawlTest () {
     if (want('intro')) results.intro = await introTest();
     if (want('powerup')) results.powerup = await powerUpTest();
     if (want('recovery')) results.recovery = await recoveryTest();
+    if (want('combo')) results.combo = await comboTest();
     if (want('minions')) results.minions = await minionHpTest();
     if (want('flip')) results.flip = await flipTest();
     if (want('whirl')) results.whirl = await whirlTest();

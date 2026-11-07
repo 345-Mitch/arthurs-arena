@@ -155,7 +155,7 @@ The buttons are along the bottom of the screen.
 | JUMP | up arrow or space | Jump. **Tap again in the air** for a second, higher jump with a **front flip**. Hold a direction (joystick or ◀ ▶) as you jump and you fly that way, further on the flip. You can punch and kick in the air. In BRAWL, if you're knocked off the stage, a **third** tap is the **RECOVERY ROCKET**: it shoots you up and back toward the stage. |
 | DODGE | C | Hop backwards and turn see-through. Nothing can hurt you while you dodge. |
 | PUNCH | Z | Quick hit. With a boomerang, PUNCH throws it. **Hold** for a **METEOR PUNCH** (see below). |
-| KICK | X | Steps in and hits harder. **Tap twice quickly** for a **WHIRLWIND KICK**, or in the air for a **HELICOPTER KICK**. **Hold** for a **SKY KICK**. |
+| KICK | X | Steps in and hits harder. **Tap twice** for a **WHIRLWIND KICK** (a second tap any time during the first kick counts), or in the air for a **HELICOPTER KICK**. **Hold** for a **SKY KICK**. In BRAWL, holding PUNCH or KICK keeps attacking, and holding KICK spins into WHIRLWIND KICKs. |
 | FIRE | F (hold) | **Hold** to charge a fireball, **let go** to shoot it. See below. |
 | (BRAWL) drop down | down arrow | Push the joystick down to drop through a thin platform. |
 | POWER | G | Your POWER move (from power level 2). It recharges in about 6 seconds. |
@@ -263,7 +263,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v4.0` in the bottom corner of the title.
+- **Version line:** `v4.1` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).

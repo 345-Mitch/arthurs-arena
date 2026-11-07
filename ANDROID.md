@@ -7,7 +7,7 @@
 During a fight the app shows game-pad controls, and you can use both thumbs at once. The joystick sits on the left and the buttons in a round cluster on the right, on top of the game. The game fills the whole screen under them: as big as it fits, then zoomed in a little so it reaches the edges (on a squarish screen like a tablet or foldable it trims a thin strip off the far left and right; on a long phone a little off the top and bottom, and the scenery continues at the sides).
 
 - **Joystick (left thumb):** put your thumb anywhere in the bottom-left corner and the stick appears under it. Push left or right to walk; push further to walk faster. **Flick it up to jump.**
-- **Buttons (right thumb):** **PUNCH** (bottom), **KICK** (right), **JUMP** (top), **DODGE** (left). Tap for a quick hit. **Hold** PUNCH for a METEOR PUNCH or KICK for a SKY KICK, then let go. Tap KICK twice for a WHIRLWIND KICK (a HELICOPTER KICK in the air).
+- **Buttons (right thumb):** **PUNCH** (bottom), **KICK** (right), **JUMP** (top), **DODGE** (left). Tap for a quick hit. **Hold** PUNCH for a METEOR PUNCH or KICK for a SKY KICK, then let go. Tap KICK twice for a WHIRLWIND KICK (a HELICOPTER KICK in the air). In BRAWL, holding PUNCH or KICK keeps attacking, and holding KICK spins.
 - **In BRAWL**, push the joystick **down** to drop through a thin platform. You can jump twice: once on the ground and once in the air.
 - **POWER** (purple, left of DODGE): your power level's move. It says LOCKED until power level 2, and a ring fills while it recharges.
 - **FIRE** (big red button, bottom left of the others): hold it to charge a fireball. The button fills up gold, and glows at full power. Let go to shoot.
@@ -60,7 +60,7 @@ To update later, install the new APK the same way. It installs over the old one 
 ## Good to know
 
 - Scratch on its own only follows one finger, so the joystick and buttons are part of the app's page, not Scratch sprites. They set the same variables the Scratch buttons do (`Want Punch` and so on, plus `Joy X` for walking). `Touch Pad` = 1 tells the game to hide its own buttons.
-- Version 4.0 (jumps carry you forward; BRAWL RECOVERY ROCKET) installs over earlier versions and keeps the Best score, difficulty, power level and sound setting.
+- Version 4.1 (the WHIRLWIND KICK works again everywhere) installs over earlier versions and keeps the Best score, difficulty, power level and sound setting.
 - The Android back button closes the game.
 - The app is signed with a debug key (`android/debug.keystore`, password `arthursarena`). That's fine for installing at home. The Play Store would need a private key.
 
