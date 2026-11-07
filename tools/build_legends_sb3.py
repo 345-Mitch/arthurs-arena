@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "3.9"
+VERSION = "4.0"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -123,6 +123,9 @@ HOLD_TIME = 0.22       # hold PUNCH or KICK this long to start charging a power 
 MELEE_RATE = 3         # charge per frame: full (100) in about a second
 JUMP_UP = 15        # first jump speed
 FLIP_UP = 11        # second jump (front flip) speed
+JUMP_PUSH = 4       # hold a direction when you jump: you also move that way (pixels per frame)
+FLIP_PUSH = 8       # ...and the front flip carries you further forward
+AIR_DRAG = 0.96     # that sideways push slowly fades in the air
 HERO_GRAV = 1.3
 FLIP_FRAMES = 16    # one full turn
 KICK_REACH = 82
@@ -1855,6 +1858,10 @@ BRAWL_SIZE = 45          # fighters are drawn small, like a platform fighter
 GRAV = 1.0
 JUMP_V = 13.5
 DJUMP_V = 12
+RECOVER_V = 15           # BRAWL third jump (RECOVERY ROCKET), only when off the stage: straight back up...
+RECOVER_PUSH = 7         # ...and back toward the middle of the stage
+OFF_STAGE_X = 250        # further out than this, or below the floor, counts as off the stage
+AIR_CONTROL = 0.2        # how quickly you can steer in the air (was 0.12)
 MAX_FALL = -15
 BLAST_X = 560
 BLAST_LOW = -360
@@ -2636,7 +2643,7 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         # off the stage? head back to the middle and jump
         B.if_(or_(lt(V("X"), -300), gt(V("X"), 300), lt(V("Y"), -150)), [
             B.if_(gt(V("X"), 0), [B.set("Dir", -1)], [B.set("Dir", 1)]),
-            B.if_(and_(lt(V("VY"), 0), lt(V("Jumps"), 2)), [B.set("Want Hop", 1)]),
+            B.if_(and_(lt(V("VY"), 0), lt(V("Jumps"), 3)), [B.set("Want Hop", 1)]),
         ], [
             B.if_(gt(V("Tgt"), 0), [
                 B.set("D", sub(item("B X", V("Tgt")), V("X"))),
@@ -2653,6 +2660,9 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
             ]),
         ]),
     ]
+
+    # off the stage: out past the sides, or below the main floor
+    off_stage = or_(gt(abs_(V("X")), OFF_STAGE_X), lt(V("Y"), item("Plat Y1", 1)))
 
     physics = [
         # 1. take any hits that landed on me
@@ -2675,13 +2685,25 @@ def build_brawl(game, s, button, FIGHT_HIDE_):
         B.if_(gt(V("Stun"), 0), [B.change("Stun", -1), B.set("VX", mul(V("VX"), 0.96)),
                                  B.if_(lt(V("Stun"), 1), [B.effect("BRIGHTNESS", 0)])], [
             # Stage Grip: 0.45 normally, very low on ice so you slide
-            B.if_(eq(V("Ground"), 1), [B.change("VX", mul(sub(mul(V("Dir"), V("Speed")), V("VX")), V("Stage Grip")))],
-                  [B.change("VX", mul(sub(mul(V("Dir"), V("Speed")), V("VX")), 0.12))]),
+            B.if_(eq(V("Ground"), 1), [B.change("VX", mul(sub(mul(V("Dir"), V("Speed")), V("VX")), V("Stage Grip")))], [
+                # in the air: steer toward Dir, but keep a jump's extra push while you hold the same way
+                B.if_(not_(gt(mul(V("Dir"), V("VX")), V("Speed"))),
+                      [B.change("VX", mul(sub(mul(V("Dir"), V("Speed")), V("VX")), AIR_CONTROL))]),
+            ]),
             B.if_(gt(V("Dir"), 0.1), [B.set("Face", 1)]), B.if_(lt(V("Dir"), -0.1), [B.set("Face", -1)]),
         ]),
-        B.if_(and_(eq(V("Want Hop"), 1), lt(V("Jumps"), 2)), [
-            B.if_(eq(V("Jumps"), 0), [B.set("VY", JUMP_V)], [B.set("VY", DJUMP_V)]),
-            B.if_(eq(V("Jumps"), 1), [B.set("Flip", 16)]),
+        # jumps: 1st a hop, 2nd a front flip, 3rd (only off the stage) the RECOVERY ROCKET back toward the middle.
+        # Holding a direction pushes the jump that way, the flip further.
+        B.if_(and_(eq(V("Want Hop"), 1), or_(lt(V("Jumps"), 2), and_(eq(V("Jumps"), 2), off_stage))), [
+            B.if_(eq(V("Jumps"), 0), [B.set("VY", JUMP_V), B.change("VX", mul(V("Dir"), JUMP_PUSH * 0.6))]),
+            B.if_(eq(V("Jumps"), 1), [B.set("VY", DJUMP_V), B.set("Flip", 16),
+                                     B.if_(gt(abs_(V("Dir")), 0.2), [B.set("VX", mul(V("Dir"), add(V("Speed"), FLIP_PUSH * 0.6)))])]),
+            B.if_(eq(V("Jumps"), 2), [
+                B.set("VY", RECOVER_V), B.set("Flip", 16),
+                B.if_(gt(V("X"), 0), [B.set("VX", -RECOVER_PUSH)], [B.set("VX", RECOVER_PUSH)]),
+                B.if_(eq(V("My Id"), V("My Slot")), [B.set("Pop Text", "RECOVERY ROCKET!"), B.broadcast("popup")]),
+                B.broadcast("whirl sfx"),
+            ]),
             B.change("Jumps", 1), B.set("Ground", 0), B.broadcast("jump sfx"),
         ]),
         # 3. attacks
@@ -3762,6 +3784,8 @@ def build():
 
     H.local("Last X", 0)
     H.local("HVY", 0)
+    H.local("HVX", 0)
+    H.local("Hold Dir", 0)
     H.local("Spin", 0)
     H.local("Jumps", 0)
     H.local("Flip", 0)
@@ -4019,17 +4043,22 @@ def build():
             H.if_(and_(eq(V("Want Jump"), 1), not_(eq(V("State"), "brawl"))), [
                 H.set("Want Jump", 0),
                 H.if_(and_(eq(V("Fight On"), 1), eq(V("Hero Lock"), 0)), [
+                    # the way you are holding (joystick or the arrow buttons; Turn Dir is set while you walk)
+                    H.if_(lt(TIMER, V("Turn Until")), [H.set("Hold Dir", V("Turn Dir"))], [H.set("Hold Dir", 0)]),
                     H.if_(eq(V("Hero Air"), 0), [
                         H.set("Hero Air", 1), H.set("Jumps", 1), H.set("HVY", JUMP_UP), pose("jump"), H.broadcast("jump sfx"),
+                        H.set("HVX", mul(V("Hold Dir"), JUMP_PUSH)),
                     ], [
-                        # second tap in the air: jump again with a front flip
+                        # second tap in the air: jump again with a front flip, flying further the way you hold
                         H.if_(eq(V("Jumps"), 1), [H.set("Jumps", 2), H.set("HVY", FLIP_UP), H.set("Flip", FLIP_FRAMES),
-                                                  H.broadcast("jump sfx")]),
+                                                  H.set("HVX", mul(V("Hold Dir"), FLIP_PUSH)), H.broadcast("jump sfx")]),
                     ]),
                 ]),
             ]),
             H.if_(eq(V("Hero Air"), 1), [
                 H.dy(V("HVY")), H.change("HVY", -HERO_GRAV),
+                # a jump's sideways push carries you along, fading slowly
+                H.dx(V("HVX")), *H.clamp_x(-215, 215), H.set("HVX", mul(V("HVX"), AIR_DRAG)),
                 H.if_(gt(V("Flip"), 0), [
                     H.change("Flip", -1),
                     H.if_(and_(eq(V("Hero Lock"), 0), not_(contains(COSTUME, "punch")), not_(contains(COSTUME, "kick"))), [
@@ -4039,13 +4068,14 @@ def build():
                     ]),
                 ]),
                 H.if_(not_(gt(YPOS, GROUND)), [
-                    H.set_y(GROUND), H.set("Hero Air", 0), H.set("Jumps", 0), H.set("HVY", 0), H.set("Flip", 0),
+                    H.set_y(GROUND), H.set("Hero Air", 0), H.set("Jumps", 0), H.set("HVY", 0), H.set("Flip", 0), H.set("HVX", 0),
                     H.if_(eq(V("Hero Lock"), 0), [pose("idle")]),
                 ]),
             ]),
         ]),
         note="The jump loop runs beside the action loop, so you can punch and kick in the air. "
-             "Tap JUMP again while in the air for a second jump with a front flip.",
+             "Tap JUMP again while in the air for a second jump with a front flip. Hold a direction when you jump "
+             "and you also fly that way (further on the flip).",
     )
     holding = or_(eq(V("Fire Held"), 1), ("keypressed", "f"))
     H.on_flag(

@@ -2939,7 +2939,7 @@ go to x: [0] y: [-80]
 ## Hero
 
 Costumes: arthur idle, arthur punch, arthur kick, arthur jump, arthur hurt, arthur win, arthur dodge, arthur special, arthur down, arthur charge, arthur idle b, arthur walk 1, arthur walk 2, arthur walk 3, arthur walk 4, arthur punch 1, arthur kick 1, arthur hurt high, arthur charge up, arthur spin 1, arthur spin 2, arthur spin 3, arthur spin 4, arthur heli 1, arthur heli 2, arthur heli 3, arthur heli 4, arthur sky kick, arthur windup, arthur flip 1, arthur flip 2, arthur flip 3, arthur flip 4, arthur gold idle, arthur gold punch, arthur gold kick, arthur gold jump, arthur gold hurt, arthur gold win, arthur gold dodge, arthur gold special, arthur gold down, arthur gold charge, arthur gold idle b, arthur gold walk 1, arthur gold walk 2, arthur gold walk 3, arthur gold walk 4, arthur gold punch 1, arthur gold kick 1, arthur gold hurt high, arthur gold charge up, arthur gold spin 1, arthur gold spin 2, arthur gold spin 3, arthur gold spin 4, arthur gold heli 1, arthur gold heli 2, arthur gold heli 3, arthur gold heli 4, arthur gold sky kick, arthur gold windup, arthur gold flip 1, arthur gold flip 2, arthur gold flip 3, arthur gold flip 4, arthur silver idle, arthur silver punch, arthur silver kick, arthur silver jump, arthur silver hurt, arthur silver win, arthur silver dodge, arthur silver special, arthur silver down, arthur silver charge, arthur silver idle b, arthur silver walk 1, arthur silver walk 2, arthur silver walk 3, arthur silver walk 4, arthur silver punch 1, arthur silver kick 1, arthur silver hurt high, arthur silver charge up, arthur silver spin 1, arthur silver spin 2, arthur silver spin 3, arthur silver spin 4, arthur silver heli 1, arthur silver heli 2, arthur silver heli 3, arthur silver heli 4, arthur silver sky kick, arthur silver windup, arthur silver flip 1, arthur silver flip 2, arthur silver flip 3, arthur silver flip 4, nova idle, nova punch, nova kick, nova jump, nova hurt, nova win, nova dodge, nova special, nova down, nova charge, nova idle b, nova walk 1, nova walk 2, nova walk 3, nova walk 4, nova punch 1, nova kick 1, nova hurt high, nova charge up, nova spin 1, nova spin 2, nova spin 3, nova spin 4, nova heli 1, nova heli 2, nova heli 3, nova heli 4, nova sky kick, nova windup, nova flip 1, nova flip 2, nova flip 3, nova flip 4, nova gold idle, nova gold punch, nova gold kick, nova gold jump, nova gold hurt, nova gold win, nova gold dodge, nova gold special, nova gold down, nova gold charge, nova gold idle b, nova gold walk 1, nova gold walk 2, nova gold walk 3, nova gold walk 4, nova gold punch 1, nova gold kick 1, nova gold hurt high, nova gold charge up, nova gold spin 1, nova gold spin 2, nova gold spin 3, nova gold spin 4, nova gold heli 1, nova gold heli 2, nova gold heli 3, nova gold heli 4, nova gold sky kick, nova gold windup, nova gold flip 1, nova gold flip 2, nova gold flip 3, nova gold flip 4, nova silver idle, nova silver punch, nova silver kick, nova silver jump, nova silver hurt, nova silver win, nova silver dodge, nova silver special, nova silver down, nova silver charge, nova silver idle b, nova silver walk 1, nova silver walk 2, nova silver walk 3, nova silver walk 4, nova silver punch 1, nova silver kick 1, nova silver hurt high, nova silver charge up, nova silver spin 1, nova silver spin 2, nova silver spin 3, nova silver spin 4, nova silver heli 1, nova silver heli 2, nova silver heli 3, nova silver heli 4, nova silver sky kick, nova silver windup, nova silver flip 1, nova silver flip 2, nova silver flip 3, nova silver flip 4, rocko idle, rocko punch, rocko kick, rocko jump, rocko hurt, rocko win, rocko dodge, rocko special, rocko down, rocko charge, rocko idle b, rocko walk 1, rocko walk 2, rocko walk 3, rocko walk 4, rocko punch 1, rocko kick 1, rocko hurt high, rocko charge up, rocko spin 1, rocko spin 2, rocko spin 3, rocko spin 4, rocko heli 1, rocko heli 2, rocko heli 3, rocko heli 4, rocko sky kick, rocko windup, rocko flip 1, rocko flip 2, rocko flip 3, rocko flip 4, rocko gold idle, rocko gold punch, rocko gold kick, rocko gold jump, rocko gold hurt, rocko gold win, rocko gold dodge, rocko gold special, rocko gold down, rocko gold charge, rocko gold idle b, rocko gold walk 1, rocko gold walk 2, rocko gold walk 3, rocko gold walk 4, rocko gold punch 1, rocko gold kick 1, rocko gold hurt high, rocko gold charge up, rocko gold spin 1, rocko gold spin 2, rocko gold spin 3, rocko gold spin 4, rocko gold heli 1, rocko gold heli 2, rocko gold heli 3, rocko gold heli 4, rocko gold sky kick, rocko gold windup, rocko gold flip 1, rocko gold flip 2, rocko gold flip 3, rocko gold flip 4, rocko silver idle, rocko silver punch, rocko silver kick, rocko silver jump, rocko silver hurt, rocko silver win, rocko silver dodge, rocko silver special, rocko silver down, rocko silver charge, rocko silver idle b, rocko silver walk 1, rocko silver walk 2, rocko silver walk 3, rocko silver walk 4, rocko silver punch 1, rocko silver kick 1, rocko silver hurt high, rocko silver charge up, rocko silver spin 1, rocko silver spin 2, rocko silver spin 3, rocko silver spin 4, rocko silver heli 1, rocko silver heli 2, rocko silver heli 3, rocko silver heli 4, rocko silver sky kick, rocko silver windup, rocko silver flip 1, rocko silver flip 2, rocko silver flip 3, rocko silver flip 4
-Sprite-only variables: Last X, HVY, Spin, Jumps, Flip, Look, Hold Until, Line Until
+Sprite-only variables: Last X, HVY, HVX, Hold Dir, Spin, Jumps, Flip, Look, Hold Until, Line Until
 
 ```
 when green flag clicked
@@ -3664,17 +3664,24 @@ forever
     if <<(Want Jump) = [1]> and <not <(State) = [brawl]>>> then
         set [Want Jump] to [0]
         if <<(Fight On) = [1]> and <(Hero Lock) = [0]>> then
+            if <(timer) < (Turn Until)> then
+                set [Hold Dir] to (Turn Dir)
+            else
+                set [Hold Dir] to [0]
+            end
             if <(Hero Air) = [0]> then
                 set [Hero Air] to [1]
                 set [Jumps] to [1]
                 set [HVY] to [15]
                 switch costume to (join (Hero Look) [ jump])
                 broadcast [jump sfx]
+                set [HVX] to ((Hold Dir) * [4])
             else
                 if <(Jumps) = [1]> then
                     set [Jumps] to [2]
                     set [HVY] to [11]
                     set [Flip] to [16]
+                    set [HVX] to ((Hold Dir) * [8])
                     broadcast [jump sfx]
                 end
             end
@@ -3683,6 +3690,14 @@ forever
     if <(Hero Air) = [1]> then
         change y by (HVY)
         change [HVY] by [-1.3]
+        change x by (HVX)
+        if <(x position) < [-215]> then
+            set x to [-215]
+        end
+        if <(x position) > [215]> then
+            set x to [215]
+        end
+        set [HVX] to ((HVX) * [0.96])
         if <(Flip) > [0]> then
             change [Flip] by [-1]
             if <<<(Hero Lock) = [0]> and <not <(costume name) contains [punch]?>>> and <not <(costume name) contains [kick]?>>> then
@@ -3699,6 +3714,7 @@ forever
             set [Jumps] to [0]
             set [HVY] to [0]
             set [Flip] to [0]
+            set [HVX] to [0]
             if <(Hero Lock) = [0]> then
                 switch costume to (join (Hero Look) [ idle])
             end
@@ -3707,7 +3723,7 @@ forever
 end
 ```
 
-> The jump loop runs beside the action loop, so you can punch and kick in the air. Tap JUMP again while in the air for a second jump with a front flip.
+> The jump loop runs beside the action loop, so you can punch and kick in the air. Tap JUMP again while in the air for a second jump with a front flip. Hold a direction when you jump and you also fly that way (further on the flip).
 
 ```
 when green flag clicked
@@ -8485,7 +8501,7 @@ if <<(Brawl On) = [1]> and <not <(Stun) > [0]>>> then
                 else
                     set [Dir] to [1]
                 end
-                if <<(VY) < [0]> and <(Jumps) < [2]>> then
+                if <<(VY) < [0]> and <(Jumps) < [3]>> then
                     set [Want Hop] to [1]
                 end
             else
@@ -8530,7 +8546,9 @@ else
     if <(Ground) = [1]> then
         change [VX] by ((((Dir) * (Speed)) - (VX)) * (Stage Grip))
     else
-        change [VX] by ((((Dir) * (Speed)) - (VX)) * [0.12])
+        if <not <((Dir) * (VX)) > (Speed)>> then
+            change [VX] by ((((Dir) * (Speed)) - (VX)) * [0.2])
+        end
     end
     if <(Dir) > [0.1]> then
         set [Face] to [1]
@@ -8539,14 +8557,31 @@ else
         set [Face] to [-1]
     end
 end
-if <<(Want Hop) = [1]> and <(Jumps) < [2]>> then
+if <<(Want Hop) = [1]> and <<(Jumps) < [2]> or <<(Jumps) = [2]> and <<(abs of (X)) > [250]> or <(Y) < (item [1] of [Plat Y1])>>>>> then
     if <(Jumps) = [0]> then
         set [VY] to [13.5]
-    else
-        set [VY] to [12]
+        change [VX] by ((Dir) * [2.4])
     end
     if <(Jumps) = [1]> then
+        set [VY] to [12]
         set [Flip] to [16]
+        if <(abs of (Dir)) > [0.2]> then
+            set [VX] to ((Dir) * ((Speed) + [4.8]))
+        end
+    end
+    if <(Jumps) = [2]> then
+        set [VY] to [15]
+        set [Flip] to [16]
+        if <(X) > [0]> then
+            set [VX] to [-7]
+        else
+            set [VX] to [7]
+        end
+        if <(My Id) = (My Slot)> then
+            set [Pop Text] to [RECOVERY ROCKET!]
+            broadcast [popup]
+        end
+        broadcast [whirl sfx]
     end
     change [Jumps] by [1]
     set [Ground] to [0]

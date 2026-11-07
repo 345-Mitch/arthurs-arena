@@ -94,6 +94,7 @@ Tap **BRAWL**, pick your fighter, and fight three CPU fighters at once (ninjas c
   - **Fishing Pond:** two docks and a **raft** that floats between them. Fall in the water and you're out! **Fish** leap up out of the pond
 - **Play a friend over Wi-Fi** (Android app): on the BRAWL fighter screen tap **📶 PLAY A FRIEND**; one phone hosts, the other joins, and your friend plays fighter 2. `ANDROID.md` explains it.
 - **Damage %:** the number at the top shows each fighter's damage. The higher it is, the further they fly when hit.
+- **Getting back on:** knocked off the side? Push the joystick toward the stage (you can steer in the air), use your jump and flip, and if you're still off the stage tap JUMP a third time for the **RECOVERY ROCKET**. The computer fighters use it too.
 - **Lives:** the dots show lives (3 each). Get knocked off the screen and you lose one, then drop back in from the sky.
 - **Win:** be the last fighter standing. The match ends if you lose all three lives.
 - **Moves:**
@@ -151,7 +152,7 @@ The buttons are along the bottom of the screen.
 | Button | Keyboard | What it does |
 | --- | --- | --- |
 | ◀ LEFT / RIGHT ▶ | arrows | Step. **Hold** the button to keep walking. |
-| JUMP | up arrow or space | Jump. **Tap again in the air** for a second, higher jump with a **front flip**. You can punch and kick in the air. |
+| JUMP | up arrow or space | Jump. **Tap again in the air** for a second, higher jump with a **front flip**. Hold a direction (joystick or ◀ ▶) as you jump and you fly that way, further on the flip. You can punch and kick in the air. In BRAWL, if you're knocked off the stage, a **third** tap is the **RECOVERY ROCKET**: it shoots you up and back toward the stage. |
 | DODGE | C | Hop backwards and turn see-through. Nothing can hurt you while you dodge. |
 | PUNCH | Z | Quick hit. With a boomerang, PUNCH throws it. **Hold** for a **METEOR PUNCH** (see below). |
 | KICK | X | Steps in and hits harder. **Tap twice quickly** for a **WHIRLWIND KICK**, or in the air for a **HELICOPTER KICK**. **Hold** for a **SKY KICK**. |
@@ -262,7 +263,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v3.9` in the bottom corner of the title.
+- **Version line:** `v4.0` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).

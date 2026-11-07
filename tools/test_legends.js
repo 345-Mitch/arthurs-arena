@@ -644,7 +644,69 @@ async function flipTest () {
     let frames = 0;
     while (T.get('Hero Air') === 1 && frames < 150) { await T.step(); frames++; }
     if (T.get('Hero Air') !== 0) fail('flip: a third tap kept the hero in the air');
-    return {once, twice};
+    // hold a direction (Turn Dir / Turn Until, set by the joystick and the arrow buttons): the jumps carry you that way
+    const travel = async hold => {
+        await T.step(10);
+        T.sprite('Hero').setXY(-180, -75);
+        await T.step(2);
+        const x0 = T.sprite('Hero').x;
+        if (hold) { T.set('Turn Dir', 1); T.set('Turn Until', 1e12); } else T.set('Turn Until', 0);
+        T.set('Want Jump', 1); await T.step(6); T.set('Want Jump', 1);
+        let n = 0;
+        while (T.get('Hero Air') === 1 && n < 150) { await T.step(); n++; }
+        T.set('Turn Until', 0);
+        return Math.round(T.sprite('Hero').x - x0);
+    };
+    const forward = await travel(true), still = await travel(false);
+    if (forward < 120) fail(`flip: holding forward only carried the hero ${forward} px`);
+    if (Math.abs(still) > 15) fail(`flip: without holding a direction the hero moved ${still} px`);
+    return {once, twice, forward, still};
+}
+
+async function recoveryTest () {
+    // BRAWL: knocked off the side with both jumps used, a third jump (RECOVERY ROCKET) brings you back onto the stage
+    const {vm} = await boot();
+    const T = tools(vm);
+    await T.step(10);
+    T.click('Brawl Button');
+    await T.step(3);
+    T.set('Stage Pick', 1);
+    T.click('Pick Arthur');
+    let n = 0;
+    while (T.get('Brawl On') !== 1 && n < 300) { await T.step(); n++; }
+    const p1 = T.clones('Brawler').find(c => Number(c.lookupVariableByNameAndType('My Id').value) === 1);
+    const v = name => p1.lookupVariableByNameAndType(name);
+    const out = {};
+    const tryFrom = async (x, y) => {
+        v('X').value = x; v('Y').value = y; v('VX').value = 0; v('VY').value = -2; v('Jumps').value = 2; v('Ground').value = 0;
+        v('Stun').value = 0; v('Inv Until').value = 1e12;
+        await T.step();
+        T.set('Joy X', x > 0 ? -1 : 1);
+        T.set('Want Jump', 1);
+        await T.step();
+        const vy = Number(v('VY').value);
+        let landed = false;
+        for (let i = 0; i < 120 && !landed; i++) {
+            await T.step();
+            landed = Number(v('Ground').value) === 1;
+        }
+        T.set('Joy X', 0);
+        return {vy: Math.round(vy), landed, x: Math.round(Number(v('X').value))};
+    };
+    out.right = await tryFrom(330, -60);
+    out.left = await tryFrom(-330, -60);
+    for (const side of ['right', 'left']) {
+        if (out[side].vy < 10) fail(`recovery: no RECOVERY ROCKET off the ${side} side (VY ${out[side].vy})`);
+        if (!out[side].landed) fail(`recovery: did not get back onto the stage from the ${side} (x ${out[side].x})`);
+    }
+    // on the stage there is no third jump
+    v('X').value = 0; v('Y').value = 40; v('VX').value = 0; v('VY').value = -1; v('Jumps').value = 2; v('Ground').value = 0;
+    await T.step();
+    T.set('Want Jump', 1);
+    await T.step();
+    out.onStageVY = Math.round(Number(v('VY').value));
+    if (out.onStageVY > 0) fail('recovery: a third jump worked on the stage');
+    return out;
 }
 
 async function adventureTest () {
@@ -1465,6 +1527,7 @@ async function brawlTest () {
     if (want('grok')) results.grok = await grokTest();
     if (want('intro')) results.intro = await introTest();
     if (want('powerup')) results.powerup = await powerUpTest();
+    if (want('recovery')) results.recovery = await recoveryTest();
     if (want('minions')) results.minions = await minionHpTest();
     if (want('flip')) results.flip = await flipTest();
     if (want('whirl')) results.whirl = await whirlTest();
