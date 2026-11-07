@@ -129,11 +129,18 @@ const fail = m => fails.push(m);
     }
     const p2joy = await Promise.all([A, B].map(p => p.evaluate(() =>
         Object.values(vm.runtime.getTargetForStage().variables).find(x => x.name === 'P2 Joy X').value)));
-    const dir2 = await Promise.all([A, B].map(p => p.evaluate(() => {
+    // read fighter 2's heading on both phones; a read can land between "buttons applied" and "frame run",
+    // so try a few times a moment apart before calling it wrong
+    const readDir = () => Promise.all([A, B].map(p => p.evaluate(() => {
         const b = vm.runtime.targets.find(t => !t.isOriginal && t.sprite.name === 'Brawler' &&
             Number(t.lookupVariableByNameAndType('My Id').value) === 2);
         return b && [Number(b.lookupVariableByNameAndType('Dir').value), Number(b.lookupVariableByNameAndType('Stun').value)];
     })));
+    let dir2 = await readDir();
+    for (let i = 0; i < 5 && dir2.some(d => !d || (d[1] <= 0 && d[0] !== 1)); i++) {
+        await A.waitForTimeout(120);
+        dir2 = await readDir();
+    }
     const midX = (await read(B)).x[1];
     await B.mouse.up();
     // the friend's stick reaches fighter 2 on BOTH phones (its position also depends on who hits it)
