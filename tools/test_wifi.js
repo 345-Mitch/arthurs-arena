@@ -192,6 +192,13 @@ const fail = m => fails.push(m);
     const after = await A.evaluate(() => ({active: window.NET.active,
         state: Object.values(vm.runtime.getTargetForStage().variables).find(x => x.name === 'State').value}));
     if (after.active) fail('wifi: lockstep still running after the friend left');
+    // the critical moments are logged (window.ARENA_LOG), so a problem on a real phone can be traced
+    const logs = await Promise.all([A, B].map(p => p.evaluate(() => window.ARENA_LOG || [])));
+    for (const [who, lines, want] of [['host', logs[0], ['hosting', '-> connected', 'starting match', 'start as host', 'friend left']],
+                                      ['guest', logs[1], ['looking for games', '-> connected', 'host started the match', 'start as guest', 'leaving']]]) {
+        for (const w of want) if (!lines.some(l => l.includes(w))) fail(`wifi: the ${who} log has no "${w}"`);
+    }
+    if (process.env.SHOW_LOG) console.log(logs[0].join('\n'));
     if (errors.length) fail('wifi: page errors ' + errors.slice(0, 3).join(' | '));
     console.log('wifi:', JSON.stringify({fighters: a0.kinds, p2Joy: p2joy, p2Dir: dir2, frames, hostAfter: after}));
     await browser.close();

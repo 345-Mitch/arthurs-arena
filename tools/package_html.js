@@ -19,6 +19,21 @@ const OUT = process.argv[2] || path.join(ROOT, 'dist', 'arthurs-arena.html');
 
 // Scratch forgets variables when a packaged game closes. This keeps Best and
 // Crown in the device's storage, so the high score and the crown unlock stay.
+const LOG_JS = `
+(function () {
+    // One tiny logger for the page modules: console output tagged by area, plus the last 200 lines kept in
+    // window.ARENA_LOG so they can be read on a phone (chrome://inspect) after something goes wrong.
+    var lines = window.ARENA_LOG = [];
+    window.arenaLog = function (area, msg, data) {
+        var line = '[' + new Date().toISOString().slice(11, 23) + '] [' + area + '] ' + msg +
+                   (data === undefined ? '' : ' ' + (typeof data === 'string' ? data : JSON.stringify(data)));
+        lines.push(line);
+        if (lines.length > 200) lines.shift();
+        try { console.log(line); } catch (e) {}
+    };
+})();
+`;
+
 const SAVE_JS = `
 (function () {
     var KEY = 'arthurs-arena-legends-save';
@@ -151,6 +166,31 @@ const EXT_JS = `
 })();
 `;
 
+const LAYOUT_JS = `
+(function () {
+    // Screen layout only. The game fills the screen: as big as it fits, then zoomed in a little more so it reaches the edges
+    // (trimming at most a thin strip off the far edges, where nothing important happens). The top bar,
+    // joystick and buttons sit on top of it. Anything still left over shows the continued scenery.
+    var MAX_ZOOM_NARROW = 1.2;   // screens squarer than the game (tablets, foldables): may trim the far left/right
+    var MAX_ZOOM_WIDE = 1.12;    // screens wider than the game (phones): may trim a little top and bottom
+    function fillScreen () {
+        var sc = window.scaffolding;
+        if (!sc || typeof sc.relayout !== 'function') return;
+        var W = innerWidth, H = innerHeight;
+        var fit = Math.min(W / 480, H / 360), cover = Math.max(W / 480, H / 360);
+        var scale = Math.min(cover, fit * (W / H < 4 / 3 ? MAX_ZOOM_NARROW : MAX_ZOOM_WIDE));
+        var x = Math.round((W - 480 * scale) / 2), y = Math.round((H - 360 * scale) / 2);
+        if (sc._offsetFromLeft !== x || sc._offsetFromRight !== x || sc._offsetFromTop !== y || sc._offsetFromBottom !== y) {
+            sc._offsetFromLeft = x; sc._offsetFromRight = x;
+            sc._offsetFromTop = y; sc._offsetFromBottom = y;
+            sc.relayout();
+            arenaLog('layout', 'game drawn at', { scale: Math.round(scale * 100) / 100, x: x, y: y, screen: W + 'x' + H });
+        }
+    }
+    setInterval(fillScreen, 250);   // cheap: it only re-lays out when the screen size changes
+})();
+`;
+
 const HUD_JS = `
 (function () {
     // the health bars, names and score live in a bar across the very top of the screen, edge to edge,
@@ -264,28 +304,9 @@ const HUD_JS = `
         document.getElementById('fs').innerHTML = html[0];
         document.getElementById('fs2').innerHTML = html[1];
     }
-    // the game fills the screen: as big as it fits, then zoomed in a little more so it reaches the edges
-    // (trimming at most a thin strip off the far edges, where nothing important happens). The top bar,
-    // joystick and buttons sit on top of it. Anything still left over shows the continued scenery.
-    var MAX_ZOOM_NARROW = 1.2;   // screens squarer than the game (tablets, foldables): may trim the far left/right
-    var MAX_ZOOM_WIDE = 1.12;    // screens wider than the game (phones): may trim a little top and bottom
-    function fillScreen () {
-        var sc = window.scaffolding;
-        if (!sc || typeof sc.relayout !== 'function') return;
-        var W = innerWidth, H = innerHeight;
-        var fit = Math.min(W / 480, H / 360), cover = Math.max(W / 480, H / 360);
-        var scale = Math.min(cover, fit * (W / H < 4 / 3 ? MAX_ZOOM_NARROW : MAX_ZOOM_WIDE));
-        var x = Math.round((W - 480 * scale) / 2), y = Math.round((H - 360 * scale) / 2);
-        if (sc._offsetFromLeft !== x || sc._offsetFromRight !== x || sc._offsetFromTop !== y || sc._offsetFromBottom !== y) {
-            sc._offsetFromLeft = x; sc._offsetFromRight = x;
-            sc._offsetFromTop = y; sc._offsetFromBottom = y;
-            sc.relayout();
-        }
-    }
     (function tick () {
         try {
             if (get('State') !== null) {
-                fillScreen();
                 if (Number(get('Page HUD')) !== 1) v('Page HUD').value = 1;
                 var state = get('State'), on = state === 'fight' || (state === 'brawl' && Number(get('Brawl Live')) === 1);
                 hud.classList.toggle('on', on);
@@ -366,7 +387,12 @@ const NET_JS = `
     document.body.appendChild(panel);
 
     var S = { view: 'off', role: '', peer: '', myPick: '', peerPick: '', myName: '', ready: { me: false, peer: false }, note: '' };
-    function show (view, note) { S.view = view; S.note = note || ''; draw(); }
+    function show (view, note) {
+        if (view !== S.view) arenaLog('net', 'screen ' + S.view + ' -> ' + view, note || undefined);
+        S.view = view;
+        S.note = note || '';
+        draw();
+    }
     function button (label, cls, fn) {
         var b = document.createElement('button');
         b.textContent = label;
@@ -374,85 +400,94 @@ const NET_JS = `
         b.addEventListener('click', function (e) { e.preventDefault(); fn(); });
         return b;
     }
-    function draw () {
-        panel.style.display = S.view === 'off' ? 'none' : 'flex';
-        if (S.view === 'off') return;
-        var card = document.createElement('div'), btns = document.createElement('div');
-        card.className = 'card';
-        btns.className = 'btns';
-        var h = document.createElement('h2'), p = document.createElement('p');
-        card.appendChild(h);
-        card.appendChild(p);
-        var st = {};
-        try { st = JSON.parse(api.state()); } catch (e) {}
-        if (S.view === 'menu') {
-            h.textContent = '📶 PLAY A FRIEND';
-            p.textContent = 'Both phones need Arthur\\'s Arena and the same Wi-Fi (or one phone\\'s hotspot). One taps HOST, the other taps JOIN.';
-            btns.appendChild(button('HOST A GAME', 'blue', host));
-            btns.appendChild(button('JOIN A GAME', '', find));
-            btns.appendChild(button('CLOSE', 'grey', leave));
-        } else if (S.view === 'hosting') {
-            h.textContent = 'WAITING FOR A FRIEND…';
-            p.innerHTML = 'Tell your friend to tap <b>JOIN A GAME</b>.<br>Your game is <b>' + S.myName + '</b>' + (st.ip ? ' (' + st.ip + ')' : '');
-            btns.appendChild(button('CANCEL', 'grey', leave));
-        } else if (S.view === 'joining') {
-            h.textContent = 'JOIN A GAME';
-            p.textContent = (st.found || []).length ? 'Tap your friend\\'s game:' : 'Looking for games on this Wi-Fi…';
-            (st.found || []).forEach(function (g) {
-                btns.appendChild(button(g.name, 'blue', function () { api.join(g.host, g.port); show('connecting'); }));
+    // ---- the panel is a small state machine: S.view is the state, VIEWS[state] draws it.
+    // Each view returns { title, text or html, buttons, extra rows below the buttons, footer buttons }.
+    function el (tag, text) { var e = document.createElement(tag); if (text) e.textContent = text; return e; }
+    var VIEWS = {
+        menu: function () {
+            return { title: '📶 PLAY A FRIEND',
+                     text: 'Both phones need Arthur\\'s Arena and the same Wi-Fi (or one phone\\'s hotspot). One taps HOST, the other taps JOIN.',
+                     buttons: [button('HOST A GAME', 'blue', host), button('JOIN A GAME', '', find), button('CLOSE', 'grey', leave)] };
+        },
+        hosting: function (st) {
+            return { title: 'WAITING FOR A FRIEND…',
+                     html: 'Tell your friend to tap <b>JOIN A GAME</b>.<br>Your game is <b>' + S.myName + '</b>' + (st.ip ? ' (' + st.ip + ')' : ''),
+                     buttons: [button('CANCEL', 'grey', leave)] };
+        },
+        joining: function (st) {
+            var games = (st.found || []).map(function (g) {
+                return button(g.name, 'blue', function () { arenaLog('net', 'joining', g); api.join(g.host, g.port); show('connecting'); });
             });
-            var row = document.createElement('p');
-            row.innerHTML = 'Not there? Type the number on your friend\\'s screen: ';
-            var input = document.createElement('input');
+            var row = el('p', 'Not there? Type the number on your friend\\'s screen: ');
+            var input = el('input');
             input.placeholder = '192.168.1.5';
             input.inputMode = 'decimal';
             row.appendChild(input);
-            row.appendChild(button('JOIN', '', function () { if (input.value.trim()) { api.join(input.value.trim(), 0); show('connecting'); } }));
-            card.appendChild(btns);
-            card.appendChild(row);
-            btns = document.createElement('div');
-            btns.className = 'btns';
-            btns.appendChild(button('CANCEL', 'grey', leave));
-        } else if (S.view === 'connecting') {
-            h.textContent = 'JOINING…';
-            p.textContent = st.status === 'error' ? 'Could not join: ' + st.error : 'Connecting to your friend…';
-            btns.appendChild(button('CANCEL', 'grey', leave));
-        } else if (S.view === 'pick') {
-            h.textContent = 'CONNECTED! 🎉';
-            p.textContent = 'Pick your fighter' + (S.role === 'host' ? ' (you are fighter 1, your friend is fighter 2):' : ' (your friend is fighter 1, you are fighter 2):');
-            KINDS.forEach(function (k) {
-                btns.appendChild(button(title(k), S.myPick === k ? 'blue picked' : 'blue', function () {
+            row.appendChild(button('JOIN', '', function () {
+                var ip = input.value.trim();
+                if (!ip) return;
+                arenaLog('net', 'joining typed address', ip);
+                api.join(ip, 0);
+                show('connecting');
+            }));
+            return { title: 'JOIN A GAME', text: games.length ? 'Tap your friend\\'s game:' : 'Looking for games on this Wi-Fi…',
+                     buttons: games, extra: [row], footer: [button('CANCEL', 'grey', leave)] };
+        },
+        connecting: function (st) {
+            return { title: 'JOINING…', text: st.status === 'error' ? 'Could not join: ' + st.error : 'Connecting to your friend…',
+                     buttons: [button('CANCEL', 'grey', leave)] };
+        },
+        pick: function () {
+            var buttons = KINDS.map(function (k) {
+                return button(title(k), S.myPick === k ? 'blue picked' : 'blue', function () {
                     S.myPick = k; send({ t: 'pick', kind: k }); draw(); maybeStart();
-                }));
+                });
             });
             if (S.role === 'host') {
                 var names = [];
                 try { names = JSON.parse(get('Stage Names')); } catch (e) {}
                 var pick = Number(get('Stage Pick')) || 0;
-                btns.appendChild(button('STAGE: ' + (pick ? names[pick - 1] : 'RANDOM'), 'grey', function () {
+                buttons.push(button('STAGE: ' + (pick ? names[pick - 1] : 'RANDOM'), 'grey', function () {
                     set('Stage Pick', (pick + 1) % (names.length + 1)); draw();
                 }));
             }
-            var w = document.createElement('p');
-            w.textContent = S.peerPick ? 'Your friend picked ' + title(S.peerPick) + '.' : 'Waiting for your friend to pick…';
-            card.appendChild(btns);
-            card.appendChild(w);
-            btns = document.createElement('div');
-            btns.className = 'btns';
-            btns.appendChild(button('LEAVE', 'grey', leave));
-        } else if (S.view === 'after') {
-            h.textContent = S.note || 'GOOD GAME!';
-            p.textContent = 'Play again with your friend?';
-            btns.appendChild(button(S.ready.me ? 'WAITING…' : 'REMATCH', '', function () {
-                S.ready.me = true; send({ t: 'again' }); draw(); maybeStart();
-            }));
-            btns.appendChild(button('LEAVE', 'grey', leave));
-        } else if (S.view === 'message') {
-            h.textContent = 'WI-FI PLAY';
-            p.textContent = S.note;
-            btns.appendChild(button('OK', '', function () { show('off'); }));
+            return { title: 'CONNECTED! 🎉',
+                     text: 'Pick your fighter' + (S.role === 'host' ? ' (you are fighter 1, your friend is fighter 2):'
+                                                                    : ' (your friend is fighter 1, you are fighter 2):'),
+                     buttons: buttons,
+                     extra: [el('p', S.peerPick ? 'Your friend picked ' + title(S.peerPick) + '.' : 'Waiting for your friend to pick…')],
+                     footer: [button('LEAVE', 'grey', leave)] };
+        },
+        after: function () {
+            return { title: S.note || 'GOOD GAME!', text: 'Play again with your friend?',
+                     buttons: [button(S.ready.me ? 'WAITING…' : 'REMATCH', '', function () {
+                         S.ready.me = true; send({ t: 'again' }); draw(); maybeStart();
+                     }), button('LEAVE', 'grey', leave)] };
+        },
+        message: function () {
+            return { title: 'WI-FI PLAY', text: S.note, buttons: [button('OK', '', function () { show('off'); })] };
         }
-        card.appendChild(btns);
+    };
+    function row (buttons) {
+        var r = el('div');
+        r.className = 'btns';
+        (buttons || []).forEach(function (b) { r.appendChild(b); });
+        return r;
+    }
+    function draw () {
+        var view = VIEWS[S.view];
+        panel.style.display = view ? 'flex' : 'none';
+        if (!view) return;   // 'off'
+        var st = {};
+        try { st = JSON.parse(api.state()); } catch (e) {}
+        var v = view(st), card = el('div'), p = el('p');
+        card.className = 'card';
+        card.appendChild(el('h2', v.title));
+        if (v.html) p.innerHTML = v.html; else p.textContent = v.text || '';
+        card.appendChild(p);
+        card.appendChild(row(v.buttons));
+        (v.extra || []).forEach(function (x) { card.appendChild(x); });
+        if (v.footer) card.appendChild(row(v.footer));
         panel.innerHTML = '';
         panel.appendChild(card);
     }
@@ -461,12 +496,14 @@ const NET_JS = `
     function host () {
         S.role = 'host';
         S.myName = 'ARENA ' + (10 + Math.floor(Math.random() * 90));
+        arenaLog('net', 'hosting', S.myName);
         api.host(S.myName);
         show('hosting');
     }
-    function find () { S.role = 'guest'; api.find(); show('joining'); }
+    function find () { S.role = 'guest'; arenaLog('net', 'looking for games'); api.find(); show('joining'); }
     function send (msg) { api.send(JSON.stringify(msg)); }
     function leave () {
+        arenaLog('net', 'leaving', { view: S.view, inMatch: !!L });
         if (lastStatus === 'connected') send({ t: 'bye' });   // tell my friend before hanging up
         if (L) stopLockstep(false);
         api.stop();
@@ -485,7 +522,9 @@ const NET_JS = `
         var seed = Math.floor(Math.random() * 4294967295);
         rt().stopAll();
         var cfg = { seed: seed, host: S.myPick, guest: S.peerPick, stage: Number(get('Stage Pick')) || 0 };
-        send({ t: 'start', cfg: cfg, snap: snapshot() });
+        var snap = snapshot();
+        arenaLog('net', 'starting match', { cfg: cfg, snapshotBytes: JSON.stringify(snap).length });
+        send({ t: 'start', cfg: cfg, snap: snap });
         startLockstep('host', cfg, null);
     }
     function snapshot () {
@@ -536,6 +575,7 @@ const NET_JS = `
         };
     }
     function startLockstep (role, cfg, snap) {
+        arenaLog('lockstep', 'start as ' + role, cfg);
         var r = rt();
         var mine = {};
         KEEP.forEach(function (k) { mine[k] = get(k); });
@@ -650,6 +690,7 @@ const NET_JS = `
         var h = L && L.hashes[f];
         if (!h || h.me === undefined || h.peer === undefined) return;
         if (h.me !== h.peer) {
+            arenaLog('lockstep', 'OUT OF STEP at frame ' + f, { mine: h.me, friend: h.peer, state: get('State') });
             send({ t: 'desync', f: f });
             stopLockstep(false);
             click('Quit Button');
@@ -672,9 +713,15 @@ const NET_JS = `
                 if (!frameReady()) {
                     L.busy = false;
                     if (!L.waitSince) L.waitSince = now;
+                    if (now - L.waitSince > 1000 && !L.stallLogged) {
+                        L.stallLogged = true;
+                        arenaLog('lockstep', 'waiting over 1 s for my friend (no buttons yet)', { frame: L.f });
+                    }
                     return;
                 }
+                if (L.stallLogged) arenaLog('lockstep', 'friend caught up', { frame: L.f, waitedMs: Math.round(now - L.waitSince) });
                 L.waitSince = 0;
+                L.stallLogged = false;
                 steps++;
                 L.acc -= FRAME;
                 doFrame(next);
@@ -686,11 +733,13 @@ const NET_JS = `
     }
     function matchOver () {
         var won = Number(get('Brawl Winner')) === Number(get('My Slot'));
+        arenaLog('lockstep', 'match over', { frame: L && L.f, winner: get('Brawl Winner'), mySlot: get('My Slot'), won: won });
         stopLockstep(true, won);
         show('after', won ? 'YOU WIN! 🏆' : 'GOOD GAME!');
     }
     function stopLockstep (finished, won) {
         if (!L) return;
+        arenaLog('lockstep', 'stop', { frame: L.f, finished: !!finished, won: !!won });
         var r = rt();
         var timers = L.timers, mine = saved.mine;
         Math.random = saved.random;
@@ -714,6 +763,7 @@ const NET_JS = `
     // ---- messages from the friend's phone
     function receive (m) {
         if (m.t === 'hello') {
+            arenaLog('net', 'friend says hello', { version: m.v, name: m.name });
             if (m.v !== get('Game Version')) {
                 leave();
                 show('message', 'Both phones need the same version of the game (yours is v' + get('Game Version') + ', your friend\\'s is v' + m.v + ').');
@@ -725,6 +775,7 @@ const NET_JS = `
             if (S.view === 'pick') draw();
             maybeStart();
         } else if (m.t === 'start' && S.role === 'guest') {
+            arenaLog('net', 'host started the match', m.cfg);
             S.myPick = m.cfg.guest;
             rt().stopAll();
             startLockstep('guest', m.cfg, m.snap);
@@ -740,10 +791,12 @@ const NET_JS = `
             if (S.view === 'after') draw();
             maybeStart();
         } else if (m.t === 'desync' && L) {
+            arenaLog('lockstep', 'friend reports OUT OF STEP', { frame: m.f });
             stopLockstep(false);
             click('Quit Button');
             show('message', 'The two phones got out of step, so the match stopped. Sorry! Tap PLAY A FRIEND to try again.');
         } else if (m.t === 'bye') {
+            arenaLog('net', 'friend left');
             var was = !!L;
             if (L) stopLockstep(false);
             api.stop();
@@ -765,6 +818,7 @@ const NET_JS = `
         var st = {};
         try { st = JSON.parse(api.state()); } catch (e) {}
         if (st.status !== lastStatus) {
+            arenaLog('net', 'connection ' + lastStatus + ' -> ' + st.status, st.error || undefined);
             if (st.status === 'connected') {
                 send({ t: 'hello', v: get('Game Version'), name: S.myName || 'friend' });
                 S.myPick = ''; S.peerPick = '';
@@ -835,7 +889,7 @@ const PAD_JS = `
     ring('bP', 0, 1); ring('bK', 1, 0); ring('bJ', 0, -1); ring('bD', -1, 0);
     ring('bS', -1.15, -1.55); ring('bF', -2.15, 0.85); ring('bW', -2.3, -0.6);
 
-    // (the game now fills the whole screen under the controls: see fillScreen in the top bar code)
+    // (the game fills the whole screen under the controls: see LAYOUT_JS)
 
     var vars = null;
     function v (name) {
@@ -976,7 +1030,7 @@ const PAD_JS = `
     o.app.windowTitle = "Arthur's Arena";
     o.app.packageName = 'arthurs-arena';
     o.cloudVariables.mode = 'local';
-    o.custom.js = SAVE_JS + EXT_JS + HUD_JS + NET_JS + PAD_JS;
+    o.custom.js = LOG_JS + SAVE_JS + LAYOUT_JS + EXT_JS + HUD_JS + NET_JS + PAD_JS;
     const result = await packager.package();
     fs.mkdirSync(path.dirname(OUT), {recursive: true});
     fs.writeFileSync(OUT, result.data);

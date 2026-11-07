@@ -60,7 +60,7 @@ To update later, install the new APK the same way. It installs over the old one 
 ## Good to know
 
 - Scratch on its own only follows one finger, so the joystick and buttons are part of the app's page, not Scratch sprites. They set the same variables the Scratch buttons do (`Want Punch` and so on, plus `Joy X` for walking). `Touch Pad` = 1 tells the game to hide its own buttons.
-- Version 3.8 (the game fills the whole screen) installs over earlier versions and keeps the Best score, difficulty, power level and sound setting.
+- Version 3.9 (logs for debugging Wi-Fi play) installs over earlier versions and keeps the Best score, difficulty, power level and sound setting.
 - The Android back button closes the game.
 - The app is signed with a debug key (`android/debug.keystore`, password `arthursarena`). That's fine for installing at home. The Play Store would need a private key.
 
@@ -80,5 +80,7 @@ How the app is made:
 - `tools/package_html.js` turns the `.sb3` into one offline web page with the TurboWarp packager. It also adds a few lines that save Best and Crown on the device.
 - `android/` holds the app: the manifest, the icon, and one screen (`MainActivity.smali`) that shows that page full screen.
 - `android/java/.../ArenaNet.java` is the Wi-Fi helper the page calls as `window.ArenaNet`: it hosts a game (a TCP server on port 47123, advertised on the local network with Android's network service discovery), finds games, joins one, and passes lines of text both ways. It is compiled with `javac` against small stand-ins for the few Android classes it uses (`android/stubs`), then `dx` turns it into `classes2.dex`. The app now asks for network permissions (Wi-Fi state, multicast for finding games, and internet for the local connection).
-- The lockstep engine is in `tools/package_html.js` (`NET_JS`). The host sends a seed and a copy of its game; both phones then drive the game themselves, frame by frame, with a frame clock instead of the real clock, seeded `pick random`, and one pass of the scripts per frame. Every second they compare a checksum of the fighters.
+- `tools/package_html.js` adds the page's own code as small modules, one job each: `LOG_JS` (a logger), `SAVE_JS`, `LAYOUT_JS` (the game fills the screen), `EXT_JS` (scenery past the edges), `HUD_JS` (top bar), `NET_JS` (Wi-Fi play) and `PAD_JS` (touch controls).
+- Debugging on a phone: the page logs connections, match start/stop, out-of-step checks and layout changes with `arenaLog`, keeping the last 200 lines in `window.ARENA_LOG` (open `chrome://inspect` on a computer with the phone plugged in). The Wi-Fi helper logs to Android's log with the tag `ArenaNet` (`adb logcat -s ArenaNet`).
+- The lockstep engine is in `tools/package_html.js` (`NET_JS`); its panel is a small state machine (`VIEWS`, one drawing function per screen). The host sends a seed and a copy of its game; both phones then drive the game themselves, frame by frame, with a frame clock instead of the real clock, seeded `pick random`, and one pass of the scripts per frame. Every second they compare a checksum of the fighters.
 - `tools/test_wifi.js` plays a Wi-Fi BRAWL between two copies of the page in a browser, with a stand-in for `ArenaNet`, and checks they stay in step (`WIFI_FULL=1` plays a whole match and a rematch).

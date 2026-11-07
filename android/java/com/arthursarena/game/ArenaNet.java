@@ -4,6 +4,7 @@ import android.content.Context;
 import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.net.wifi.WifiManager;
+import android.util.Log;
 import android.webkit.JavascriptInterface;
 
 import java.io.BufferedReader;
@@ -27,10 +28,12 @@ import java.util.concurrent.LinkedBlockingQueue;
  * Wi-Fi play for Arthur's Arena. The game page (JavaScript) calls these methods as window.ArenaNet.
  * One phone hosts (a TCP server, advertised on the local network with NSD / mDNS), the other finds it
  * and joins. After that both sides just send and receive lines of text; the game page does the rest.
+ * Critical moments are logged under the tag ArenaNet (adb logcat -s ArenaNet).
  */
 public class ArenaNet {
     static final String TYPE = "_arthursarena._tcp.";
     static final int PORT = 47123;
+    static final String TAG = "ArenaNet";
 
     private final Context context;
     private final NsdManager nsd;
@@ -145,11 +148,17 @@ public class ArenaNet {
                         s.bind(new InetSocketAddress(0));
                     }
                     server = s;
+                    Log.i(TAG, "hosting '" + name + "' on port " + s.getLocalPort() + " at " + myIp());
                     advertise(name, s.getLocalPort());
                     Socket c = s.accept();
+                    Log.i(TAG, "friend joined from " + c.getInetAddress());
                     connected(c);
                 } catch (Throwable t) {
-                    if (!"idle".equals(status)) { status = "error"; error = String.valueOf(t.getMessage()); }
+                    if (!"idle".equals(status)) {
+                        status = "error";
+                        error = String.valueOf(t.getMessage());
+                        Log.w(TAG, "hosting failed: " + error);
+                    }
                 }
             }
         }).start();
@@ -162,9 +171,9 @@ public class ArenaNet {
             info.setServiceType(TYPE);
             info.setPort(port);
             registration = new NsdManager.RegistrationListener() {
-                public void onRegistrationFailed(NsdServiceInfo i, int code) { }
+                public void onRegistrationFailed(NsdServiceInfo i, int code) { Log.w(TAG, "could not advertise the game: " + code); }
                 public void onUnregistrationFailed(NsdServiceInfo i, int code) { }
-                public void onServiceRegistered(NsdServiceInfo i) { }
+                public void onServiceRegistered(NsdServiceInfo i) { Log.i(TAG, "game advertised as " + i.getServiceName()); }
                 public void onServiceUnregistered(NsdServiceInfo i) { }
             };
             nsd.registerService(info, NsdManager.PROTOCOL_DNS_SD, registration);
@@ -179,11 +188,12 @@ public class ArenaNet {
         multicast(true);
         try {
             discovery = new NsdManager.DiscoveryListener() {
-                public void onStartDiscoveryFailed(String t, int code) { error = "search failed " + code; }
+                public void onStartDiscoveryFailed(String t, int code) { error = "search failed " + code; Log.w(TAG, error); }
                 public void onStopDiscoveryFailed(String t, int code) { }
                 public void onDiscoveryStarted(String t) { }
                 public void onDiscoveryStopped(String t) { }
                 public void onServiceFound(NsdServiceInfo info) {
+                    Log.i(TAG, "found " + info.getServiceName());
                     synchronized (toResolve) { toResolve.add(info); }
                     resolveNext();
                 }
@@ -208,11 +218,12 @@ public class ArenaNet {
         }
         try {
             nsd.resolveService(next, new NsdManager.ResolveListener() {
-                public void onResolveFailed(NsdServiceInfo i, int code) { done(); }
+                public void onResolveFailed(NsdServiceInfo i, int code) { Log.w(TAG, "could not resolve " + i.getServiceName() + ": " + code); done(); }
                 public void onServiceResolved(NsdServiceInfo i) {
                     InetAddress h = i.getHost();
                     if (h != null) {
                         String[] row = {i.getServiceName(), h.getHostAddress(), String.valueOf(i.getPort())};
+                        Log.i(TAG, "resolved " + row[0] + " at " + row[1] + ":" + row[2]);
                         synchronized (found) {
                             for (int k = found.size() - 1; k >= 0; k--) {
                                 if (found.get(k)[0].equals(row[0])) found.remove(k);
@@ -245,6 +256,7 @@ public class ArenaNet {
         stopFinding();
         status = "joining";
         error = "";
+        Log.i(TAG, "joining " + host + ":" + (port > 0 ? port : PORT));
         new Thread(new Runnable() {
             public void run() {
                 try {
@@ -254,6 +266,7 @@ public class ArenaNet {
                 } catch (Throwable t) {
                     status = "error";
                     error = "could not join " + host;
+                    Log.w(TAG, error + ": " + t.getMessage());
                 }
             }
         }).start();
@@ -262,6 +275,7 @@ public class ArenaNet {
     private void connected(final Socket c) throws Exception {
         c.setTcpNoDelay(true);
         socket = c;
+        Log.i(TAG, "connected to " + c.getInetAddress());
         outbox = new LinkedBlockingQueue<String>();
         status = "connected";
         final LinkedBlockingQueue<String> out = outbox;
@@ -293,6 +307,7 @@ public class ArenaNet {
         if (socket == c) {
             socket = null;
             status = "lost";
+            Log.w(TAG, "connection lost");
             try { c.close(); } catch (Throwable t) { }
         }
     }
@@ -300,6 +315,7 @@ public class ArenaNet {
     /** Hang up and stop hosting or searching. */
     @JavascriptInterface
     public void stop() {
+        if (!"idle".equals(status)) Log.i(TAG, "stop (was " + status + ")");
         status = "idle";
         stopFinding();
         if (registration != null) {
