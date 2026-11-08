@@ -702,6 +702,56 @@ async function comboTest () {
     return out;
 }
 
+async function quitTest () {
+    // quitting in the middle of a pause (after a win, a knockout or during a story scene) and starting BRAWL:
+    // the old mode must not wake up later and start a fight on top of BRAWL
+    const out = {};
+    const cases = {
+        'arcade win': async T => {
+            T.click('Arcade Button'); await T.step(3); T.click('Pick Arthur');
+            for (let i = 0; i < 400 && T.get('Fight On') !== 1; i++) await T.step();
+            T.set('Enemy HP', 1); T.set('Hit Power', 5); T.set('Enemy Stun Until', 0); T.send('hero hits');
+            await T.step(10);
+        },
+        'knockout': async T => {
+            T.click('Arcade Button'); await T.step(3); T.click('Pick Arthur');
+            for (let i = 0; i < 400 && T.get('Fight On') !== 1; i++) await T.step();
+            T.set('Hero HP', 1); T.set('Hero Safe Until', 0); T.set('Hurt Power', 9); T.send('enemy hits hero');
+            await T.step(10);
+        },
+        'story scene': async T => {
+            T.click('Story Button'); await T.step(3); T.click('Pick Arthur');
+            await T.step(30);
+        },
+        'adventure waves': async T => {
+            T.click('Adventure Button'); await T.step(3); T.click('Pick Arthur');
+            for (let i = 0; i < 400 && T.clones('Ninja Minion').length === 0; i++) await T.step();
+        },
+    };
+    for (const [name, setup] of Object.entries(cases)) {
+        const {vm} = await boot();
+        const T = tools(vm);
+        await T.step(10);
+        await setup(T);
+        // quit, straight into BRAWL
+        T.click('Quit Button'); await T.step(3);
+        T.click('Brawl Button'); await T.step(3);
+        T.set('Stage Pick', 1);
+        T.click('Pick Arthur');
+        let bad = '';
+        for (let i = 0; i < 30 * 8; i++) {
+            await T.step();
+            if (T.get('State') !== 'brawl') bad = bad || `state ${T.get('State')}`;
+            if (T.get('Fight On') === 1) bad = bad || 'a fight started';
+            if (T.sprite('Hero').visible) bad = bad || 'the big Hero showed up';
+            if (T.clones('Ninja Minion').length) bad = bad || 'small enemies came in';
+        }
+        out[name] = bad || 'ok';
+        if (bad) fail(`quit: after quitting a ${name} and starting BRAWL, ${bad}`);
+    }
+    return out;
+}
+
 async function recoveryTest () {
     // BRAWL: knocked off the side with both jumps used, a third jump (RECOVERY ROCKET) brings you back onto the stage
     const {vm} = await boot();
@@ -1567,6 +1617,7 @@ async function brawlTest () {
     if (want('intro')) results.intro = await introTest();
     if (want('powerup')) results.powerup = await powerUpTest();
     if (want('recovery')) results.recovery = await recoveryTest();
+    if (want('quit')) results.quit = await quitTest();
     if (want('combo')) results.combo = await comboTest();
     if (want('minions')) results.minions = await minionHpTest();
     if (want('flip')) results.flip = await flipTest();

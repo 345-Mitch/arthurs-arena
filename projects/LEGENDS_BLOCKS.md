@@ -7,7 +7,7 @@ Made by `tools/build_legends_sb3.py` from the same blocks that are inside
 
 Costumes: Title, Select, Yard, Woods, Pass, Factory, Fortress, Bamboo, Dojo, Volcano, Castle, Arcade, Ending, Paper, brawl sky, brawl ramps, brawl pagoda, brawl pirate, brawl castle, brawl space, brawl snow, brawl candy, brawl factory, brawl towers, brawl jungle, brawl dino, brawl highway, brawl pond
 Sounds: screech, honk, hit, big hit, hurt, ki roar, ki flare, transform, scribble, page, jump, whirl, swing, pickup, super, perfect, ko, charge, charged, fireball, big fireball, boom, spikes, clang, thunder, power up, alarm, poof, shuriken, spike fall, win
-Sprite-only variables: New Level, Frames, Second, Waves, Near, I, K, Pick, MI, Min X, Max X, Min Y, Max Y, Alive, Zoom To
+Sprite-only variables: SF Run, New Level, Frames, Second, AS Run, Waves, Near, I, FO Run, ED Run, HD Run, K, Pick, MI, Min X, Max X, Min Y, Max Y, Alive, Zoom To
 
 ```
 when green flag clicked
@@ -25,6 +25,7 @@ broadcast [intro]
 
 ```
 when I receive [show title]
+change [Session] by [1]
 set [State] to [title]
 set [Fight On] to [0]
 set [Wave Phase] to [0]
@@ -305,9 +306,13 @@ set [Enemy Phase] to [1]
 
 ```
 when I receive [start fight]
+set [SF Run] to (Session)
 set [Fight On] to [0]
 set [State] to [fight]
 broadcast [load enemy] and wait
+if <not <(SF Run) = (Session)>> then
+    stop [this script]
+end
 if <<(Mode) = [arcade]> and <(Page HUD) = [0]>> then
     show variable [Wave]
 else
@@ -338,19 +343,34 @@ set [Shot Live] to [0]
 set [Hero Safe Until] to [0]
 set [Enemy Stun Until] to [0]
 broadcast [fighters ready] and wait
+if <not <(SF Run) = (Session)>> then
+    stop [this script]
+end
 broadcast [power up show] and wait
+if <not <(SF Run) = (Session)>> then
+    stop [this script]
+end
 if <<<(Enemy Type) = [5]> or <(Enemy Type) = [7]>> or <(Enemy Type) = [9]>> then
     start sound (alarm)
     set [Banner] to [boss]
     broadcast [banner]
     wait [1.5] seconds
+    if <not <(SF Run) = (Session)>> then
+        stop [this script]
+    end
 end
 set [Banner] to [ready]
 broadcast [banner]
 wait [1.1] seconds
+if <not <(SF Run) = (Session)>> then
+    stop [this script]
+end
 set [Banner] to [fight]
 broadcast [banner]
 wait [0.3] seconds
+if <not <(SF Run) = (Session)>> then
+    stop [this script]
+end
 set [Want Punch] to [0]
 set [Want Kick] to [0]
 set [Want Jump] to [0]
@@ -600,6 +620,7 @@ end
 
 ```
 when I receive [adventure stage]
+set [AS Run] to (Session)
 set [Wave Phase] to [1]
 set [Fight On] to [0]
 if <(Adv Stage) = [1]> then
@@ -624,6 +645,9 @@ if <(Adv Stage) = [5]> then
 end
 broadcast [start fight]
 wait [0.6] seconds
+if <not <(AS Run) = (Session)>> then
+    stop [this script]
+end
 broadcast [popup]
 ```
 
@@ -644,6 +668,7 @@ end
 
 ```
 when I receive [fight on]
+set [FO Run] to (Session)
 if <<(Mode) = [adventure]> and <(Wave Phase) = [1]>> then
     if <(Adv Stage) = [1]> then
         set [Waves] to [2]
@@ -708,6 +733,9 @@ if <<(Mode) = [adventure]> and <(Wave Phase) = [1]>> then
                 set [Summon Count] to [1]
                 broadcast [ninja summon]
                 wait [0.45] seconds
+                if <not <(FO Run) = (Session)>> then
+                    stop [this script]
+                end
             end
             set [Enemy HP] to ((Wave Total) - (Beaten))
             (aim at nearest)
@@ -716,15 +744,27 @@ if <<(Mode) = [adventure]> and <(Wave Phase) = [1]>> then
             stop [this script]
         end
         wait [0.8] seconds
+        if <not <(FO Run) = (Session)>> then
+            stop [this script]
+        end
     end
     broadcast [load enemy] and wait
+    if <not <(FO Run) = (Session)>> then
+        stop [this script]
+    end
     set [Wave Phase] to [0]
     set [Enemy X] to [170]
     start sound (alarm)
     set [Banner] to [boss]
     broadcast [banner]
     broadcast [boss enter] and wait
+    if <not <(FO Run) = (Session)>> then
+        stop [this script]
+    end
     wait [0.6] seconds
+    if <not <(FO Run) = (Session)>> then
+        stop [this script]
+    end
     broadcast [fight on]
 end
 ```
@@ -847,10 +887,14 @@ clear graphic effects
 
 ```
 when I receive [enemy down]
+set [ED Run] to (Session)
 start sound (ko)
 set [Banner] to [ko]
 broadcast [banner]
 wait [1.4] seconds
+if <not <(ED Run) = (Session)>> then
+    stop [this script]
+end
 if <(Mode) = [story]> then
     if <(Chapter) = [9]> then
         change [Score] by ([1000] + ((Hero HP) * [5]))
@@ -871,6 +915,9 @@ if <(Mode) = [story]> then
         end
         broadcast [gain xp]
         wait [2] seconds
+        if <not <(ED Run) = (Session)>> then
+            stop [this script]
+        end
         change [Chapter] by [1]
         broadcast [story scene]
     end
@@ -890,6 +937,9 @@ else
             set [Best] to (Score)
         end
         wait [2] seconds
+        if <not <(ED Run) = (Session)>> then
+            stop [this script]
+        end
         change [Adv Stage] by [1]
         if <(Adv Stage) > [5]> then
             set [Adv Stage] to [1]
@@ -897,6 +947,9 @@ else
             set [Pop Text] to (join [LAP ] (join (Lap) [! Enemies are tougher!]))
             broadcast [popup]
             wait [1] seconds
+            if <not <(ED Run) = (Session)>> then
+                stop [this script]
+            end
         end
         broadcast [adventure stage]
     else
@@ -919,6 +972,9 @@ else
             set [Best] to (Score)
         end
         wait [1.8] seconds
+        if <not <(ED Run) = (Session)>> then
+            stop [this script]
+        end
         change [Wave] by [1]
         broadcast [start fight]
     end
@@ -929,15 +985,22 @@ end
 
 ```
 when I receive [hero down]
+set [HD Run] to (Session)
 start sound (ko)
 set [State] to [over]
 if <(Score) > (Best)> then
     set [Best] to (Score)
 end
 wait [0.6] seconds
+if <not <(HD Run) = (Session)>> then
+    stop [this script]
+end
 set [Banner] to [ko]
 broadcast [banner]
 wait [1.4] seconds
+if <not <(HD Run) = (Session)>> then
+    stop [this script]
+end
 broadcast [game over]
 ```
 
@@ -6773,7 +6836,7 @@ hide
 ## Story Card
 
 Costumes: prologue, chapter 1, chapter 2, chapter 3, chapter 4, chapter 5, chapter 6, chapter 7, chapter 8, chapter 9, game over, arcade over, brawl win, brawl lose, the end, angry, kage angry, overdrive
-Sprite-only variables: Until
+Sprite-only variables: Until, SS Run
 
 ```
 when green flag clicked
@@ -6782,10 +6845,14 @@ hide
 
 ```
 when I receive [story scene]
+set [SS Run] to (Session)
 set [State] to [story]
 set [Skip] to [0]
 hide
 broadcast [load enemy] and wait
+if <not <(SS Run) = (Session)>> then
+    stop [this script]
+end
 broadcast [skip on]
 if <(Chapter) = [1]> then
     switch costume to (prologue)
@@ -6795,6 +6862,9 @@ if <(Chapter) = [1]> then
     go to [front] layer
     set [Until] to ((timer) + [3.2])
     wait until <<(timer) > (Until)> or <(Skip) = [1]>>
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     switch costume to (chapter 1)
     set size to [100] %
     go to x: [0] y: [30]
@@ -6803,16 +6873,25 @@ if <(Chapter) = [1]> then
     set [Until] to ((timer) + [2.6])
     wait until <<(timer) > (Until)> or <(Skip) = [1]>>
     hide
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     broadcast [scene setup] and wait
     if <(Skip) = [0]> then
         set [Line] to [Nobody gets past the gate!]
         set [Line Secs] to [2.2]
         broadcast [enemy line] and wait
     end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     if <(Skip) = [0]> then
         set [Line] to [Then let's fight!]
         set [Line Secs] to [2.2]
         broadcast [hero line] and wait
+    end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
     end
 end
 if <(Chapter) = [2]> then
@@ -6824,16 +6903,25 @@ if <(Chapter) = [2]> then
     set [Until] to ((timer) + [2.6])
     wait until <<(timer) > (Until)> or <(Skip) = [1]>>
     hide
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     broadcast [scene setup] and wait
     if <(Skip) = [0]> then
         set [Line] to [My vines see everything.]
         set [Line Secs] to [2.2]
         broadcast [enemy line] and wait
     end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     if <(Skip) = [0]> then
         set [Line] to [Then watch me jump!]
         set [Line Secs] to [2.2]
         broadcast [hero line] and wait
+    end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
     end
 end
 if <(Chapter) = [3]> then
@@ -6845,16 +6933,25 @@ if <(Chapter) = [3]> then
     set [Until] to ((timer) + [2.6])
     wait until <<(timer) > (Until)> or <(Skip) = [1]>>
     hide
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     broadcast [scene setup] and wait
     if <(Skip) = [0]> then
         set [Line] to [BRUTE... SMASH!]
         set [Line Secs] to [2.2]
         broadcast [enemy line] and wait
     end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     if <(Skip) = [0]> then
         set [Line] to [Not if I move first!]
         set [Line Secs] to [2.2]
         broadcast [hero line] and wait
+    end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
     end
 end
 if <(Chapter) = [4]> then
@@ -6866,16 +6963,25 @@ if <(Chapter) = [4]> then
     set [Until] to ((timer) + [2.6])
     wait until <<(timer) > (Until)> or <(Skip) = [1]>>
     hide
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     broadcast [scene setup] and wait
     if <(Skip) = [0]> then
         set [Line] to [BZZT! SPIKES... ONLINE!]
         set [Line Secs] to [2.2]
         broadcast [enemy line] and wait
     end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     if <(Skip) = [0]> then
         set [Line] to [Then I'll use FIREBALLS!]
         set [Line Secs] to [2.2]
         broadcast [hero line] and wait
+    end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
     end
 end
 if <(Chapter) = [5]> then
@@ -6887,16 +6993,25 @@ if <(Chapter) = [5]> then
     set [Until] to ((timer) + [2.6])
     wait until <<(timer) > (Until)> or <(Skip) = [1]>>
     hide
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     broadcast [scene setup] and wait
     if <(Skip) = [0]> then
         set [Line] to [I AM MEGA SPIKE! FEEL MY SPIKES!]
         set [Line Secs] to [2.2]
         broadcast [enemy line] and wait
     end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     if <(Skip) = [0]> then
         set [Line] to [Then I'll fight smart!]
         set [Line Secs] to [2.2]
         broadcast [hero line] and wait
+    end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
     end
 end
 if <(Chapter) = [6]> then
@@ -6908,16 +7023,25 @@ if <(Chapter) = [6]> then
     set [Until] to ((timer) + [2.6])
     wait until <<(timer) > (Until)> or <(Skip) = [1]>>
     hide
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     broadcast [scene setup] and wait
     if <(Skip) = [0]> then
         set [Line] to [You will never see us coming...]
         set [Line Secs] to [2.2]
         broadcast [enemy line] and wait
     end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     if <(Skip) = [0]> then
         set [Line] to [I can see you right now!]
         set [Line Secs] to [2.2]
         broadcast [hero line] and wait
+    end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
     end
 end
 if <(Chapter) = [7]> then
@@ -6929,16 +7053,25 @@ if <(Chapter) = [7]> then
     set [Until] to ((timer) + [2.6])
     wait until <<(timer) > (Until)> or <(Skip) = [1]>>
     hide
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     broadcast [scene setup] and wait
     if <(Skip) = [0]> then
         set [Line] to [I am MASTER KAGE. My ninjas are everywhere!]
         set [Line Secs] to [2.2]
         broadcast [enemy line] and wait
     end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     if <(Skip) = [0]> then
         set [Line] to [Then I'll beat every one of them!]
         set [Line Secs] to [2.2]
         broadcast [hero line] and wait
+    end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
     end
 end
 if <(Chapter) = [8]> then
@@ -6950,16 +7083,25 @@ if <(Chapter) = [8]> then
     set [Until] to ((timer) + [2.6])
     wait until <<(timer) > (Until)> or <(Skip) = [1]>>
     hide
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     broadcast [scene setup] and wait
     if <(Skip) = [0]> then
         set [Line] to [Feel the ground shake!]
         set [Line Secs] to [2.2]
         broadcast [enemy line] and wait
     end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     if <(Skip) = [0]> then
         set [Line] to [I'll jump right over it!]
         set [Line Secs] to [2.2]
         broadcast [hero line] and wait
+    end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
     end
 end
 if <(Chapter) = [9]> then
@@ -6971,19 +7113,31 @@ if <(Chapter) = [9]> then
     set [Until] to ((timer) + [2.6])
     wait until <<(timer) > (Until)> or <(Skip) = [1]>>
     hide
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     broadcast [scene setup] and wait
     if <(Skip) = [0]> then
         set [Line] to [The Golden Crown is MINE!]
         set [Line Secs] to [2.2]
         broadcast [enemy line] and wait
     end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
     if <(Skip) = [0]> then
         set [Line] to [Not for long!]
         set [Line Secs] to [2.2]
         broadcast [hero line] and wait
     end
+    if <not <(SS Run) = (Session)>> then
+        stop [this script]
+    end
 end
 broadcast [skip off]
+if <not <(SS Run) = (Session)>> then
+    stop [this script]
+end
 broadcast [start fight]
 ```
 

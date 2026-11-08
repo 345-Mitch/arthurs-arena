@@ -263,7 +263,7 @@ Ideas from Grok's feature plan (pull request #1) that fit the game:
 - **Sound on/off:** the speaker button on the title. The app remembers it.
 - **How to play:** the **?** button on the title.
 - **Practice fight:** the **PRACTICE** button.
-- **Version line:** `v4.1` in the bottom corner of the title.
+- **Version line:** `v4.2` in the bottom corner of the title.
 - **Debug overlay (for Mitch):** tap the version number or press **D** to show FPS, game state, health, enemy, ninjas, power level and BRAWL status.
 
 Grok's other ideas were already in (colour health bars, hit flash, screen shake, dodge, power star = SUPER, try again) or would change the game too much (blocking, rounds, hearts).
@@ -291,6 +291,7 @@ How it is built:
 - **Hits use distance, not "touching".** Every hit checks how far apart the two fighters are. That works the same on every device, and it can be tested without a screen.
 - **BRAWL's per-frame work is in custom blocks set to "run without screen refresh"** (`fighter frame`, `camera frame`, `fireball frame`). A normal Scratch `repeat` pauses for a frame on every turn, so looping over 4 fighters and 8 platforms would make everything move in slow motion.
 - **Clones hear every message too.** Any sprite that makes clones checks `Is Clone` first, or each clone would make more clones; the build script refuses to build a sprite that forgets.
+- **Quitting cancels what was coming next.** Some scripts wait and then carry on (the next Arcade wave, the next story chapter, the game-over card). `Session` goes up every time you go back to the title; each of those scripts remembers its session and stops if it changed while it waited, so the old game can't start a fight on top of a new one.
 - **Hurt and stun use timestamps, not waits.** `Enemy Stun Until` and `Hero Safe Until` hold a `timer` value, so a hit that arrives mid-wait cannot break anything.
 - Sounds are small beeps and thumps made by the build script, so there are no outside files.
 - The main scripts have comments in the editor that explain what they do.

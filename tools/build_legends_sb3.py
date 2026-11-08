@@ -39,7 +39,7 @@ SB3_PATH = ROOT / "projects" / "arthurs-arena-legends.sb3"
 LISTING_PATH = ROOT / "projects" / "LEGENDS_BLOCKS.md"
 
 GROUND = -75  # y of everyone's feet
-VERSION = "4.1"
+VERSION = "4.2"
 APPLE_HEAL = 25
 
 # ---------------------------------------------------------------- tuning --
@@ -499,6 +499,18 @@ def button_svg(label, fill, ink="#ffffff", width=62, height=44, size=12):
         + text_el(label, width / 2, height / 2 + size * 0.38, size, ink)
     )
     return svg_doc(width, height, body)
+
+
+
+def remember_session(T, run):
+    """A delayed script remembers which game session it belongs to (Session goes up on every return to the title)."""
+    T.local(run, 0)
+    return T.set(run, V("Session"))
+
+
+def still_session(T, run):
+    """After a wait: if you quit and started something else meanwhile, this old script stops quietly."""
+    return T.if_(not_(eq(V(run), V("Session"))), [T.stop()])
 
 
 def hud_info():
@@ -3117,7 +3129,7 @@ def build():
         ("Power Level", 1), ("Power XP", 0), ("XP Gain", 0), ("Want Power", 0), ("Power Ready At", 0), ("Power Move", "none"),
         ("Bolt X", 0), ("Bolt Y", GROUND), ("Bolt Owner", "hero"), ("Bolt Power", 0), ("Bolt Size", 100),
         ("Fire Held", 0), ("Charge", 0), ("Fire Power", 0), ("Fireball Out", 0),
-        ("Pop Seq", 0), ("Ki", 0), ("Enemy Says", ""), ("Page HUD", 0), ("HUD Info", hud_info()), ("Game Version", VERSION), ("Punch Held", 0), ("Kick Held", 0), ("Melee Charge", 0), ("Glow DX", 0), ("Glow DY", 60), ("Glow Kind", "punch"),
+        ("Pop Seq", 0), ("Ki", 0), ("Session", 0), ("Enemy Says", ""), ("Page HUD", 0), ("HUD Info", hud_info()), ("Game Version", VERSION), ("Punch Held", 0), ("Kick Held", 0), ("Melee Charge", 0), ("Glow DX", 0), ("Glow DY", 60), ("Glow Kind", "punch"),
         ("Swirl On", 0),
         ("Shot X", 999), ("Shot Live", 0), ("Shot Cancel", 0), ("Boom X", 0),
     ]:
@@ -3143,7 +3155,7 @@ def build():
         s.broadcast("intro"),
         note="Green flag. Best and Crown are kept, so a saved project remembers them. The paper intro plays first.",
     )
-    s.on_msg("show title", s.set("State", "title"), s.set("Fight On", 0), s.set("Wave Phase", 0), s.backdrop("Title"),
+    s.on_msg("show title", s.change("Session", 1), s.set("State", "title"), s.set("Fight On", 0), s.set("Wave Phase", 0), s.backdrop("Title"),
              s.clear_fx(), s.hide_var("Score"), s.hide_var("Wave"), s.show_var("Best"))
     s.on_msg("choose hero", s.set("State", "select"), s.backdrop("Select"), s.hide_var("Best"))
 
@@ -3216,10 +3228,12 @@ def build():
         note="Story: the chapter picks the enemy. Arcade: waves 1-6 cycle (wave 5 is the MEGA SPIKE boss), every 7th wave is the Shadow King, and each wave is tougher and faster.",
     )
 
+    s_still = lambda run: still_session(s, run)  # noqa: E731
     s.on_msg(
         "start fight",
+        remember_session(s, "SF Run"),
         s.set("Fight On", 0), s.set("State", "fight"),
-        s.broadcast("load enemy", wait=True),
+        s.broadcast("load enemy", wait=True), s_still("SF Run"),
         s.if_(and_(eq(V("Mode"), "arcade"), eq(V("Page HUD"), 0)), [s.show_var("Wave")],
               [s.if_(not_(eq(V("Mode"), "adventure")), [s.set("Hero HP", V("Hero Max"))])]),
         s.list_clear("M X"), s.repeat(3, [s.list_add("M X", 9999)]),
@@ -3228,13 +3242,13 @@ def build():
         s.set("Hero Lock", 0), s.set("Hero Safe", 0), s.set("Hero Air", 0),
         s.set("Spikes", 0), s.set("Charge", 0), s.set("Fireball Out", 0), s.set("Shot Live", 0),
         s.set("Hero Safe Until", 0), s.set("Enemy Stun Until", 0),
-        s.broadcast("fighters ready", wait=True),
-        s.broadcast("power up show", wait=True),
+        s.broadcast("fighters ready", wait=True), s_still("SF Run"),
+        s.broadcast("power up show", wait=True), s_still("SF Run"),
         s.if_(or_(*[eq(V("Enemy Type"), b) for b in BOSSES]), [
-            s.play("alarm"), s.set("Banner", "boss"), s.broadcast("banner"), s.wait(1.5),
+            s.play("alarm"), s.set("Banner", "boss"), s.broadcast("banner"), s.wait(1.5), s_still("SF Run"),
         ]),
-        s.set("Banner", "ready"), s.broadcast("banner"), s.wait(1.1),
-        s.set("Banner", "fight"), s.broadcast("banner"), s.wait(0.3),
+        s.set("Banner", "ready"), s.broadcast("banner"), s.wait(1.1), s_still("SF Run"),
+        s.set("Banner", "fight"), s.broadcast("banner"), s.wait(0.3), s_still("SF Run"),
         s.set("Want Punch", 0), s.set("Want Kick", 0), s.set("Want Jump", 0), s.set("Want Dodge", 0), s.set("Want Super", 0),
         s.set("Fight On", 1), s.broadcast("fight on"),
         s.if_(eq(V("Mode"), "practice"), [s.set("Pop Text", "PRACTICE: try every move!"), s.broadcast("popup")]),
@@ -3343,10 +3357,11 @@ def build():
              s.if_(eq(V("Debug"), 1), [s.show_var(n) for n in debug_vars], [s.hide_var(n) for n in debug_vars]))
     s.on_msg(
         "adventure stage",
+        remember_session(s, "AS Run"),
         s.set("Wave Phase", 1), s.set("Fight On", 0),
         *[s.if_(eq(V("Adv Stage"), i), [s.set("Pop Text", f"STAGE {i}: {st['name']}"), s.set("Summon Kind", st["kind"])])
           for i, st in enumerate(ADVENTURE, start=1)],
-        s.broadcast("start fight"), s.wait(0.6), s.broadcast("popup"),
+        s.broadcast("start fight"), s.wait(0.6), s_still("AS Run"), s.broadcast("popup"),
         note="ADVENTURE: a stage starts with waves of small enemies (the boss stays hidden), then the boss comes.",
     )
     s.local("Waves", 1)
@@ -3373,6 +3388,7 @@ def build():
         return out
     s.on_msg(
         "fight on",
+        remember_session(s, "FO Run"),
         s.if_(and_(eq(V("Mode"), "adventure"), eq(V("Wave Phase"), 1)), [
             *wave_counts, s.set("Wave Num", 0),
             s.repeat(V("Waves"), [
@@ -3381,18 +3397,18 @@ def build():
                 s.set("Pop Text", join("WAVE ", join(V("Wave Num"), join(" of ", V("Waves"))))), s.broadcast("popup"),
                 s.until(or_(not_(lt(V("Beaten"), V("Wave Total"))), eq(V("Fight On"), 0)), [
                     s.if_(and_(lt(V("Minions"), 3), lt(V("Spawned"), V("Wave Total"))), [
-                        s.change("Spawned", 1), s.set("Summon Count", 1), s.broadcast("ninja summon"), s.wait(0.45),
+                        s.change("Spawned", 1), s.set("Summon Count", 1), s.broadcast("ninja summon"), s.wait(0.45), s_still("FO Run"),
                     ]),
                     s.set("Enemy HP", sub(V("Wave Total"), V("Beaten"))),
                     s.call("aim at nearest"),
                 ]),
                 s.if_(eq(V("Fight On"), 0), [s.stop()]),
-                s.wait(0.8),
+                s.wait(0.8), s_still("FO Run"),
             ]),
             # the boss arrives (its health is loaded first, so no hit can land while the bar still says "0 left")
-            s.broadcast("load enemy", wait=True), s.set("Wave Phase", 0), s.set("Enemy X", 170),
+            s.broadcast("load enemy", wait=True), s_still("FO Run"), s.set("Wave Phase", 0), s.set("Enemy X", 170),
             s.play("alarm"), s.set("Banner", "boss"), s.broadcast("banner"),
-            s.broadcast("boss enter", wait=True), s.wait(0.6),
+            s.broadcast("boss enter", wait=True), s_still("FO Run"), s.wait(0.6), s_still("FO Run"),
             s.broadcast("fight on"),
         ]),
         note="The waves: small enemies come in (up to 3 at once) until the wave is beaten; the enemy bar shows how many are left. "
@@ -3426,8 +3442,9 @@ def build():
 
     s.on_msg(
         "enemy down",
+        remember_session(s, "ED Run"),
         s.play("ko"), s.set("Banner", "ko"), s.broadcast("banner"),
-        s.wait(1.4),
+        s.wait(1.4), s_still("ED Run"),
         s.if_(eq(V("Mode"), "story"), [
             s.if_(eq(V("Chapter"), len(CHAPTERS)), [
                 s.change("Score", add(1000, mul(V("Hero HP"), 5))),
@@ -3439,7 +3456,7 @@ def build():
                 s.change("Score", add(500, mul(V("Hero HP"), 5))),
                 s.set("XP Gain", 1), s.if_(or_(*[eq(V("Enemy Type"), b) for b in BOSSES]), [s.set("XP Gain", 2)]),
                 s.broadcast("gain xp"),
-                s.wait(2), s.change("Chapter", 1), s.broadcast("story scene"),
+                s.wait(2), s_still("ED Run"), s.change("Chapter", 1), s.broadcast("story scene"),
             ]),
         ], [s.if_(eq(V("Mode"), "adventure"), [
             s.play("win"), s.set("Banner", "stage clear"), s.broadcast("banner"),
@@ -3447,10 +3464,10 @@ def build():
             s.set("XP Gain", 2), s.broadcast("gain xp"),
             s.change("Hero HP", ARCADE_HEAL), s.if_(gt(V("Hero HP"), V("Hero Max")), [s.set("Hero HP", V("Hero Max"))]),
             s.if_(gt(V("Score"), V("Best")), [s.set("Best", V("Score"))]),
-            s.wait(2), s.change("Adv Stage", 1),
+            s.wait(2), s_still("ED Run"), s.change("Adv Stage", 1),
             s.if_(gt(V("Adv Stage"), len(ADVENTURE)), [
                 s.set("Adv Stage", 1), s.change("Lap", 1),
-                s.set("Pop Text", join("LAP ", join(V("Lap"), "! Enemies are tougher!"))), s.broadcast("popup"), s.wait(1),
+                s.set("Pop Text", join("LAP ", join(V("Lap"), "! Enemies are tougher!"))), s.broadcast("popup"), s.wait(1), s_still("ED Run"),
             ]),
             s.broadcast("adventure stage"),
         ], [
@@ -3461,15 +3478,16 @@ def build():
             s.change("Hero HP", ARCADE_HEAL), s.if_(gt(V("Hero HP"), V("Hero Max")), [s.set("Hero HP", V("Hero Max"))]),
             s.set("Pop Text", f"+{ARCADE_HEAL} HEALTH"), s.broadcast("popup"),
             s.if_(gt(V("Score"), V("Best")), [s.set("Best", V("Score"))]),
-            s.wait(1.8), s.change("Wave", 1), s.broadcast("start fight"),
+            s.wait(1.8), s_still("ED Run"), s.change("Wave", 1), s.broadcast("start fight"),
         ])]),
         note="Adventure: heal and go on to the next stage. Story: next chapter, or the ending after the Shadow King. Arcade: heal a little and start the next, harder wave.",
     )
     s.on_msg(
         "hero down",
+        remember_session(s, "HD Run"),
         s.play("ko"), s.set("State", "over"),
         s.if_(gt(V("Score"), V("Best")), [s.set("Best", V("Score"))]),
-        s.wait(0.6), s.set("Banner", "ko"), s.broadcast("banner"), s.wait(1.4),
+        s.wait(0.6), s_still("HD Run"), s.set("Banner", "ko"), s.broadcast("banner"), s.wait(1.4), s_still("HD Run"),
         s.broadcast("game over"),
     )
     s.on_msg("ending", s.set("State", "ending"), s.backdrop("Ending"), s.hide_var("Wave"), s.hide_var("Score"))
@@ -5216,6 +5234,7 @@ def build():
     card.costume("overdrive", card_svg("OVERDRIVE!", ["MEGA SPIKE is faster", "and shoots more spikes!"], "#b91c1c"), 210, 120)
     K = card
     K.local("Until", 0)
+    K.local("SS Run", 0)   # the game session this story scene belongs to (see remember_session)
 
     def card_wait(secs):
         return [K.set("Until", add(TIMER, secs)), K.wait_until(or_(gt(TIMER, V("Until")), eq(V("Skip"), 1)))]
@@ -5228,19 +5247,23 @@ def build():
     for i, c in enumerate(CHAPTERS, start=1):
         lines = [talk(who, text) for who, text in c["talk"]]
         scenes.append(K.if_(eq(V("Chapter"), i), [
-            *([K.wear("prologue"), K.size_to(100), K.goto(0, 30), K.show(), K.front(), *card_wait(3.2)] if i == 1 else []),
+            *([K.wear("prologue"), K.size_to(100), K.goto(0, 30), K.show(), K.front(), *card_wait(3.2),
+               still_session(K, "SS Run")] if i == 1 else []),
             K.wear(f"chapter {i}"), K.size_to(100), K.goto(0, 30), K.show(), K.front(), *card_wait(2.6), K.hide(),
+            still_session(K, "SS Run"),
             K.broadcast("scene setup", wait=True),
-            *lines,
+            *[x for line in lines for x in (line, still_session(K, "SS Run"))],
         ]))
     K.on_flag(K.hide())
     K.on_msg(
         "story scene",
+        K.set("SS Run", V("Session")),
         K.set("State", "story"), K.set("Skip", 0), K.hide(),
-        K.broadcast("load enemy", wait=True),
+        K.broadcast("load enemy", wait=True), still_session(K, "SS Run"),
         K.broadcast("skip on"),
         *scenes,
         K.broadcast("skip off"),
+        still_session(K, "SS Run"),
         K.broadcast("start fight"),
         note="Chapter card, then the hero and the enemy talk. SKIP jumps straight to the fight.",
     )
